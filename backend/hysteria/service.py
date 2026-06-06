@@ -1,0 +1,237 @@
+import json
+import logging
+import subprocess
+import shutil
+import time
+import requests
+import backend.hysteria
+from backend.database import get_all_inbounds, get_clients_for_inbound, update_client_traffic, update_inbound_traffic
+
+# Словарь запущенных процессов: inbound_id -> Popen
+hysteria_processes = {}
+# Предыдущие счетчики трафика для дельт: "inbound_id:email:dir" -> value
+_last_hysteria_stats = {}
+_hysteria_tailer_running = False
+
+def tail_hysteria_logs():
+    """Background thread to tail hysteria.log and print to stdout"""
+    global _hysteria_tailer_running
+    if _hysteria_tailer_running:
+        return
+    _hysteria_tailer_running = True
+    
+    try:
+        # Wait for log file to be created
+        for _ in range(10):
+            if backend.hysteria.HYSTERIA_LOG_PATH.exists():
+                break
+            time.sleep(0.5)
+            
+        if not backend.hysteria.HYSTERIA_LOG_PATH.exists():
+            _hysteria_tailer_running = False
+            return
+            
+        with open(backend.hysteria.HYSTERIA_LOG_PATH, "r", encoding="utf-8", errors="ignore") as f:
+            f.seek(0, 2)
+            while backend.hysteria.is_hysteria_running():
+                try:
+                    import os
+                    if os.path.exists(backend.hysteria.HYSTERIA_LOG_PATH):
+                        current_pos = f.tell()
+                        file_size = os.path.getsize(backend.hysteria.HYSTERIA_LOG_PATH)
+                        if current_pos > file_size:
+                            f.seek(0)
+                except Exception:
+                    pass
+
+                line = f.readline()
+                if not line:
+                    time.sleep(0.5)
+                    continue
+                print(f"[Hysteria] {line.strip()}", flush=True)
+    except Exception as e:
+        logging.error(f"Error tailing Hysteria logs: {e}")
+    finally:
+        _hysteria_tailer_running = False
+
+def get_hysteria_logs(lines_count: int = 150) -> list:
+    """Возвращает последние строки лог-файла Hysteria 2"""
+    if not backend.hysteria.HYSTERIA_LOG_PATH.exists():
+        return ["Лог-файл пуст или еще не создан."]
+        
+    try:
+        with open(backend.hysteria.HYSTERIA_LOG_PATH, "r", encoding="utf-8", errors="ignore") as f:
+            lines = f.readlines()
+            return [line.strip() for line in lines[-lines_count:]]
+    except Exception as e:
+        return [f"Ошибка чтения логов: {e}"]
+
+def is_hysteria_running() -> bool:
+    """Проверяет, запущен ли хотя бы один процесс Hysteria 2"""
+    global hysteria_processes
+    for ib_id, proc in list(hysteria_processes.items()):
+        if proc.poll() is None:
+            return True
+            
+    import psutil
+    for proc in psutil.process_iter(["name", "cmdline"]):
+        try:
+            name = proc.info.get("name") or ""
+            if name == backend.hysteria.HYSTERIA_BIN_NAME or (name and name.startswith("hysteria-linux-")):
+                return True
+            cmdline = proc.info.get("cmdline") or []
+            if any(backend.hysteria.HYSTERIA_BIN_NAME in arg for arg in cmdline):
+                return True
+        except (psutil.NoSuchProcess, psutil.AccessDenied, psutil.ZombieProcess):
+            continue
+            
+    return False
+
+def start_hysteria():
+    """Запускает процессы Hysteria 2 для всех hysteria2 подключений из БД"""
+    global hysteria_processes
+    
+    # Гарантируем установку ядра Hysteria 2 на старте
+    backend.hysteria.ensure_hysteria_installed()
+    
+    inbounds = get_all_inbounds()
+    hysteria_inbounds = [ib for ib in inbounds if ib["protocol"] == "hysteria2" and ib["enable"]]
+    
+    if not hysteria_inbounds:
+        logging.info("No active Hysteria 2 inbounds found.")
+        return True
+        
+    backend.hysteria.generate_self_signed_cert()
+    
+    success = True
+    for ib in hysteria_inbounds:
+        ib_id = ib["id"]
+        if ib_id in hysteria_processes and hysteria_processes[ib_id].poll() is None:
+            continue
+            
+        clients = get_clients_for_inbound(ib_id)
+        active_clients = [c for c in clients if c["enable"]]
+        if not active_clients:
+            logging.info(f"Hysteria 2 inbound {ib_id} on port {ib['port']} has no active clients. Skipping startup.")
+            continue
+            
+        try:
+            stream_settings = json.loads(ib["stream_settings"] or "{}")
+        except Exception:
+            stream_settings = {}
+        config_path = backend.hysteria.BIN_DIR / f"hysteria_{ib_id}.json"
+        from backend.database import get_setting
+        if get_setting(f"use_custom_hysteria_config_{ib_id}") == "true" and config_path.exists():
+            logging.info(f"Hysteria 2 inbound {ib_id} is using custom configuration. Skipping generation.")
+        else:
+            config = backend.hysteria.generate_hysteria_config(ib_id, ib["port"], active_clients, stream_settings)
+            with open(config_path, "w", encoding="utf-8") as f:
+                json.dump(config, f, indent=2)
+            
+        logging.info(f"Starting Hysteria 2 on port {ib['port']} (Admin port: 10100+{ib_id})...")
+        try:
+            log_file = open(backend.hysteria.HYSTERIA_LOG_PATH, "a", encoding="utf-8", errors="ignore")
+            process = subprocess.Popen(
+                [str(backend.hysteria.HYSTERIA_BIN_PATH), "server", "-c", str(config_path)],
+                stdout=log_file,
+                stderr=log_file,
+                close_fds=True
+            )  # nosec B603
+            
+            try:
+                process.wait(timeout=0.5)
+                logging.error(f"Hysteria 2 process for inbound {ib_id} exited immediately with code {process.returncode}!")
+                success = False
+            except subprocess.TimeoutExpired:
+                hysteria_processes[ib_id] = process
+        except Exception as e:
+            logging.error(f"Failed to start Hysteria 2 for inbound {ib_id}: {e}")
+            success = False
+            
+    if backend.hysteria.is_hysteria_running():
+        import threading
+        threading.Thread(target=backend.hysteria.tail_hysteria_logs, daemon=True).start()
+        
+    return success
+
+def stop_hysteria():
+    """Останавливает все процессы Hysteria 2"""
+    global hysteria_processes
+    for ib_id, process in list(hysteria_processes.items()):
+        logging.info(f"Stopping Hysteria 2 process for inbound {ib_id}...")
+        process.terminate()
+        try:
+            process.wait(timeout=3)
+        except subprocess.TimeoutExpired:
+            process.kill()
+        del hysteria_processes[ib_id]
+        
+    if backend.hysteria.IS_WINDOWS:
+        taskkill_path = shutil.which("taskkill") or r"C:\Windows\System32\taskkill.exe"
+        subprocess.run([taskkill_path, "/F", "/IM", backend.hysteria.HYSTERIA_BIN_NAME], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)  # nosec B603
+    else:
+        killall_path = shutil.which("killall") or "/usr/bin/killall"
+        subprocess.run([killall_path, backend.hysteria.HYSTERIA_BIN_NAME], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)  # nosec B603
+
+def restart_hysteria():
+    import backend.watchdog_state
+    if not backend.watchdog_state.in_watchdog_context:
+        backend.watchdog_state.reset_hysteria_watchdog()
+    backend.hysteria.stop_hysteria()
+    return backend.hysteria.start_hysteria()
+
+def query_hysteria_traffic():
+    """Считывает трафик по HTTP API Hysteria 2 и обновляет БД"""
+    global _last_hysteria_stats
+    
+    inbounds = get_all_inbounds()
+    hysteria_inbounds = [ib for ib in inbounds if ib["protocol"] == "hysteria2" and ib["enable"]]
+    
+    for ib in hysteria_inbounds:
+        ib_id = ib["id"]
+        admin_port = 10100 + ib_id
+        url = f"http://127.0.0.1:{admin_port}/traffic"
+        
+        try:
+            response = requests.get(url, timeout=2)
+            if response.status_code != 200:
+                continue
+                
+            traffic_data = response.json()
+            for email, stats in traffic_data.items():
+                tx = int(stats.get("tx", 0)) # download
+                rx = int(stats.get("rx", 0)) # upload
+                
+                up_key = f"{ib_id}:{email}:up"
+                prev_up = _last_hysteria_stats.get(up_key, 0)
+                up_delta = rx - prev_up if rx >= prev_up else rx
+                _last_hysteria_stats[up_key] = rx
+                
+                down_key = f"{ib_id}:{email}:down"
+                prev_down = _last_hysteria_stats.get(down_key, 0)
+                down_delta = tx - prev_down if tx >= prev_down else tx
+                _last_hysteria_stats[down_key] = tx
+                
+                if up_delta > 0 or down_delta > 0:
+                    update_client_traffic(ib_id, email, up_delta, down_delta)
+                    update_inbound_traffic(ib_id, up_delta, down_delta)
+                    
+        except Exception as e:
+            logging.debug(f"Hysteria traffic stats poll error (process might not be ready yet): {e}")
+
+def kick_client_hysteria_api(inbound_id: int, email: str) -> bool:
+    """Динамически сбрасывает QUIC-сессию клиента в Hysteria 2 без перезапуска процесса"""
+    admin_port = 10100 + inbound_id
+    url = f"http://127.0.0.1:{admin_port}/kick"
+    try:
+        payload = [email]
+        response = requests.post(url, json=payload, timeout=3)
+        if response.status_code == 200:
+            logging.info(f"Successfully kicked client {email} from Hysteria 2 inbound {inbound_id} via Admin API.")
+            return True
+        else:
+            logging.warning(f"Failed to kick client {email} in Hysteria 2: Status {response.status_code}, {response.text}")
+            return False
+    except Exception as e:
+        logging.error(f"Error calling Hysteria 2 kick API for client {email}: {e}")
+        return False

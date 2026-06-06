@@ -1,0 +1,315 @@
+import pytest
+import requests
+import subprocess
+import importlib
+from backend.database import add_inbound, add_client_db, get_clients_for_inbound, delete_inbound
+from backend.hysteria import generate_hysteria_config, kick_client_hysteria_api, get_latest_hysteria_version_info, download_hysteria_core
+
+
+def test_hysteria_config_generation():
+    """Test Hysteria 2 Config Generation."""
+    hyst_settings = {"clients": []}
+    hyst_stream_settings = {
+        "hysteria": {
+            "obfsPassword": "obfs_test_pwd",
+            "upMbps": 50,
+            "downMbps": 100
+        }
+    }
+    ib_hyst_id = add_inbound(
+        remark="Hysteria 2 Inbound",
+        port=60003,
+        protocol="hysteria2",
+        settings_dict=hyst_settings,
+        stream_settings_dict=hyst_stream_settings
+    )
+    
+    # Add client to Hysteria 2 inbound
+    add_client_db(ib_hyst_id, "client2@hysteria.com", "pass-client-2")
+
+    try:
+        # Generate Hysteria config and test
+        clients = get_clients_for_inbound(ib_hyst_id)
+        hyst_config = generate_hysteria_config(ib_hyst_id, 60003, clients, hyst_stream_settings)
+        
+        assert hyst_config["listen"] == ":60003"
+        assert hyst_config["auth"]["userpass"]["client2@hysteria.com"] == "pass-client-2"
+        assert hyst_config["admin"]["listen"] == f"127.0.0.1:{10100 + ib_hyst_id}"
+        assert hyst_config["obfs"]["type"] == "salamander"
+        assert hyst_config["obfs"]["salamander"]["password"] == "obfs_test_pwd"
+        assert hyst_config["bandwidth"]["up"] == "50 mbps"
+        assert hyst_config["bandwidth"]["down"] == "100 mbps"
+    finally:
+        # Cleanup test inbound
+        delete_inbound(ib_hyst_id)
+
+
+def test_advanced_hysteria_configs():
+    """Test Hysteria 2 config generator with custom certificates, masquerades, and port hopping."""
+    stream_settings = {
+        "hysteria": {
+            "upMbps": 20,
+            "downMbps": 40,
+            "certMode": "custom",
+            "certPath": "/path/to/cert.pem",
+            "keyPath": "/path/to/key.pem",
+            "masqType": "status",
+            "masqValue": "403",
+            "hop": "30000-40000"
+        }
+    }
+    clients = [
+        {"email": "user1", "client_uuid_or_pwd": "password123", "enable": True}
+    ]
+
+    config = generate_hysteria_config(1, 60020, clients, stream_settings)
+
+    # Verify custom certificates
+    assert config["tls"]["cert"] == "/path/to/cert.pem"
+    assert config["tls"]["key"] == "/path/to/key.pem"
+
+    # Verify status masquerade
+    assert config["masquerade"]["type"] == "status"
+    assert config["masquerade"]["status"]["code"] == 403
+
+    # Verify port hopping listen
+    assert config["listen"] == ":60020"
+
+
+def test_hysteria_endpoints(client):
+    """Test Hysteria 2 API endpoints for status, actions, logs, version, and update."""
+    headers = {"Authorization": "Bearer test_bearer_token"}
+
+    # 1. Status without auth -> 404 Nginx
+    response = client.get("/api/hysteria/status")
+    assert response.status_code == 404
+
+    # 2. Status with auth -> 200
+    response = client.get("/api/hysteria/status", headers=headers)
+    assert response.status_code == 200
+    assert response.json()["running"] is True
+
+    # 3. Action without auth -> 404
+    response = client.post("/api/hysteria/action", json={"action": "restart"})
+    assert response.status_code == 404
+
+    # 4. Action with auth -> 200
+    response = client.post("/api/hysteria/action", json={"action": "restart"}, headers=headers)
+    assert response.status_code == 200
+    assert response.json()["success"] is True
+
+    # 5. Logs without auth -> 404
+    response = client.get("/api/hysteria/logs")
+    assert response.status_code == 404
+
+    # 6. Logs with auth -> 200
+    response = client.get("/api/hysteria/logs", headers=headers)
+    assert response.status_code == 200
+    assert response.json()["success"] is True
+    assert "mock hysteria log line 1" in response.json()["logs"]
+
+    # 7. Version without auth -> 404
+    response = client.get("/api/hysteria/version")
+    assert response.status_code == 404
+
+    # 8. Version with auth -> 200
+    response = client.get("/api/hysteria/version", headers=headers)
+    assert response.status_code == 200
+    assert response.json()["success"] is True
+    assert response.json()["current"] == "v2.5.0"
+
+    # 9. Update without auth -> 404
+    response = client.post("/api/hysteria/update", json={"download_url": "https://github.com/apernet/hysteria/releases/download/v2.5.0/hysteria-linux-amd64"})
+    assert response.status_code == 404
+
+    # 10. Update with auth -> 200
+    response = client.post("/api/hysteria/update", json={"download_url": "https://github.com/apernet/hysteria/releases/download/v2.5.0/hysteria-linux-amd64"}, headers=headers)
+    assert response.status_code == 200
+    assert response.json()["success"] is True
+    assert response.json()["version"] == "v2.5.0"
+
+
+def test_instant_disconnect_hysteria_api(monkeypatch):
+    """Test calling Hysteria kick client API."""
+    called_post = []
+    class MockResponse:
+        def __init__(self, status_code=200):
+            self.status_code = status_code
+            self.text = "OK"
+            
+    def mock_post(url, **kwargs):
+        called_post.append(url)
+        return MockResponse(200)
+        
+    monkeypatch.setattr(requests, "post", mock_post)
+    
+    res = kick_client_hysteria_api(1, "test@client.com")
+    assert res is True
+    assert "10101/kick" in called_post[0]
+
+
+def test_hysteria_config_port_hopping():
+    """Test Hysteria 2 configuration listen address generation under various port range scenarios."""
+    clients = [{"email": "test@mail.com", "client_uuid_or_pwd": "pass", "enable": True}]
+    
+    # Scenario 1: Contiguous range starting with primary port
+    config1 = generate_hysteria_config(999, 20000, clients, {"hysteria": {"hop": "20000-30000"}})
+    assert config1["listen"] == ":20000-30000"
+    
+    # Scenario 2: Disjoint range (should fallback to primary port only)
+    config2 = generate_hysteria_config(999, 8443, clients, {"hysteria": {"hop": "20000-30000"}})
+    assert config2["listen"] == ":8443"
+    
+    # Scenario 3: Invalid range format
+    config3 = generate_hysteria_config(999, 8443, clients, {"hysteria": {"hop": "invalid-hop"}})
+    assert config3["listen"] == ":8443"
+    
+    # Scenario 4: Non-range input
+    config4 = generate_hysteria_config(999, 8443, clients, {"hysteria": {"hop": "20000"}})
+    assert config4["listen"] == ":8443"
+
+
+def test_hysteria_version_api(client, monkeypatch):
+    """Test Hysteria latest version parsing and API response."""
+    import backend.routes.hysteria
+    monkeypatch.setattr(backend.routes.hysteria, "check_auth", lambda r: True)
+    
+    # Mock requests.get for GitHub API
+    class MockResponse:
+        status_code = 200
+        def json(self):
+            return {
+                "tag_name": "app/v2.9.2",
+                "assets": [
+                    {
+                        "name": "hysteria-windows-amd64.exe",
+                        "browser_download_url": "https://github.com/apernet/hysteria/releases/download/app/v2.9.2/hysteria-windows-amd64.exe"
+                    },
+                    {
+                        "name": "hysteria-linux-amd64",
+                        "browser_download_url": "https://github.com/apernet/hysteria/releases/download/app/v2.9.2/hysteria-linux-amd64"
+                    }
+                ]
+            }
+            
+    monkeypatch.setattr(requests, "get", lambda *args, **kwargs: MockResponse())
+    
+    # Verify latest version info parsing
+    info = get_latest_hysteria_version_info()
+    assert info is not None
+    assert info["version"] == "v2.9.2"
+    assert "releases/download/app/v2.9.2" in info["download_url"]
+    
+    # Verify API endpoint
+    response = client.get("/api/hysteria/version")
+    assert response.status_code == 200
+    res_data = response.json()
+    assert res_data["success"] is True
+    assert res_data["latest"] == "v2.9.2"
+
+
+def test_download_hysteria_core_verification_failure_actual(monkeypatch, tmp_path):
+    import backend.hysteria
+    
+    # Reload to get the real functions
+    importlib.reload(backend.hysteria)
+    
+    # Set paths to temp path
+    monkeypatch.setattr(backend.hysteria, "BIN_DIR", tmp_path)
+    monkeypatch.setattr(backend.hysteria, "HYSTERIA_BIN_PATH", tmp_path / "hysteria")
+    
+    # Mock get_latest_hysteria_version_info
+    monkeypatch.setattr(backend.hysteria, "get_latest_hysteria_version_info", lambda: {
+        "version": "v2.5.0",
+        "download_url": "https://github.com/apernet/hysteria/releases/download/v2.5.0/hysteria"
+    })
+    
+    # Mock requests.get
+    class MockResponse:
+        status_code = 200
+        def iter_content(self, chunk_size):
+            return [b"mock binary content"]
+        def raise_for_status(self):
+            pass
+            
+    monkeypatch.setattr(requests, "get", lambda *args, **kwargs: MockResponse())
+    
+    # Mock subprocess.run to simulate a failed self-test (returncode = 1)
+    class MockCompletedProcess:
+        returncode = 1
+        stdout = "Execution failed"
+        stderr = "Exec format error"
+        
+    monkeypatch.setattr(subprocess, "run", lambda *args, **kwargs: MockCompletedProcess())
+    
+    # Verify download_hysteria_core raises verification failure exception
+    with pytest.raises(Exception) as excinfo:
+        backend.hysteria.download_hysteria_core()
+    assert "failed self-test verification" in str(excinfo.value)
+    
+    # Ensure temporary file is cleaned up and the binary doesn't exist
+    assert not (tmp_path / "hysteria.tmp").exists()
+    assert not (tmp_path / "hysteria").exists()
+    
+    # Now restore/reload and re-apply global mocks so other tests are not affected
+    importlib.reload(backend.hysteria)
+    backend.hysteria.start_hysteria = lambda: True
+    backend.hysteria.stop_hysteria = lambda: None
+    backend.hysteria.restart_hysteria = lambda: True
+    backend.hysteria.is_hysteria_running = lambda: True
+    backend.hysteria.get_installed_hysteria_version = lambda: "v2.5.0"
+    backend.hysteria.get_hysteria_logs = lambda: ["mock hysteria log line 1", "mock hysteria log line 2"]
+    backend.hysteria.download_hysteria_core = lambda url=None: "v2.5.0"
+
+
+def test_update_online_emails_hysteria(monkeypatch):
+    """Test update_online_emails properly queries Hysteria 2 /traffic and /online endpoints."""
+    from backend.routes.clients.actions import update_online_emails
+    import backend.routes.clients.actions
+    
+    # 1. Mock inbounds in database
+    mock_inbounds = [
+        {"id": 1, "protocol": "hysteria2", "enable": True}
+    ]
+    monkeypatch.setattr("backend.database.get_all_inbounds", lambda: mock_inbounds)
+    
+    # 2. Mock is_xray_running to return False so Xray query is skipped
+    monkeypatch.setattr("backend.xray.is_xray_running", lambda: False)
+    
+    # 3. Mock requests.get to return fake data for Hysteria endpoints
+    called_urls = []
+    
+    class MockGetResponse:
+        def __init__(self, url):
+            self.url = url
+            self.status_code = 200
+            
+        def json(self):
+            if "traffic" in self.url:
+                return {"user_traffic@mail.com": {"up": 100, "down": 200}}
+            elif "online" in self.url:
+                return {"user_online@mail.com": 2, "user_zero_conn@mail.com": 0}
+            return {}
+            
+    def mock_get(url, **kwargs):
+        called_urls.append(url)
+        return MockGetResponse(url)
+        
+    import requests
+    monkeypatch.setattr(requests, "get", mock_get)
+    
+    # 4. Clear existing _online_emails
+    backend.routes.clients.actions._online_emails = []
+    
+    # 5. Call update_online_emails
+    update_online_emails()
+    
+    # 6. Verify correct API endpoints were queried and results compiled
+    assert "http://127.0.0.1:10101/traffic" in called_urls
+    assert "http://127.0.0.1:10101/online" in called_urls
+    
+    # Verify both traffic and online users (with count > 0) are in the list
+    assert "user_traffic@mail.com" in backend.routes.clients.actions._online_emails
+    assert "user_online@mail.com" in backend.routes.clients.actions._online_emails
+    assert "user_zero_conn@mail.com" not in backend.routes.clients.actions._online_emails
+

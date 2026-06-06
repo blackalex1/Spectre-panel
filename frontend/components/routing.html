@@ -1,0 +1,297 @@
+<section id="tab-routing" class="tab-content">
+    <!-- Блок Исходящих подключений (Outbounds) -->
+    <div class="routing-section glass-card" style="margin-bottom: 25px;">
+        <div class="section-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+            <h3 data-i18n="routing_outbounds_title" style="margin: 0; font-size: 1.3rem;"><i class="fa-solid fa-plane-departure" style="margin-right: 8px;"></i>Исходящие подключения (Outbounds)</h3>
+            <button id="add-outbound-btn" class="btn primary-btn" style="padding: 6px 12px; font-size: 13px;"><i class="fa-solid fa-plus" style="margin-right: 5px;"></i><span data-i18n="routing_add_outbound">Добавить Outbound</span></button>
+        </div>
+        <div class="table-container" style="overflow-x: auto;">
+            <table class="glass-table" style="width: 100%; border-collapse: collapse; text-align: left;">
+                <thead>
+                    <tr style="border-bottom: 2px solid var(--border-color); color: var(--text-secondary);">
+                        <th data-i18n="routing_th_remark">Описание</th>
+                        <th data-i18n="routing_th_protocol">Протокол</th>
+                        <th data-i18n="routing_th_tag">Тег (Tag)</th>
+                        <th data-i18n="routing_th_settings">Настройки</th>
+                        <th data-i18n="routing_th_traffic">Трафик (↓ / ↑)</th>
+                        <th data-i18n="routing_th_status">Статус</th>
+                        <th data-i18n="routing_th_actions">Действия</th>
+                    </tr>
+                </thead>
+                <tbody id="outbounds-list-tbody">
+                    <!-- Заполняется динамически -->
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Блок Правил маршрутизации (Routing Rules) -->
+    <div class="routing-section glass-card">
+        <div class="section-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+            <h3 data-i18n="routing_rules_title" style="margin: 0; font-size: 1.3rem;"><i class="fa-solid fa-route" style="margin-right: 8px;"></i>Правила маршрутизации</h3>
+            <button id="add-routing-rule-btn" class="btn primary-btn" style="padding: 6px 12px; font-size: 13px;"><i class="fa-solid fa-plus" style="margin-right: 5px;"></i><span data-i18n="routing_add_rule">Добавить правило</span></button>
+        </div>
+        <p style="font-size: 13px; color: var(--text-secondary); margin-top: -10px; margin-bottom: 15px;" data-i18n="routing_rules_desc">
+            Правила проверяются сверху вниз. Вы можете менять порядок (приоритет) правил с помощью стрелок.
+        </p>
+        <div class="table-container" style="overflow-x: auto;">
+            <table class="glass-table" style="width: 100%; border-collapse: collapse; text-align: left;">
+                <thead>
+                    <tr style="border-bottom: 2px solid var(--border-color); color: var(--text-secondary);">
+                        <th style="width: 60px;" data-i18n="routing_th_priority">Порядок</th>
+                        <th data-i18n="routing_th_remark">Описание</th>
+                        <th data-i18n="routing_th_conditions">Условия (Домены / IP / Протоколы / Входящие)</th>
+                        <th data-i18n="routing_th_outbound">Назначение</th>
+                        <th data-i18n="routing_th_status">Активно</th>
+                        <th style="width: 180px;" data-i18n="routing_th_actions">Действия</th>
+                    </tr>
+                </thead>
+                <tbody id="routing-rules-tbody">
+                    <!-- Заполняется динамически -->
+                </tbody>
+            </table>
+        </div>
+    </div>
+</section>
+
+<!-- Модальное окно добавления/редактирования Outbound -->
+<div id="outbound-modal" class="modal" style="z-index: 1100;">
+    <div class="glass-card modal-card" style="background: hsl(223, 47%, 11%) !important;">
+        <div class="modal-header">
+            <h3 id="outbound-modal-title">Создание исходящего подключения</h3>
+            <button class="btn icon-btn close-modal-btn"><i class="fa-solid fa-xmark"></i></button>
+        </div>
+        <form id="outbound-form">
+            <input type="hidden" id="ob-id">
+            <div class="input-group" id="ob-import-group">
+                <label for="ob-import-link" data-i18n="routing_modal_import_link">Импортировать из ссылки (vless, ss, socks, http, hysteria)</label>
+                <input type="text" id="ob-import-link" data-i18n-placeholder="routing_modal_import_placeholder" placeholder="Вставьте vless://, ss://, hysteria2://, socks:// и т.д.">
+            </div>
+            <div class="input-group">
+                <label for="ob-remark" data-i18n="routing_modal_remark">Описание / Название</label>
+                <input type="text" id="ob-remark" placeholder="Например: Внешний SOCKS5 прокси">
+            </div>
+            <div class="input-row">
+                <div class="input-group">
+                    <label for="ob-protocol" data-i18n="routing_modal_protocol">Протокол</label>
+                    <select id="ob-protocol" class="glass-select">
+                        <option value="freedom">freedom (Напрямую)</option>
+                        <option value="blackhole">blackhole (Блокировка)</option>
+                        <option value="socks">socks (SOCKS5 прокси)</option>
+                        <option value="shadowsocks">shadowsocks (Shadowsocks)</option>
+                        <option value="http">http (HTTP прокси)</option>
+                        <option value="vless">VLESS</option>
+                        <option value="hysteria">Hysteria 2</option>
+                    </select>
+                </div>
+                <div class="input-group">
+                    <label for="ob-tag" data-i18n="routing_modal_tag">Тег (Tag)</label>
+                    <input type="text" id="ob-tag" placeholder="Например: my-socks-proxy">
+                </div>
+            </div>
+
+            <!-- Группа полей для сетевых прокси (socks, http, shadowsocks) -->
+            <div id="ob-proxy-fields" style="display: none; border: 1px solid var(--border-color); border-radius: 8px; padding: 12px; margin-bottom: 15px;">
+                <div class="input-row">
+                    <div class="input-group" style="flex: 2;">
+                        <label for="ob-address" data-i18n="routing_modal_address">Адрес сервера (Host / IP)</label>
+                        <input type="text" id="ob-address" placeholder="1.2.3.4 или proxy.domain.com">
+                    </div>
+                    <div class="input-group" style="flex: 1;">
+                        <label for="ob-port" data-i18n="routing_modal_port">Порт</label>
+                        <input type="number" id="ob-port" placeholder="1080">
+                    </div>
+                </div>
+                
+                <!-- Поля авторизации -->
+                <div class="input-row">
+                    <div class="input-group">
+                        <label for="ob-username" data-i18n="routing_modal_username">Пользователь (опционально)</label>
+                        <input type="text" id="ob-username" placeholder="Username">
+                    </div>
+                    <div class="input-group">
+                        <label for="ob-password" data-i18n="routing_modal_password">Пароль / Ключ</label>
+                        <input type="text" id="ob-password" placeholder="Password">
+                    </div>
+                </div>
+
+                <!-- Метод шифрования для Shadowsocks -->
+                <div id="ob-ss-method-group" class="input-group" style="display: none;">
+                    <label for="ob-ss-method" data-i18n="routing_modal_ss_method">Метод шифрования Shadowsocks</label>
+                    <select id="ob-ss-method" class="glass-select">
+                        <option value="aes-256-gcm">aes-256-gcm</option>
+                        <option value="chacha20-ietf-poly1305">chacha20-ietf-poly1305</option>
+                        <option value="aes-128-gcm">aes-128-gcm</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- Группа полей безопасности TLS/Reality (для vless, hysteria) -->
+            <div id="ob-security-fields" style="display: none; border: 1px solid var(--border-color); border-radius: 8px; padding: 12px; margin-bottom: 15px;">
+                <h4 style="margin-top: 0; margin-bottom: 10px; font-size: 14px; color: var(--text-primary);">Безопасность и транспорт</h4>
+                <div class="input-row">
+                    <div class="input-group" id="ob-security-group">
+                        <label for="ob-security">Безопасность (Security)</label>
+                        <select id="ob-security" class="glass-select">
+                            <option value="none">none</option>
+                            <option value="tls">tls</option>
+                            <option value="reality">reality</option>
+                        </select>
+                    </div>
+                    <div class="input-group">
+                        <label for="ob-sni">SNI / ServerName</label>
+                        <input type="text" id="ob-sni" placeholder="domain.com">
+                    </div>
+                </div>
+                
+                <!-- Reality-специфичные поля -->
+                <div id="ob-reality-fields" style="display: none; margin-top: 10px;">
+                    <div class="input-row">
+                        <div class="input-group">
+                            <label for="ob-pbk">Публичный ключ (Public Key)</label>
+                            <input type="text" id="ob-pbk" placeholder="Reality Public Key">
+                        </div>
+                        <div class="input-group">
+                            <label for="ob-shortid">Short ID</label>
+                            <input type="text" id="ob-shortid" placeholder="8f9c2d1b">
+                        </div>
+                    </div>
+                    <div class="input-group" style="margin-top: 10px;">
+                        <label for="ob-fingerprint">Fingerprint</label>
+                        <select id="ob-fingerprint" class="glass-select">
+                            <option value="chrome">chrome</option>
+                            <option value="firefox">firefox</option>
+                            <option value="safari">safari</option>
+                            <option value="edge">edge</option>
+                            <option value="random">random</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- ALPN для TLS/Hysteria -->
+                <div class="input-group" id="ob-alpn-group" style="margin-top: 10px;">
+                    <label for="ob-alpn">ALPN (через запятую)</label>
+                    <input type="text" id="ob-alpn" placeholder="h2,http/1.1">
+                </div>
+
+                <!-- Flow для VLESS -->
+                <div class="input-group" id="ob-flow-group" style="margin-top: 10px;">
+                    <label for="ob-flow">Flow</label>
+                    <select id="ob-flow" class="glass-select">
+                        <option value="">Без flow</option>
+                        <option value="xtls-rprx-vision">xtls-rprx-vision</option>
+                    </select>
+                </div>
+
+                <!-- Encryption для VLESS -->
+                <div class="input-group" id="ob-encryption-group" style="margin-top: 10px;">
+                    <label for="ob-encryption">VLESS Encryption (Шифрование - опционально)</label>
+                    <input type="text" id="ob-encryption" placeholder="Например: mlkem768x25519plus.native.0rtt.xxxx...">
+                </div>
+            </div>
+
+            <!-- Группа полей скорости Hysteria 2 -->
+            <div id="ob-hysteria-fields" style="display: none; border: 1px solid var(--border-color); border-radius: 8px; padding: 12px; margin-bottom: 15px;">
+                <h4 style="margin-top: 0; margin-bottom: 10px; font-size: 14px; color: var(--text-primary);">Настройки скорости Hysteria 2</h4>
+                <div class="input-row">
+                    <div class="input-group">
+                        <label for="ob-up-mbps">Скорость отдачи (Up Mbps)</label>
+                        <input type="number" id="ob-up-mbps" min="0" placeholder="100">
+                    </div>
+                    <div class="input-group">
+                        <label for="ob-down-mbps">Скорость загрузки (Down Mbps)</label>
+                        <input type="number" id="ob-down-mbps" min="0" placeholder="100">
+                    </div>
+                </div>
+            </div>
+
+            <div class="input-group checkbox-group" style="margin-bottom: 15px;">
+                <label style="display: inline-flex; align-items: center; gap: 10px; cursor: pointer;">
+                    <span class="switch-toggle">
+                        <input type="checkbox" id="ob-enable" checked>
+                        <span class="switch-slider"></span>
+                    </span>
+                    <span data-i18n="routing_modal_enable">Включить исходящее подключение</span>
+                </label>
+            </div>
+
+            <div style="display: flex; gap: 10px; margin-top: 25px;">
+                <button type="submit" class="btn primary-btn" style="flex: 1;"><i class="fa-solid fa-floppy-disk" style="margin-right: 5px;"></i><span data-i18n="routing_modal_save">Сохранить</span></button>
+                <div style="display: flex; gap: 5px; flex: 1;">
+                    <select id="ob-test-type" class="glass-select" style="flex: 1; min-width: 90px; padding: 10px;">
+                        <option value="tcp" selected>TCP</option>
+                        <option value="http">HTTP</option>
+                    </select>
+                    <button type="button" id="ob-test-btn" class="btn secondary-btn" style="flex: 2; padding: 10px;"><i class="fa-solid fa-bolt" style="margin-right: 5px;"></i><span data-i18n="routing_modal_test">Проверить</span></button>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Модальное окно добавления/редактирования Правила маршрутизации -->
+<div id="routing-rule-modal" class="modal" style="z-index: 1100;">
+    <div class="glass-card modal-card" style="background: hsl(223, 47%, 11%) !important; width: 500px; max-width: 95%;">
+        <div class="modal-header">
+            <h3 id="routing-rule-modal-title">Создание правила маршрутизации</h3>
+            <button class="btn icon-btn close-modal-btn"><i class="fa-solid fa-xmark"></i></button>
+        </div>
+        <form id="routing-rule-form">
+            <input type="hidden" id="rule-id">
+            <div class="input-group">
+                <label for="rule-remark" data-i18n="routing_rule_modal_remark">Описание / Название</label>
+                <input type="text" id="rule-remark" placeholder="Например: Обход блокировок Telegram">
+            </div>
+
+            <div class="input-row">
+                <div class="input-group">
+                    <label for="rule-outbound" data-i18n="routing_rule_modal_outbound">Назначение (Outbound Tag)</label>
+                    <select id="rule-outbound" class="glass-select">
+                        <!-- Заполняется динамически на основе доступных tags -->
+                    </select>
+                </div>
+                <div class="input-group">
+                    <label for="rule-protocols" data-i18n="routing_rule_modal_protocols">Протоколы (через запятую)</label>
+                    <input type="text" id="rule-protocols" placeholder="Например: bittorrent">
+                </div>
+            </div>
+
+            <div class="input-row">
+                <div class="input-group">
+                    <label for="rule-inbound-select">Входящее подключение (Inbound)</label>
+                    <select id="rule-inbound-select" class="glass-select">
+                        <option value="">Все подключения (Any)</option>
+                    </select>
+                </div>
+                <div class="input-group" id="rule-client-select-group" style="display: none;">
+                    <label for="rule-client-select">Конкретный клиент (Email)</label>
+                    <select id="rule-client-select" class="glass-select">
+                        <option value="">Все клиенты (All)</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="input-group">
+                <label for="rule-domains" data-i18n="routing_rule_modal_domains">Доменные имена (одно на строку)</label>
+                <textarea id="rule-domains" rows="3" placeholder="Например:&#13;domain:openai.com&#13;geosite:google&#13;regexp:\.ru$"></textarea>
+            </div>
+
+            <div class="input-group">
+                <label for="rule-ips" data-i18n="routing_rule_modal_ips">IP адреса / подсети (одно на строку)</label>
+                <textarea id="rule-ips" rows="3" placeholder="Например:&#13;8.8.8.8&#13;1.1.1.1/24&#13;geoip:private"></textarea>
+            </div>
+
+            <div class="input-group checkbox-group" style="margin-bottom: 15px;">
+                <label style="display: inline-flex; align-items: center; gap: 10px; cursor: pointer;">
+                    <span class="switch-toggle">
+                        <input type="checkbox" id="rule-enable" checked>
+                        <span class="switch-slider"></span>
+                    </span>
+                    <span data-i18n="routing_rule_modal_enable">Включить правило</span>
+                </label>
+            </div>
+
+            <button type="submit" class="btn primary-btn"><i class="fa-solid fa-floppy-disk" style="margin-right: 5px;"></i><span data-i18n="routing_modal_save">Сохранить</span></button>
+        </form>
+    </div>
+</div>

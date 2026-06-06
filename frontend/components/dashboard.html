@@ -1,0 +1,96 @@
+<section id="tab-dashboard" class="tab-content active">
+    <!-- Сетка карточек метрик -->
+    <div class="metrics-grid">
+        <div class="glass-card metric-card">
+            <div class="card-icon blue"><i class="fa-solid fa-microchip"></i></div>
+            <div class="metric-data">
+                <h3 data-i18n="dashboard_cpu">Загрузка CPU</h3>
+                <p class="metric-value" id="cpu-value">0%</p>
+            </div>
+        </div>
+        <div class="glass-card metric-card">
+            <div class="card-icon purple"><i class="fa-solid fa-memory"></i></div>
+            <div class="metric-data">
+                <h3 data-i18n="dashboard_ram">ОЗУ Память</h3>
+                <p class="metric-value" id="ram-value">0 / 0 GB</p>
+            </div>
+        </div>
+        <div class="glass-card metric-card">
+            <div class="card-icon rose"><i class="fa-solid fa-hard-drive"></i></div>
+            <div class="metric-data">
+                <h3 data-i18n="dashboard_disk">Накопитель (Диск)</h3>
+                <p class="metric-value" id="disk-value">0 / 0 GB</p>
+            </div>
+        </div>
+        <div class="glass-card metric-card">
+            <div class="card-icon green"><i class="fa-solid fa-arrow-up-right-from-square"></i></div>
+            <div class="metric-data">
+                <h3 data-i18n="dashboard_net_up">Исходящий трафик</h3>
+                <p class="metric-value" id="net-up-value">0 GB</p>
+            </div>
+        </div>
+        <div class="glass-card metric-card">
+            <div class="card-icon orange"><i class="fa-solid fa-arrow-down-left-from-square"></i></div>
+            <div class="metric-data">
+                <h3 data-i18n="dashboard_net_down">Входящий трафик</h3>
+                <p class="metric-value" id="net-down-value">0 GB</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Блок графиков и логов системы -->
+    <div class="charts-container">
+        <div class="glass-card chart-card">
+            <h3 data-i18n="dashboard_usage">Использование ресурсов</h3>
+            <div class="chart-wrapper">
+                <canvas id="sysChart"></canvas>
+            </div>
+        </div>
+        <div class="glass-card info-card">
+            <h3 data-i18n="dashboard_sys_info">Системная информация</h3>
+            <div class="sys-info-list">
+                <div class="info-item">
+                    <span class="label" data-i18n="dashboard_uptime">Аптайм сервера</span>
+                    <span class="value" id="sys-uptime">0ч 0м</span>
+                </div>
+                <div class="info-item">
+                    <span class="label" data-i18n="dashboard_xray_state">Статус Xray</span>
+                    <span class="value" id="sys-xray-state">Неизвестно</span>
+                </div>
+                <div class="info-item">
+                    <span class="label" data-i18n="dashboard_xray_version">Версия Xray</span>
+                    <span class="value" id="sys-xray-version">v1.8.24</span>
+                </div>
+                <div class="info-item">
+                    <span class="label" data-i18n="dashboard_hysteria_state">Статус Hysteria</span>
+                    <span class="value" id="sys-hysteria-state">Неизвестно</span>
+                </div>
+                <div class="info-item">
+                    <span class="label" data-i18n="dashboard_hysteria_version">Версия Hysteria</span>
+                    <span class="value" id="sys-hysteria-version">Неизвестно</span>
+                </div>
+                <div class="info-item">
+                    <span class="label" data-i18n="dashboard_server_ip">Адрес сервера</span>
+                    <span class="value" id="sys-ip">localhost</span>
+                </div>
+                <div class="info-item" style="align-items: center;">
+                    <span class="label" data-i18n="dashboard_bbr">Ускорение BBR</span>
+                    <div style="display: flex; align-items: center; gap: 10px;">
+                        <span class="value" id="sys-bbr">Проверка...</span>
+                        <button id="enable-bbr-btn" class="btn secondary-btn" style="padding: 4px 8px; font-size: 12px; display: none;" data-i18n="dashboard_enable_bbr">Включить</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Блок глобальной статистики трафика -->
+    <div style="margin-top: 30px;">
+        <div class="glass-card chart-card" style="width: 100%;">
+            <h3 data-i18n="dashboard_global_traffic">Глобальное потребление трафика за 30 дней</h3>
+            <div class="chart-wrapper" style="height: 250px; position: relative;">
+                <canvas id="globalTrafficChart"></canvas>
+            </div>
+        </div>
+    </div>
+</section>

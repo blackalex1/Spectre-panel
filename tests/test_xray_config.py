@@ -1,0 +1,210 @@
+import io
+import zipfile
+import pytest
+import subprocess
+import requests
+import importlib
+from backend.database import add_inbound, add_client_db, delete_inbound
+from backend.xray import generate_xray_config_json
+
+def test_xray_config_generation():
+    """Test VLESS Reality Inbound Config Generation."""
+    vless_settings = {"clients": []}
+    vless_stream_settings = {
+        "network": "tcp",
+        "security": "reality",
+        "realitySettings": {
+            "show": False,
+            "dest": "google.com:443",
+            "serverNames": ["google.com"],
+            "privateKey": "private_key_xyz",
+            "publicKey": "public_key_xyz",
+            "shortIds": ["01234567"]
+        }
+    }
+    
+    ib_vless_id = add_inbound(
+        remark="VLESS Reality Inbound",
+        port=60002,
+        protocol="vless",
+        settings_dict=vless_settings,
+        stream_settings_dict=vless_stream_settings
+    )
+    
+    # Add client to VLESS inbound
+    add_client_db(ib_vless_id, "client1@reality.com", "uuid-client-1")
+
+    # Generate config and test
+    try:
+        xray_config = generate_xray_config_json()
+        vless_config = next((ib for ib in xray_config["inbounds"] if ib["port"] == 60002), None)
+        
+        assert vless_config is not None
+        assert vless_config["protocol"] == "vless"
+        assert vless_config["streamSettings"]["security"] == "reality"
+        assert vless_config["streamSettings"]["realitySettings"]["privateKey"] == "private_key_xyz"
+        assert vless_config["settings"]["clients"][0]["id"] == "uuid-client-1"
+    finally:
+        # Cleanup test inbounds
+        delete_inbound(ib_vless_id)
+
+
+def test_advanced_xray_configs():
+    """Test Xray config generator with advanced transports, TLS, sniffing, and fallbacks."""
+    # 1. Create Inbound with mKCP, TLS Min/Max, Sniffing overrides & Fallbacks
+    settings_dict = {
+        "clients": [],
+        "fallbacks": [
+            {
+                "dest": "127.0.0.1:8080",
+                "path": "/masquerade",
+                "xver": 2,
+                "alpn": "h2"
+            }
+        ]
+    }
+    stream_settings_dict = {
+        "network": "mkcp",
+        "security": "tls",
+        "tlsSettings": {
+            "serverName": "domain.com",
+            "allowInsecure": True,
+            "alpn": ["h2"],
+            "minVersion": "1.2",
+            "maxVersion": "1.3"
+        },
+        "kcpSettings": {
+            "header": {"type": "srtp"},
+            "seed": "my_mkcp_obfs_seed",
+            "congestion": True
+        }
+    }
+    sniffing_dict = {
+        "enabled": True,
+        "destOverride": ["http", "quic"],
+        "routeOnly": True
+    }
+
+    ib_id = add_inbound(
+        remark="Advanced Xray Inbound",
+        port=60010,
+        protocol="vless",
+        settings_dict=settings_dict,
+        stream_settings_dict=stream_settings_dict,
+        sniffing_dict=sniffing_dict
+    )
+
+    try:
+        xray_config = generate_xray_config_json()
+        inbound = next((ib for ib in xray_config["inbounds"] if ib["port"] == 60010), None)
+
+        assert inbound is not None
+        assert inbound["protocol"] == "vless"
+        assert inbound["settings"]["fallbacks"][0]["dest"] == "127.0.0.1:8080"
+        assert inbound["settings"]["fallbacks"][0]["xver"] == 2
+        
+        # Test Transport settings
+        assert inbound["streamSettings"]["network"] == "mkcp"
+        assert inbound["streamSettings"]["kcpSettings"]["header"]["type"] == "srtp"
+        assert inbound["streamSettings"]["kcpSettings"]["seed"] == "my_mkcp_obfs_seed"
+        assert inbound["streamSettings"]["kcpSettings"]["congestion"] is True
+        
+        # Test TLS advanced settings
+        assert inbound["streamSettings"]["tlsSettings"]["minVersion"] == "1.2"
+        assert inbound["streamSettings"]["tlsSettings"]["maxVersion"] == "1.3"
+
+        # Test Sniffing settings
+        assert inbound["sniffing"]["enabled"] is True
+        assert "http" in inbound["sniffing"]["destOverride"]
+        assert "quic" in inbound["sniffing"]["destOverride"]
+        assert inbound["sniffing"]["routeOnly"] is True
+
+    finally:
+        delete_inbound(ib_id)
+
+
+def test_download_xray_core_verification_failure_actual(monkeypatch, tmp_path):
+    import backend.xray
+    
+    # Reload to get real functions
+    importlib.reload(backend.xray)
+    
+    # Set paths to temp path
+    monkeypatch.setattr(backend.xray, "BIN_DIR", tmp_path)
+    monkeypatch.setattr(backend.xray, "XRAY_BIN_PATH", tmp_path / "xray")
+    
+    # Mock get_latest_xray_version_info
+    monkeypatch.setattr(backend.xray, "get_latest_xray_version_info", lambda: {
+        "version": "v1.8.24",
+        "download_url": "https://github.com/XTLS/Xray-core/releases/download/v1.8.24/xray.zip"
+    })
+    
+    # Create a mock zip in memory
+    zip_buffer = io.BytesIO()
+    with zipfile.ZipFile(zip_buffer, "a", zipfile.ZIP_DEFLATED, False) as zip_file:
+        # On Windows XRAY_BIN_NAME has .exe, on Linux it doesn't
+        from backend.config import XRAY_BIN_NAME
+        zip_file.writestr(XRAY_BIN_NAME, b"mock xray binary")
+    zip_bytes = zip_buffer.getvalue()
+    
+    # Mock requests.get
+    class MockResponse:
+        status_code = 200
+        def iter_content(self, chunk_size):
+            return [zip_bytes]
+        def raise_for_status(self):
+            pass
+            
+    monkeypatch.setattr(requests, "get", lambda *args, **kwargs: MockResponse())
+    
+    # Mock subprocess.run to simulate verification failure
+    class MockCompletedProcess:
+        returncode = 1
+        stdout = ""
+        stderr = "Exec format error"
+        
+    monkeypatch.setattr(subprocess, "run", lambda *args, **kwargs: MockCompletedProcess())
+    
+    # Verify download_xray_core raises exception
+    with pytest.raises(Exception) as excinfo:
+        backend.xray.download_xray_core()
+    assert "failed self-test verification" in str(excinfo.value)
+    
+    # Ensure cleanup
+    assert not (tmp_path / "xray_temp.zip").exists()
+    assert not (tmp_path / "xray_temp_extract").exists()
+    assert not (tmp_path / "xray").exists()
+    
+    # Restore global mocks
+    importlib.reload(backend.xray)
+    backend.xray.start_xray = lambda: True
+    backend.xray.stop_xray = lambda: None
+    backend.xray.restart_xray = lambda: True
+    backend.xray.is_xray_running = lambda: True
+
+
+def test_vless_encryption_config():
+    """Test VLESS inbound with Encryption/Decryption settings."""
+    settings_dict = {
+        "clients": [],
+        "decryption": "mlkem768x25519plus.native.600s.mydecryptionkey",
+        "encryption": "mlkem768x25519plus.native.0rtt.myencryptionkey"
+    }
+    
+    ib_id = add_inbound(
+        remark="VLESS Encryption Inbound",
+        port=60020,
+        protocol="vless",
+        settings_dict=settings_dict
+    )
+    
+    try:
+        xray_config = generate_xray_config_json()
+        inbound = next((ib for ib in xray_config["inbounds"] if ib["port"] == 60020), None)
+        
+        assert inbound is not None
+        assert inbound["protocol"] == "vless"
+        assert inbound["settings"]["decryption"] == "mlkem768x25519plus.native.600s.mydecryptionkey"
+    finally:
+        delete_inbound(ib_id)
+

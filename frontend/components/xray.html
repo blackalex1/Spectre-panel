@@ -1,0 +1,59 @@
+<section id="tab-xray" class="tab-content">
+    <div class="core-controls glass-card">
+        <h3 data-i18n="xray_title">Управление версиями Xray-core</h3>
+        <div class="core-info-row">
+            <div>
+                <p class="label" data-i18n="xray_curr_version">Установленная версия</p>
+                <p class="value" id="core-curr-version">v1.8.24</p>
+            </div>
+            <div>
+                <p class="label" data-i18n="xray_latest_version">Последняя версия на GitHub</p>
+                <p class="value" id="core-latest-version">Загрузка...</p>
+            </div>
+            <div class="core-actions">
+                <button id="core-update-btn" class="btn primary-btn" disabled><i class="fa-solid fa-download"></i> <span data-i18n="xray_btn_update">Обновить ядро</span></button>
+                <button id="core-restart-btn" class="btn secondary-btn"><i class="fa-solid fa-rotate-right"></i> <span data-i18n="xray_btn_restart">Перезапустить Xray</span></button>
+                <button id="core-stop-btn" class="btn danger-btn"><i class="fa-solid fa-stop"></i> <span data-i18n="xray_btn_stop">Остановить</span></button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Логи терминала -->
+    <div class="terminal-card glass-card">
+        <div class="terminal-header">
+            <span><i class="fa-solid fa-square-poll-horizontal"></i> <span data-i18n="xray_terminal_title">Логи ядра Xray (в реальном времени)</span></span>
+            <div style="display: flex; gap: 8px;">
+                <button class="btn icon-btn" id="copy-logs-btn" title="Копировать логи" data-i18n-title="xray_btn_copy_logs"><i class="fa-regular fa-copy"></i></button>
+                <button class="btn icon-btn" id="clear-logs-btn" title="Очистить терминал" data-i18n-title="xray_btn_clear_logs"><i class="fa-regular fa-trash-can"></i></button>
+            </div>
+        </div>
+        <div class="terminal-body" id="logs-terminal">
+            <!-- Логи заполняются динамически -->
+        </div>
+    </div>
+
+    <!-- Конфигурация ядра -->
+    <div class="terminal-card glass-card" style="margin-top: 30px; height: auto; display: flex; flex-direction: column;">
+        <div class="terminal-header" style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-color); padding-bottom: 10px; margin-bottom: 15px;">
+            <span><i class="fa-solid fa-gears"></i> <span data-i18n="xray_config_title">Конфигурация ядра Xray</span></span>
+            <div style="display: flex; gap: 8px; align-items: center;">
+                <button class="btn success-btn" id="xray-config-save-btn" style="padding: 6px 12px; font-size: 13px; display: none;"><i class="fa-solid fa-floppy-disk"></i> <span data-i18n="config_save_btn">Сохранить</span></button>
+                <button class="btn danger-btn" id="xray-config-reset-btn" style="padding: 6px 12px; font-size: 13px; display: none;"><i class="fa-solid fa-rotate-left"></i> <span data-i18n="config_reset_btn">Сбросить</span></button>
+                <button class="btn secondary-btn active" id="xray-config-tab-parsed" style="padding: 6px 12px; font-size: 13px;"><span data-i18n="xray_config_tab_parsed">Структура</span></button>
+                <button class="btn secondary-btn" id="xray-config-tab-raw" style="padding: 6px 12px; font-size: 13px;"><span data-i18n="xray_config_tab_raw">JSON</span></button>
+            </div>
+        </div>
+        
+        <!-- Parsed View -->
+        <div id="xray-config-parsed-container" class="config-view-container active">
+            <!-- Будет заполнено динамически -->
+        </div>
+        
+        <!-- Raw View -->
+        <div id="xray-config-raw-container" class="config-view-container" style="display: none; position: relative;">
+            <button class="btn icon-btn copy-btn" id="xray-config-copy-btn" data-target="xray-config-raw-pre" style="position: absolute; right: 15px; top: 15px; background: rgba(0,0,0,0.5); z-index: 10;" title="Копировать" data-i18n-title="copy_btn"><i class="fa-regular fa-copy"></i></button>
+            <textarea id="xray-config-raw-pre" class="terminal-body" style="height: 350px; margin: 0; font-family: monospace; white-space: pre-wrap; word-break: break-all; overflow-y: auto; user-select: text; border: 1px solid var(--border-color); border-radius: 8px; padding: 15px; background: #020617; width: 100%; color: #cbd5e1; outline: none; resize: vertical;"></textarea>
+        </div>
+    </div>
+</section>
+
