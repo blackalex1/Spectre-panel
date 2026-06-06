@@ -22,15 +22,25 @@ def update_online_emails():
     # 1. Query Xray online clients
     if is_xray_running():
         try:
+            # Primary: use active IP cache from access log parsing (highly accurate last 3m activity)
+            from backend.scheduler import parse_recent_xray_ips, ACTIVE_IP_CACHE
+            try:
+                parse_recent_xray_ips()
+                emails.extend(ACTIVE_IP_CACHE.keys())
+            except Exception as e:
+                logging.error(f"Error parsing recent xray IPs for online check: {e}")
+
+            # Fallback: query statsquery API for user list
             cmd = [str(XRAY_BIN_PATH), "api", "statsquery", "--server=127.0.0.1:10085"]
             result = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, encoding="utf-8", timeout=3)  # nosec B603
             if result.returncode == 0:
                 data = json.loads(result.stdout)
-                for stat in data.get("stat", []):
-                    name = stat.get("name", "")
-                    parts = name.split(">>>")
-                    if len(parts) == 4 and parts[0] == "user":
-                        emails.append(parts[1])
+                if not ACTIVE_IP_CACHE:
+                    for stat in data.get("stat", []):
+                        name = stat.get("name", "")
+                        parts = name.split(">>>")
+                        if len(parts) == 4 and parts[0] == "user":
+                            emails.append(parts[1])
         except Exception as e:
             logging.error(f"Error querying online Xray clients in background: {e}")
             log_xray_errors()

@@ -2,11 +2,10 @@ import os
 import sys
 import logging
 import asyncio
-import requests
 import time
 import datetime
 from aiogram import Bot, Dispatcher, html, F
-from aiogram.types import Message, InlineKeyboardMarkup, InlineKeyboardButton, WebAppInfo, BufferedInputFile
+from aiogram.types import Message, InlineKeyboardMarkup, InlineKeyboardButton, WebAppInfo, BufferedInputFile, InputMediaPhoto, CallbackQuery
 from aiogram.filters import CommandStart, Command
 from pathlib import Path
 
@@ -29,12 +28,32 @@ from backend.i18n import t
 # Настройка логирования
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
 
+def generate_qr_code_png(data: str) -> bytes:
+    import io
+    import qrcode
+    qr = qrcode.QRCode(
+        version=1,
+        error_correction=qrcode.constants.ERROR_CORRECT_L,
+        box_size=10,
+        border=4,
+    )
+    qr.add_data(data)
+    qr.make(fit=True)
+    img = qr.make_image(fill_color="black", back_color="white")
+    
+    buf = io.BytesIO()
+    img.save(buf, format="PNG")
+    return buf.getvalue()
+
 # Получение публичного IP-адреса сервера
-def get_public_ip():
+async def get_public_ip():
+    import aiohttp
     try:
-        response = requests.get("https://api.ipify.org?format=json", timeout=5)
-        if response.status_code == 200:
-            return response.json().get("ip", "127.0.0.1")
+        async with aiohttp.ClientSession() as session:
+            async with session.get("https://api.ipify.org?format=json", timeout=aiohttp.ClientTimeout(total=5)) as response:
+                if response.status == 200:
+                    res_json = await response.json()
+                    return res_json.get("ip", "127.0.0.1")
     except Exception as e:
         logging.warning(f"Could not determine public IP: {e}")
     return "127.0.0.1"
@@ -79,7 +98,7 @@ if dp:
             logging.warning(f"Unauthorized Telegram access attempt from ID {user_id}")
             return
             
-        public_ip = get_public_ip()
+        public_ip = await get_public_ip()
         port = settings.PANEL_PORT
         secret_path = settings.PANEL_SECRET_PATH
         
@@ -223,7 +242,7 @@ if dp:
                 await message.reply(t("my_not_found", lang, "bot"))
                 return
                 
-            public_ip = get_public_ip()
+            public_ip = await get_public_ip()
             port = settings.PANEL_PORT
             base_url = f"http://{public_ip}:{port}"
             
@@ -265,9 +284,265 @@ if dp:
                 msg += f"{t('sub_click_to_copy', lang, 'bot')}"
                 await message.reply(msg, parse_mode="HTML")
                 
+                # Генерируем и отправляем QR-коды медиагруппой
+                media_group = []
+                for idx, link in enumerate(links):
+                    try:
+                        qr_bytes = generate_qr_code_png(link)
+                        photo_file = BufferedInputFile(qr_bytes, filename=f"qr_{idx}.png")
+                        proto_name = link.split("://")[0].upper() if "://" in link else "VPN"
+                        caption = f"QR-код {proto_name} ({idx+1})"
+                        media_group.append(InputMediaPhoto(media=photo_file, caption=caption))
+                    except Exception as qr_err:
+                        logging.error(f"Error generating QR code in mini_bot: {qr_err}")
+                
+                if media_group:
+                    try:
+                        await message.answer_media_group(media=media_group)
+                    except Exception as send_err:
+                        logging.error(f"Error sending QR media group in mini_bot: {send_err}")
+                
         except Exception as e:
             logging.error(f"Error checking sub info in bot: {e}")
             await message.reply(t("my_error", lang, "bot", error=str(e)))
+
+    @dp.message(Command("ban"))
+    async def cmd_ban(message: Message):
+        user_id = message.from_user.id
+        lang = message.from_user.language_code or "ru"
+        
+        if not is_admin(user_id):
+            await message.reply(t("access_denied_general", lang, "bot"))
+            return
+            
+        args = message.text.split(maxsplit=2)
+        if len(args) < 2:
+            await message.reply(t("ban_help", lang, "bot"), parse_mode="HTML")
+            return
+            
+        email = args[1].strip()
+        reason = args[2].strip() if len(args) > 2 else "Blocked via Telegram Bot"
+        
+        try:
+            from backend.database import db_session
+            from backend.models import ClientStats, Inbound
+            from backend.xray import restart_xray, remove_client_api
+            from backend.hysteria import restart_hysteria, kick_client_hysteria_api
+            import json
+            
+            disabled_count = 0
+            with db_session() as session:
+                clients = session.query(ClientStats).filter_by(email=email).all()
+                for c in clients:
+                    if c.enable == 1:
+                        c.enable = 0
+                        c.block_reason = reason
+                        ib_id = c.inbound_id
+                        
+                        inbound = session.query(Inbound).filter_by(id=ib_id).first()
+                        if inbound:
+                            try:
+                                ib_settings = json.loads(inbound.settings or "{}")
+                                ib_clients = ib_settings.get("clients", [])
+                                for sc in ib_clients:
+                                    if sc.get("email") == email:
+                                        sc["enable"] = False
+                                        break
+                                inbound.settings = json.dumps(ib_settings)
+                            except Exception as e:
+                                logging.error(f"Error updating inbound settings JSON: {e}")
+                                
+                            if inbound.protocol == "hysteria2":
+                                try:
+                                    kick_client_hysteria_api(ib_id, email)
+                                except Exception as e:
+                                    logging.error(f"Failed to kick Hysteria2 client: {e}")
+                            else:
+                                try:
+                                    remove_client_api(ib_id, email)
+                                except Exception as e:
+                                    logging.error(f"Failed to remove Xray client: {e}")
+                                    
+                        disabled_count += 1
+                session.commit()
+                
+            if disabled_count > 0:
+                restart_xray()
+                restart_hysteria()
+                await message.reply(t("ban_success", lang, "bot", email=email, reason=reason), parse_mode="HTML")
+            else:
+                await message.reply(t("ban_error", lang, "bot", error="Client not found or already blocked"))
+        except Exception as e:
+            logging.error(f"Error banning via bot: {e}")
+            await message.reply(t("ban_error", lang, "bot", error=str(e)))
+
+    @dp.message(Command("unban"))
+    async def cmd_unban(message: Message):
+        user_id = message.from_user.id
+        lang = message.from_user.language_code or "ru"
+        
+        if not is_admin(user_id):
+            await message.reply(t("access_denied_general", lang, "bot"))
+            return
+            
+        args = message.text.split(maxsplit=1)
+        if len(args) < 2:
+            await message.reply(t("unban_help", lang, "bot"), parse_mode="HTML")
+            return
+            
+        email = args[1].strip()
+        
+        try:
+            from backend.database import db_session
+            from backend.models import ClientStats, Inbound
+            from backend.xray import restart_xray
+            from backend.hysteria import restart_hysteria
+            import json
+            
+            enabled_count = 0
+            with db_session() as session:
+                clients = session.query(ClientStats).filter_by(email=email).all()
+                for c in clients:
+                    if c.enable == 0:
+                        c.enable = 1
+                        c.block_reason = None
+                        ib_id = c.inbound_id
+                        
+                        inbound = session.query(Inbound).filter_by(id=ib_id).first()
+                        if inbound:
+                            try:
+                                ib_settings = json.loads(inbound.settings or "{}")
+                                ib_clients = ib_settings.get("clients", [])
+                                for sc in ib_clients:
+                                    if sc.get("email") == email:
+                                        sc["enable"] = True
+                                        break
+                                inbound.settings = json.dumps(ib_settings)
+                            except Exception as e:
+                                logging.error(f"Error updating inbound settings JSON: {e}")
+                                
+                        enabled_count += 1
+                session.commit()
+                
+            if enabled_count > 0:
+                restart_xray()
+                restart_hysteria()
+                await message.reply(t("unban_success", lang, "bot", email=email), parse_mode="HTML")
+            else:
+                await message.reply(t("unban_error", lang, "bot", error="Client not found or already active"))
+        except Exception as e:
+            logging.error(f"Error unbanning via bot: {e}")
+            await message.reply(t("unban_error", lang, "bot", error=str(e)))
+
+    @dp.message(Command("top"))
+    async def cmd_top(message: Message):
+        user_id = message.from_user.id
+        lang = message.from_user.language_code or "ru"
+        
+        if not is_admin(user_id):
+            await message.reply(t("access_denied_general", lang, "bot"))
+            return
+            
+        args = message.text.split(maxsplit=1)
+        period = "today"
+        if len(args) > 1 and args[1].strip().lower() in ["month", "месяц"]:
+            period = "month"
+            
+        try:
+            from backend.database import db_session
+            from backend.models import ClientTrafficDaily
+            from sqlalchemy import func
+            import datetime
+            
+            today_str = datetime.date.today().isoformat()
+            month_prefix = datetime.date.today().strftime("%Y-%m-%")
+            
+            with db_session() as session:
+                if period == "today":
+                    records = session.query(
+                        ClientTrafficDaily.email,
+                        ClientTrafficDaily.up,
+                        ClientTrafficDaily.down
+                    ).filter(ClientTrafficDaily.date == today_str).all()
+                else:
+                    records = session.query(
+                        ClientTrafficDaily.email,
+                        func.sum(ClientTrafficDaily.up).label("up"),
+                        func.sum(ClientTrafficDaily.down).label("down")
+                    ).filter(ClientTrafficDaily.date.like(month_prefix)).group_by(ClientTrafficDaily.email).all()
+                    
+            result = []
+            for r in records:
+                up_val = int(r.up or 0)
+                down_val = int(r.down or 0)
+                result.append({
+                    "email": r.email,
+                    "total": up_val + down_val
+                })
+                
+            result.sort(key=lambda x: x["total"], reverse=True)
+            top_list = result[:10]
+            
+            title = "🏆 <b>Топ потребителей трафика (Сегодня)</b>" if period == "today" else "🏆 <b>Топ потребителей трафика (За месяц)</b>"
+            msg = f"{title}\n"
+            msg += "━━━━━━━━━━━━━━━━━━━━━━━━\n"
+            
+            if not top_list:
+                msg += "Нет данных по активности пользователей за этот период."
+            else:
+                for idx, item in enumerate(top_list, 1):
+                    gb = item["total"] / (1024**3)
+                    msg += f"{idx}. 👤 <code>{html.escape(item['email'])}</code>: <b>{gb:.3f} GB</b>\n"
+            
+            msg += "\n<i>Для переключения используйте: <code>/top today</code> или <code>/top month</code></i>"
+            await message.reply(msg, parse_mode="HTML")
+        except Exception as e:
+            logging.error(f"Error getting top traffic: {e}")
+            await message.reply(f"❌ Ошибка при получении статистики: {e}")
+
+    @dp.callback_query(F.data.startswith("tg_2fa_approve:"))
+    async def cb_tg_2fa_approve(callback: CallbackQuery):
+        token = callback.data.split(":", 1)[1]
+        import aiohttp
+        url = f"http://127.0.0.1:{settings.PANEL_PORT}/api/auth/tg-2fa/action"
+        try:
+            async with aiohttp.ClientSession() as session:
+                async with session.post(url, json={"token": token, "action": "approve"}) as resp:
+                    if resp.status == 200:
+                        res = await resp.json()
+                        if res.get("success"):
+                            await callback.message.edit_text(f"✅ <b>Вход разрешен.</b>", parse_mode="HTML")
+                        else:
+                            await callback.answer(f"❌ Ошибка: {res.get('msg')}", show_alert=True)
+                    else:
+                        await callback.answer(f"❌ Ошибка HTTP {resp.status}", show_alert=True)
+        except Exception as e:
+            logging.error(f"Error approving tg 2fa: {e}")
+            await callback.answer(f"❌ Ошибка соединения: {e}", show_alert=True)
+
+    @dp.callback_query(F.data.startswith("tg_2fa_block:"))
+    async def cb_tg_2fa_block(callback: CallbackQuery):
+        parts = callback.data.split(":", 2)
+        token = parts[1]
+        ip = parts[2] if len(parts) > 2 else "unknown"
+        
+        import aiohttp
+        url = f"http://127.0.0.1:{settings.PANEL_PORT}/api/auth/tg-2fa/action"
+        try:
+            async with aiohttp.ClientSession() as session:
+                async with session.post(url, json={"token": token, "action": "block"}) as resp:
+                    if resp.status == 200:
+                        res = await resp.json()
+                        if res.get("success"):
+                            await callback.message.edit_text(f"🛑 <b>IP {ip} заблокирован.</b>", parse_mode="HTML")
+                        else:
+                            await callback.answer(f"❌ Ошибка: {res.get('msg')}", show_alert=True)
+                    else:
+                        await callback.answer(f"❌ Ошибка HTTP {resp.status}", show_alert=True)
+        except Exception as e:
+            logging.error(f"Error blocking ip tg 2fa: {e}")
+            await callback.answer(f"❌ Ошибка соединения: {e}", show_alert=True)
+
 
 async def main():
     if not bot:

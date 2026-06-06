@@ -39,7 +39,7 @@ class ClientStats(Base):
     
     id = Column(Integer, primary_key=True, autoincrement=True)
     inbound_id = Column(Integer, ForeignKey("inbounds.id", ondelete="CASCADE"), nullable=False)
-    email = Column(String, nullable=False)
+    email = Column(String, nullable=False, index=True)
     client_uuid_or_pwd = Column(String, nullable=False)
     up = Column(BigInteger, default=0)
     down = Column(BigInteger, default=0)
@@ -84,7 +84,7 @@ class AuditLog(Base):
     __tablename__ = "audit_logs"
     
     id = Column(Integer, primary_key=True, autoincrement=True)
-    timestamp = Column(BigInteger, nullable=False)  # UTC epoch seconds
+    timestamp = Column(BigInteger, nullable=False, index=True)  # UTC epoch seconds
     username = Column(String, nullable=False)
     action = Column(String, nullable=False)
     target = Column(String, nullable=True)
@@ -97,7 +97,7 @@ class UserSession(Base):
     session_id = Column(String, primary_key=True)
     username = Column(String, nullable=False)
     created_at = Column(BigInteger, nullable=False)  # UTC epoch seconds
-    expires_at = Column(BigInteger, nullable=False)  # UTC epoch seconds
+    expires_at = Column(BigInteger, nullable=False, index=True)  # UTC epoch seconds
 
 
 class Outbound(Base):

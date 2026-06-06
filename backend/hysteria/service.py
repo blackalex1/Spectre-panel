@@ -60,9 +60,9 @@ def get_hysteria_logs(lines_count: int = 150) -> list:
         return ["Лог-файл пуст или еще не создан."]
         
     try:
-        with open(backend.hysteria.HYSTERIA_LOG_PATH, "r", encoding="utf-8", errors="ignore") as f:
-            lines = f.readlines()
-            return [line.strip() for line in lines[-lines_count:]]
+        from backend.utils import read_last_lines
+        lines = read_last_lines(backend.hysteria.HYSTERIA_LOG_PATH, lines_count)
+        return [line.strip() for line in lines]
     except Exception as e:
         return [f"Ошибка чтения логов: {e}"]
 

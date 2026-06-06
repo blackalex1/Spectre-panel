@@ -3,7 +3,8 @@ services:
     image: postgres:16-alpine
     container_name: vpn-db
     restart: always
-    network_mode: host
+    ports:
+      - "127.0.0.1:5432:5432"
     env_file:
       - ./config/.env
     volumes:
@@ -25,6 +26,10 @@ services:
       - PYTHONUNBUFFERED=1
     env_file:
       - ./config/.env
+    ulimits:
+      nofile:
+        soft: 1000000
+        hard: 1000000
 
 volumes:
   pgdata:

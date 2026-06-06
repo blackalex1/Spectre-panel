@@ -451,6 +451,12 @@
     "sub_status": "⚡ Статус",
     "sub_keys": "🔗 <b>Ключи подключения:</b>",
     "sub_click_to_copy": "<i>Нажмите на ключ, чтобы скопировать его.</i>",
-    "my_error": "❌ Ошибка проверки подписки: {error}"
+    "my_error": "❌ Ошибка проверки подписки: {error}",
+    "ban_help": "ℹ️ <b>Использование:</b>\n<code>/ban &lt;email&gt; [причина]</code>",
+    "ban_success": "🔴 <b>Клиент {email} успешно заблокирован.</b>\nПричина: <code>{reason}</code>",
+    "ban_error": "❌ Ошибка блокировки клиента: {error}",
+    "unban_help": "ℹ️ <b>Использование:</b>\n<code>/unban &lt;email&gt;</code>",
+    "unban_success": "🟢 <b>Клиент {email} успешно разблокирован.</b>",
+    "unban_error": "❌ Ошибка разблокировки клиента: {error}"
   }
 }

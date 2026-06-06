@@ -20,10 +20,18 @@ if database_url.startswith("postgres://"):
 
 # Добавляем параметры подключения для SQLite
 connect_args = {}
+pool_args = {}
 if database_url.startswith("sqlite"):
     connect_args = {"check_same_thread": False}
+elif database_url.startswith("postgresql"):
+    pool_args = {
+        "pool_size": 20,
+        "max_overflow": 10,
+        "pool_timeout": 30,
+        "pool_recycle": 1800
+    }
 
-engine = create_engine(database_url, connect_args=connect_args)
+engine = create_engine(database_url, connect_args=connect_args, **pool_args)
 session_factory = sessionmaker(bind=engine)
 Session = scoped_session(session_factory)
 
@@ -91,6 +99,17 @@ def init_db():
                     conn.execute(text("ALTER TABLE outbounds ADD COLUMN up BIGINT DEFAULT 0"))
                     conn.execute(text("ALTER TABLE outbounds ADD COLUMN down BIGINT DEFAULT 0"))
                     conn.commit()
+
+            # Создание индексов (поддерживается и в PostgreSQL, и в SQLite через IF NOT EXISTS)
+            if "client_stats" in inspector.get_table_names():
+                conn.execute(text("CREATE INDEX IF NOT EXISTS ix_client_stats_email ON client_stats (email)"))
+                conn.commit()
+            if "audit_logs" in inspector.get_table_names():
+                conn.execute(text("CREATE INDEX IF NOT EXISTS ix_audit_logs_timestamp ON audit_logs (timestamp)"))
+                conn.commit()
+            if "user_sessions" in inspector.get_table_names():
+                conn.execute(text("CREATE INDEX IF NOT EXISTS ix_user_sessions_expires_at ON user_sessions (expires_at)"))
+                conn.commit()
 
     except Exception as e:
         if "postgresql" in admin_url:

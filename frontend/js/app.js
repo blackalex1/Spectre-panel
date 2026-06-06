@@ -105,24 +105,73 @@ async function startPanel() {
     document.getElementById("app-container").classList.add("active");
 }
 
+let tg2faPollInterval = null;
+
+function startTg2faPolling(token) {
+    if (tg2faPollInterval) {
+        clearInterval(tg2faPollInterval);
+    }
+    const errorDiv = document.getElementById("login-error");
+    const tgMsgDiv = document.getElementById("login-tg-2fa-message");
+    const btnBack = document.getElementById("btn-login-2fa-back");
+
+    tg2faPollInterval = setInterval(async () => {
+        try {
+            const res = await apiFetch(`/api/auth/tg-2fa/poll?token=${token}`);
+            if (res) {
+                if (res.status === "approved") {
+                    clearInterval(tg2faPollInterval);
+                    tg2faPollInterval = null;
+                    const csrfRes = await apiFetch("/csrf-token");
+                    if (csrfRes && csrfRes.success) {
+                        setCsrfToken(csrfRes.obj);
+                    }
+                    await startPanel();
+                } else if (res.status === "blocked") {
+                    clearInterval(tg2faPollInterval);
+                    tg2faPollInterval = null;
+                    if (errorDiv) errorDiv.innerText = "Этот IP-адрес был заблокирован.";
+                    if (btnBack) btnBack.click();
+                } else if (res.status === "expired") {
+                    clearInterval(tg2faPollInterval);
+                    tg2faPollInterval = null;
+                    if (errorDiv) errorDiv.innerText = "Время подтверждения входа истекло.";
+                    if (btnBack) btnBack.click();
+                }
+            }
+        } catch (e) {
+            console.error("Polling error:", e);
+        }
+    }, 2000);
+}
+
 function setupLoginListener() {
     const loginForm = document.getElementById("login-form");
     const credentialsGroup = document.getElementById("login-credentials-group");
     const faGroup = document.getElementById("login-2fa-group");
     const btnBack = document.getElementById("btn-login-2fa-back");
     const totpInput = document.getElementById("login-totp-code");
+    const totpGroup = document.getElementById("login-totp-group");
+    const tgMsgDiv = document.getElementById("login-tg-2fa-message");
     
     let is2faState = false;
     let cachedUsername = "";
     let cachedPassword = "";
+    let currentTgToken = "";
 
     if (btnBack) {
         btnBack.addEventListener("click", () => {
             is2faState = false;
+            if (tg2faPollInterval) {
+                clearInterval(tg2faPollInterval);
+                tg2faPollInterval = null;
+            }
             if (credentialsGroup) credentialsGroup.style.display = "block";
             if (faGroup) faGroup.style.display = "none";
             if (btnBack) btnBack.style.display = "none";
             if (totpInput) totpInput.value = "";
+            if (tgMsgDiv) tgMsgDiv.style.display = "none";
+            if (totpGroup) totpGroup.style.display = "block";
             const errorDiv = document.getElementById("login-error");
             if (errorDiv) errorDiv.innerText = "";
         });
@@ -157,6 +206,9 @@ function setupLoginListener() {
                     return;
                 }
                 payload = { username: cachedUsername, password: cachedPassword, code };
+                if (currentTgToken) {
+                    payload.token = currentTgToken;
+                }
             }
             
             const res = await apiFetch("/login", {
@@ -171,8 +223,29 @@ function setupLoginListener() {
                     if (credentialsGroup) credentialsGroup.style.display = "none";
                     if (faGroup) faGroup.style.display = "block";
                     if (btnBack) btnBack.style.display = "block";
-                    if (totpInput) totpInput.focus();
+                    
+                    if (res.type === "tg_2fa") {
+                        if (totpGroup) totpGroup.style.display = "none";
+                        if (tgMsgDiv) tgMsgDiv.style.display = "block";
+                        currentTgToken = res.token;
+                        startTg2faPolling(res.token);
+                    } else if (res.type === "both") {
+                        if (totpGroup) totpGroup.style.display = "block";
+                        if (tgMsgDiv) tgMsgDiv.style.display = "block";
+                        if (totpInput) totpInput.focus();
+                        currentTgToken = res.token;
+                        startTg2faPolling(res.token);
+                    } else {
+                        if (totpGroup) totpGroup.style.display = "block";
+                        if (tgMsgDiv) tgMsgDiv.style.display = "none";
+                        if (totpInput) totpInput.focus();
+                        currentTgToken = "";
+                    }
                 } else {
+                    if (tg2faPollInterval) {
+                        clearInterval(tg2faPollInterval);
+                        tg2faPollInterval = null;
+                    }
                     const csrfRes = await apiFetch("/csrf-token");
                     if (csrfRes && csrfRes.success) {
                         setCsrfToken(csrfRes.obj);

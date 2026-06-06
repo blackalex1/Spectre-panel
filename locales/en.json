@@ -451,6 +451,12 @@
     "sub_status": "⚡ Status",
     "sub_keys": "🔗 <b>Connection Keys:</b>",
     "sub_click_to_copy": "<i>Click on any key to copy it.</i>",
-    "my_error": "❌ Subscription query error: {error}"
+    "my_error": "❌ Subscription query error: {error}",
+    "ban_help": "ℹ️ <b>Usage:</b>\n<code>/ban &lt;email&gt; [reason]</code>",
+    "ban_success": "🔴 <b>Client {email} blocked successfully.</b>\nReason: <code>{reason}</code>",
+    "ban_error": "❌ Error blocking client: {error}",
+    "unban_help": "ℹ️ <b>Usage:</b>\n<code>/unban &lt;email&gt;</code>",
+    "unban_success": "🟢 <b>Client {email} unblocked successfully.</b>",
+    "unban_error": "❌ Error unblocking client: {error}"
   }
 }

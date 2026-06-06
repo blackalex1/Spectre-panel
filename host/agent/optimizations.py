@@ -82,6 +82,41 @@ def get_optimization_status() -> bool:
         pass
     return False
 
+def ensure_ethtool_installed() -> bool:
+    """Checks if ethtool is installed, and if not, attempts to install it."""
+    import shutil
+    if shutil.which("ethtool"):
+        return True
+
+    logging.info("ethtool is not installed. Attempting to install it...")
+    if shutil.which("apt-get"):
+        try:
+            subprocess.run(["apt-get", "update"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            res = subprocess.run(["apt-get", "install", "-y", "ethtool"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            if res.returncode == 0:
+                logging.info("ethtool installed successfully via apt-get.")
+                return True
+        except Exception as e:
+            logging.warning(f"Failed to install ethtool via apt-get: {e}")
+    elif shutil.which("yum"):
+        try:
+            res = subprocess.run(["yum", "install", "-y", "ethtool"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            if res.returncode == 0:
+                logging.info("ethtool installed successfully via yum.")
+                return True
+        except Exception as e:
+            logging.warning(f"Failed to install ethtool via yum: {e}")
+    elif shutil.which("apk"):
+        try:
+            res = subprocess.run(["apk", "add", "ethtool"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            if res.returncode == 0:
+                logging.info("ethtool installed successfully via apk.")
+                return True
+        except Exception as e:
+            logging.warning(f"Failed to install ethtool via apk: {e}")
+
+    return False
+
 def apply_network_optimizations() -> tuple[bool, str]:
     """Applies kernel networking sysctl presets and nofile limits for high loads."""
     if sys.platform != "linux":
@@ -131,6 +166,23 @@ root hard nofile 1000000
 """
         with open(limits_file, "w") as f:
             f.write(limits_content)
+            
+        # Try to find the default network interface and enable UDP GSO/GRO
+        try:
+            if ensure_ethtool_installed():
+                res = subprocess.run(["ip", "route", "show", "default"], capture_output=True, text=True)
+                if res.returncode == 0 and res.stdout:
+                    parts = res.stdout.split()
+                    if "dev" in parts:
+                        idx = parts.index("dev")
+                        if idx + 1 < len(parts):
+                            interface = parts[idx + 1]
+                            logging.info(f"Enabling UDP GSO/GRO on default interface: {interface}")
+                            subprocess.run(["ethtool", "-K", interface, "tx-udp-segmentation", "on", "rx-gro", "on"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            else:
+                logging.warning("ethtool is missing and could not be auto-installed. Skipping UDP GSO/GRO configuration.")
+        except Exception as e:
+            logging.warning(f"Failed to enable UDP GSO/GRO: {e}")
             
         return True, "Network optimized (sysctl parameters and security limits written)."
     except Exception as e:

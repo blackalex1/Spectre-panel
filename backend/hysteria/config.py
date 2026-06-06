@@ -99,7 +99,7 @@ def generate_hysteria_config(inbound_id: int, port: int, clients: list, stream_s
             "userpass": auth_userpass
         },
         "tls": tls_config,
-        "admin": {
+        "trafficStats": {
             "listen": f"127.0.0.1:{admin_port}"
         }
     }
