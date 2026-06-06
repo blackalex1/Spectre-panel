@@ -108,6 +108,10 @@ export async function loadSettings() {
         if (telegramAdminIdsInput) {
             telegramAdminIdsInput.value = setObj.telegram_admin_ids || "";
         }
+        const telegram2faEnableInput = document.getElementById("setting-telegram-2fa-enable");
+        if (telegram2faEnableInput) {
+            telegram2faEnableInput.checked = setObj.telegram_2fa_enabled !== undefined ? setObj.telegram_2fa_enabled : false;
+        }
         
         const backupEnableInput = document.getElementById("setting-backup-enable");
         if (backupEnableInput) {
@@ -278,6 +282,8 @@ export function setupSettingsListeners() {
             const telegramToken = telegramTokenInput ? telegramTokenInput.value.trim() : "";
             const telegramAdminIdsInput = document.getElementById("setting-telegram-admin-ids");
             const telegramAdminIds = telegramAdminIdsInput ? telegramAdminIdsInput.value.trim() : "";
+            const telegram2faEnableInput = document.getElementById("setting-telegram-2fa-enable");
+            const telegram2faEnable = telegram2faEnableInput ? telegram2faEnableInput.checked : false;
 
             btnSaveTelegram.disabled = true;
             const res = await apiFetch("/api/settings/update", {
@@ -285,7 +291,8 @@ export function setupSettingsListeners() {
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({
                     telegram_bot_token: telegramToken,
-                    telegram_admin_ids: telegramAdminIds
+                    telegram_admin_ids: telegramAdminIds,
+                    telegram_2fa_enabled: telegram2faEnable
                 })
             });
             btnSaveTelegram.disabled = false;

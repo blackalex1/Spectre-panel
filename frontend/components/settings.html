@@ -186,6 +186,12 @@
                 <h3 data-i18n="settings_telegram_config">Интеграция с Telegram (Mini App)</h3>
                 <p class="card-desc" data-i18n="settings_telegram_desc">Настройки Telegram-бота для оповещений администратора о блокировках и интеграции Mini App.</p>
                 <div class="settings-form-content" style="margin-top: auto;">
+                    <div style="display: flex; flex-direction: column; gap: 12px; background: var(--bg-input); border: 1px solid var(--border-color); border-radius: 12px; padding: 15px 20px; margin-bottom: 20px;">
+                        <label class="checkbox-container" style="display: flex; align-items: center; gap: 10px; cursor: pointer; color: var(--text-secondary); font-size: 14px; font-weight: normal; text-transform: none; margin-bottom: 0;">
+                            <input type="checkbox" id="setting-telegram-2fa-enable">
+                            <span>Использовать подтверждение входа через Telegram (2FA)</span>
+                        </label>
+                    </div>
                     <div class="input-group">
                         <label for="setting-telegram-token" data-i18n="settings_telegram_token">Токен Telegram-бота (Bot Token)</label>
                         <input type="text" id="setting-telegram-token" placeholder="123456789:ABCDefGhIJKlmNoPQRsT" data-i18n-placeholder="settings_telegram_token_placeholder">

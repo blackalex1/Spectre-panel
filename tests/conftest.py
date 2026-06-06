@@ -57,6 +57,28 @@ def ensure_postgres_db_exists(admin_url: str):
     finally:
         temp_engine.dispose()
 
+    # Даем приложению (DML пользователю) права в тестовой базе
+    try:
+        app_user = "vpn_app"
+        if test_app_url:
+            parsed_app = urllib.parse.urlparse(test_app_url)
+            if parsed_app.username:
+                app_user = parsed_app.username
+                
+        grant_engine = create_engine(admin_url, isolation_level="AUTOCOMMIT")
+        with grant_engine.connect() as conn:
+            conn.execute(text(f"GRANT USAGE ON SCHEMA public TO {app_user}"))
+            conn.execute(text(f"GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA public TO {app_user}"))
+            conn.execute(text(f"GRANT ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA public TO {app_user}"))
+            conn.execute(text(f"ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL PRIVILEGES ON TABLES TO {app_user}"))
+            conn.execute(text(f"ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL PRIVILEGES ON SEQUENCES TO {app_user}"))
+            print(f"Granted database privileges to {app_user} in {db_name}")
+    except Exception as e:
+        print(f"Warning: Failed to grant database privileges in {db_name}: {e}")
+    finally:
+        if 'grant_engine' in locals():
+            grant_engine.dispose()
+
 if not test_app_url:
     orig_app_url = backend.config.settings.DATABASE_URL
     orig_admin_url = backend.config.settings.DATABASE_ADMIN_URL or orig_app_url

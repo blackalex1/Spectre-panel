@@ -166,7 +166,7 @@ def process_stats_deltas(stats_list):
                 update_client_traffic(ib_id, target, up_add, down_add)
                 
         elif metric_type == "inbound":
-            if target.startswith("inbound-"):
+            if target.startswith("inbound-") and not target.endswith("-socks"):
                 try:
                     ib_id = int(target.split("-")[1])
                     update_inbound_traffic(ib_id, up_add, down_add)
@@ -206,9 +206,9 @@ def get_xray_logs(lines_count: int = 150) -> list:
         return ["Лог-файл пуст или еще не создан."]
         
     try:
-        with open(backend.xray.XRAY_LOG_PATH, "r", encoding="utf-8", errors="ignore") as f:
-            lines = f.readlines()
-            return [line.strip() for line in lines[-lines_count:]]
+        from backend.utils import read_last_lines
+        lines = read_last_lines(backend.xray.XRAY_LOG_PATH, lines_count)
+        return [line.strip() for line in lines]
     except Exception as e:
         return [f"Ошибка чтения логов: {e}"]
 

@@ -1,7 +1,7 @@
 import asyncio
 import logging
 from contextlib import asynccontextmanager
-from fastapi import FastAPI, Request
+from fastapi import FastAPI, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import HTMLResponse
@@ -124,6 +124,10 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )  # nosec B104
+
+# Подключение сжатия Gzip для ответов API
+from fastapi.middleware.gzip import GZipMiddleware
+app.add_middleware(GZipMiddleware, minimum_size=1000)
 
 # Middleware для отключения кэширования фронтенда
 @app.middleware("http")

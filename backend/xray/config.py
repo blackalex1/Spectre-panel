@@ -167,6 +167,13 @@ def generate_xray_config_json() -> dict:
                             }
                         ]
             xray_inbound["streamSettings"] = stream_settings
+            
+        if "streamSettings" not in xray_inbound:
+            xray_inbound["streamSettings"] = {}
+        if "sockopt" not in xray_inbound["streamSettings"]:
+            xray_inbound["streamSettings"]["sockopt"] = {}
+        xray_inbound["streamSettings"]["sockopt"]["reusePort"] = True
+        
         if sniffing:
             xray_inbound["sniffing"] = sniffing
             
@@ -250,6 +257,20 @@ def generate_xray_config_json() -> dict:
             ]
         },
         "stats": {},
+        "policy": {
+            "levels": {
+                "0": {
+                    "statsUserUplink": True,
+                    "statsUserDownlink": True
+                }
+            },
+            "system": {
+                "statsInboundUplink": True,
+                "statsInboundDownlink": True,
+                "statsOutboundUplink": True,
+                "statsOutboundDownlink": True
+            }
+        },
         "inbounds": xray_inbounds,
         "outbounds": xray_outbounds,
         "routing": {

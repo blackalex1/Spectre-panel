@@ -7,6 +7,7 @@ from backend.routes.xray import router as xray_router
 from backend.routes.hysteria import router as hysteria_router
 from backend.routes.routing import router as routing_router
 from backend.routes.system import router as system_router
+from backend.routes.security import router as security_router
 
 router = APIRouter()
 
@@ -17,3 +18,5 @@ router.include_router(xray_router)
 router.include_router(hysteria_router)
 router.include_router(routing_router)
 router.include_router(system_router)
+router.include_router(security_router)
+

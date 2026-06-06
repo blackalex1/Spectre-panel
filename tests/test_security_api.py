@@ -1,0 +1,335 @@
+import pytest
+import json
+from backend.database import db_session
+from backend.models import Inbound, ClientStats
+
+def test_security_auth_decoy(client):
+    """
+    Проверка, что при неверном или отсутствующем токене эндпоинты возвращают Decoy (404).
+    """
+    # Без токена
+    response = client.get("/api/security/system-status")
+    assert response.status_code == 404
+    assert "404 Not Found" in response.text
+    
+    # С неверным токеном
+    headers = {"Authorization": "Bearer invalid_token"}
+    response = client.get("/api/security/system-status", headers=headers)
+    assert response.status_code == 404
+
+def test_security_system_status(client):
+    """
+    Проверка эндпоинта /api/security/system-status с верным токеном.
+    """
+    headers = {"Authorization": "Bearer test_bearer_token"}
+    response = client.get("/api/security/system-status", headers=headers)
+    assert response.status_code == 200
+    data = response.json()
+    assert data["success"] is True
+    assert "counts" in data
+    assert "total_inbounds" in data["counts"]
+    assert "total_clients" in data["counts"]
+
+def test_security_backup(client):
+    """
+    Проверка эндпоинта /api/security/backup.
+    """
+    headers = {"Authorization": "Bearer test_bearer_token"}
+    response = client.get("/api/security/backup", headers=headers)
+    assert response.status_code == 200
+    data = response.json()
+    assert data["success"] is True
+    assert "dump" in data
+
+def test_security_search_client_and_disable(client):
+    """
+    Проверка эндпоинтов поиска и блокировки клиента.
+    """
+    headers = {"Authorization": "Bearer test_bearer_token"}
+    
+    # 1. Создаем тестового клиента в БД
+    with db_session() as session:
+        session.query(ClientStats).delete()
+        session.query(Inbound).delete()
+        
+        ib = Inbound(
+            remark="Test Inbound for Security API",
+            port=20800,
+            protocol="vless",
+            settings="{}",
+            stream_settings="{}",
+            sniffing="{}",
+            enable=1
+        )
+        session.add(ib)
+        session.flush()
+        
+        c = ClientStats(
+            inbound_id=ib.id,
+            email="threat_user@example.com",
+            client_uuid_or_pwd="test-uuid-for-security-api-test",
+            up=1000,
+            down=2000,
+            total=1000000,
+            expiry_time=0,
+            enable=1,
+            limit_ip=1,
+            block_reason=""
+        )
+        session.add(c)
+        session.commit()
+
+    # 2. Выполняем поиск клиента по email
+    response = client.get("/api/security/search-client?key=threat_user@example.com", headers=headers)
+    assert response.status_code == 200
+    data = response.json()
+    assert data["success"] is True
+    assert len(data["clients"]) == 1
+    assert data["clients"][0]["client"]["email"] == "threat_user@example.com"
+    assert data["clients"][0]["client"]["enable"] == 1
+
+    # 3. Блокируем клиента через API
+    response = client.post("/api/security/disable-client", data={"email": "threat_user@example.com"}, headers=headers)
+    assert response.status_code == 200
+    data = response.json()
+    assert data["success"] is True
+
+    # 4. Проверяем, что в БД клиент заблокирован
+    with db_session() as session:
+        c_db = session.query(ClientStats).filter_by(email="threat_user@example.com").first()
+        assert c_db.enable == 0
+        assert c_db.block_reason == "IPS Auto-blocked"
+
+    # 5. Проверяем поиск заблокированного клиента
+    response = client.get("/api/security/search-client?key=threat_user@example.com", headers=headers)
+    assert response.status_code == 200
+    data = response.json()
+    assert data["success"] is True
+    assert data["clients"][0]["client"]["enable"] == 0
+
+    # 6. Разблокируем клиента через API /api/security/enable-client
+    response = client.post("/api/security/enable-client", data={"email": "threat_user@example.com"}, headers=headers)
+    assert response.status_code == 200
+    data = response.json()
+    assert data["success"] is True
+
+    # 7. Проверяем, что в БД клиент снова разблокирован
+    with db_session() as session:
+        c_db = session.query(ClientStats).filter_by(email="threat_user@example.com").first()
+        assert c_db.enable == 1
+        assert c_db.block_reason is None
+
+def test_security_client_by_connection_hysteria(client, tmp_path, monkeypatch):
+    """
+    Проверка поиска клиента по соединению в логах Hysteria.
+    """
+    headers = {"Authorization": "Bearer test_bearer_token"}
+    
+    # 1. Записываем тестовые логи Hysteria
+    log_file = tmp_path / "hysteria.log"
+    log_content = (
+        '2026-06-07T00:30:00Z\tinfo\t[socks5] tcp request\t{"client": "1.2.3.4:5678", "auth": "tunnel_user@example.com", "req": "185.112.14.3:22"}\n'
+    )
+    log_file.write_text(log_content)
+    
+    # Мокаем путь к логам Hysteria в конфигурации
+    monkeypatch.setattr("backend.routes.security.HYSTERIA_LOG_PATH", log_file)
+    
+    # 2. Вызываем эндпоинт поиска
+    response = client.get("/api/security/client-by-connection?dst_ip=185.112.14.3&port=22", headers=headers)
+    assert response.status_code == 200
+    data = response.json()
+    assert data["success"] is True
+    assert data["email"] == "tunnel_user@example.com"
+    assert data["source"] == "hysteria"
+
+
+def test_security_top_traffic(client):
+    """
+    Проверка эндпоинта /api/security/top-traffic.
+    """
+    from backend.models import ClientTrafficDaily
+    import datetime
+    
+    headers = {"Authorization": "Bearer test_bearer_token"}
+    today_str = datetime.date.today().isoformat()
+    
+    with db_session() as session:
+        session.query(ClientTrafficDaily).delete()
+        
+        t1 = ClientTrafficDaily(
+            email="user1@example.com",
+            up=1000 * 1024 * 1024,
+            down=2000 * 1024 * 1024,
+            date=today_str
+        )
+        t2 = ClientTrafficDaily(
+            email="user2@example.com",
+            up=5000 * 1024 * 1024,
+            down=5000 * 1024 * 1024,
+            date=today_str
+        )
+        session.add(t1)
+        session.add(t2)
+        session.commit()
+        
+    response = client.get("/api/security/top-traffic?period=today", headers=headers)
+    assert response.status_code == 200
+    data = response.json()
+    assert data["success"] is True
+    assert data["period"] == "today"
+    
+    users = data["users"]
+    assert len(users) == 2
+    assert users[0]["email"] == "user2@example.com"
+    assert users[0]["total"] == 10000 * 1024 * 1024
+    assert users[1]["email"] == "user1@example.com"
+    assert users[1]["total"] == 3000 * 1024 * 1024
+
+
+def test_telegram_2fa_auth_endpoints(client):
+    """
+    Проверка маршрутов опроса и действий Telegram 2FA (/api/auth/tg-2fa/poll, /api/auth/tg-2fa/action).
+    """
+    from backend.models import SystemSetting
+    import json
+    import time
+    
+    token = "test_tg_2fa_token_12345"
+    
+    # 1. Создаем запрос 2FA в SystemSetting
+    with db_session() as session:
+        session.query(SystemSetting).filter(SystemSetting.key.like("tg_2fa_req_%")).delete()
+        
+        req = SystemSetting(
+            key=f"tg_2fa_req_{token}",
+            value=json.dumps({
+                "username": "admin",
+                "client_ip": "192.168.1.100",
+                "status": "pending",
+                "expires": time.time() + 120
+            })
+        )
+        session.add(req)
+        session.commit()
+        
+    # 2. Опрашиваем статус (ожидаем pending)
+    response = client.get(f"/api/auth/tg-2fa/poll?token={token}")
+    assert response.status_code == 200
+    data = response.json()
+    assert data["success"] is True
+    assert data["status"] == "pending"
+    
+    # 3. Выполняем подтверждение входа (approve)
+    response = client.post("/api/auth/tg-2fa/action", json={"token": token, "action": "approve"})
+    assert response.status_code == 200
+    data = response.json()
+    assert data["success"] is True
+    
+    # 4. Снова опрашиваем статус (ожидаем approved и установку session_id cookie)
+    response = client.get(f"/api/auth/tg-2fa/poll?token={token}")
+    assert response.status_code == 200
+    data = response.json()
+    assert data["success"] is True
+    assert data["status"] == "approved"
+    assert "session_id" in response.cookies
+    
+    # 5. Проверяем блокировку (block) с повторным созданием
+    token_block = "test_tg_2fa_token_block"
+    with db_session() as session:
+        req = SystemSetting(
+            key=f"tg_2fa_req_{token_block}",
+            value=json.dumps({
+                "username": "admin",
+                "client_ip": "1.2.3.4",
+                "status": "pending",
+                "expires": time.time() + 120
+            })
+        )
+        session.add(req)
+        session.commit()
+        
+    response = client.post("/api/auth/tg-2fa/action", json={"token": token_block, "action": "block"})
+    assert response.status_code == 200
+    data = response.json()
+    assert data["success"] is True
+    
+    # 6. Опрашиваем статус после блокировки
+    response = client.get(f"/api/auth/tg-2fa/poll?token={token_block}")
+    assert response.status_code == 200
+    data = response.json()
+    assert data["success"] is True
+    assert data["status"] == "blocked"
+
+
+def test_security_whitelist_sync_and_bypass(client):
+    """
+    Проверка синхронизации белого списка и обхода 2FA и ограничений частоты входа.
+    """
+    from backend.database import set_setting, get_setting
+    from backend.routes.auth import is_ip_whitelisted_sync, check_rate_limit
+    
+    headers = {"Authorization": "Bearer test_bearer_token"}
+    
+    # 1. Синхронизируем белый список с IP "testclient"
+    whitelist_payload = {"ips": ["testclient", "1.2.3.4:12345"]}
+    response = client.post("/api/security/whitelist/sync", json=whitelist_payload, headers=headers)
+    assert response.status_code == 200
+    assert response.json()["success"] is True
+    
+    # Проверяем, что настройка сохранилась в БД
+    assert "testclient" in get_setting("ips_whitelisted_sync", "[]")
+    
+    # 2. Проверяем работу функции is_ip_whitelisted_sync
+    assert is_ip_whitelisted_sync("testclient") is True
+    assert is_ip_whitelisted_sync("1.2.3.4") is True
+    assert is_ip_whitelisted_sync("9.9.9.9") is False
+    
+    # 3. Проверяем обход rate limit
+    # Сбросим лимиты и включим жесткий лимит на 1 попытку
+    set_setting("login_max_attempts", "1")
+    set_setting("login_attempts_period", "10")
+    try:
+        # Для белого IP лимит всегда разрешен (True)
+        assert check_rate_limit("testclient") is True
+        assert check_rate_limit("testclient") is True
+    finally:
+        set_setting("login_max_attempts", "5")
+        set_setting("login_attempts_period", "60")
+        
+    # 4. Проверяем обход 2FA при логине
+    # Сначала включим Telegram 2FA
+    set_setting("telegram_2fa_enabled", "true")
+    try:
+        # Пробуем войти под админом.
+        # Так как IP "testclient" в белом списке, 2FA должна пропуститься, и вход завершится успехом (requires_2fa не вернется)
+        login_payload = {"username": "test_admin", "password": "test_password"}
+        response = client.post("/login", json=login_payload)
+        assert response.status_code == 200
+        assert response.json()["success"] is True
+        assert response.json().get("requires_2fa") is not True
+        assert response.cookies.get("session_id") is not None
+    finally:
+        set_setting("telegram_2fa_enabled", "false")
+
+
+def test_security_unban_ip(client):
+    """
+    Проверка разблокировки IP через API /api/security/unban-ip.
+    """
+    from backend.database import set_setting, get_setting
+    headers = {"Authorization": "Bearer test_bearer_token"}
+    
+    set_setting("banned_login_ips", "1.1.1.1,2.2.2.2,3.3.3.3")
+    
+    response = client.post("/api/security/unban-ip", data={"ip": "2.2.2.2"}, headers=headers)
+    assert response.status_code == 200
+    assert response.json()["success"] is True
+    
+    # Проверяем, что 2.2.2.2 удален из списка
+    banned_ips = get_setting("banned_login_ips", "")
+    assert "2.2.2.2" not in banned_ips
+    assert "1.1.1.1" in banned_ips
+    assert "3.3.3.3" in banned_ips
+
+

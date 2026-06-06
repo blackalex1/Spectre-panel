@@ -34,7 +34,7 @@ def test_hysteria_config_generation():
         
         assert hyst_config["listen"] == ":60003"
         assert hyst_config["auth"]["userpass"]["client2@hysteria.com"] == "pass-client-2"
-        assert hyst_config["admin"]["listen"] == f"127.0.0.1:{10100 + ib_hyst_id}"
+        assert hyst_config["trafficStats"]["listen"] == f"127.0.0.1:{10100 + ib_hyst_id}"
         assert hyst_config["obfs"]["type"] == "salamander"
         assert hyst_config["obfs"]["salamander"]["password"] == "obfs_test_pwd"
         assert hyst_config["bandwidth"]["up"] == "50 mbps"

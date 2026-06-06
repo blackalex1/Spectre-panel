@@ -36,6 +36,7 @@ async def get_settings_api(request: Request):
         "session_timeout_days": int(get_setting("session_timeout_days", str(settings.SESSION_TIMEOUT_DAYS))),
         "telegram_bot_token": get_setting("telegram_bot_token", ""),
         "telegram_admin_ids": get_setting("telegram_admin_ids", ""),
+        "telegram_2fa_enabled": get_setting("telegram_2fa_enabled", "false") == "true",
         "login_max_attempts": int(get_setting("login_max_attempts", str(settings.LOGIN_MAX_ATTEMPTS))),
         "login_attempts_period": int(get_setting("login_attempts_period", str(settings.LOGIN_ATTEMPTS_PERIOD))),
         "login_fail_delay": float(get_setting("login_fail_delay", str(settings.LOGIN_FAIL_DELAY))),
@@ -100,7 +101,7 @@ async def update_settings_api(request: Request):
 
         # 2. Telegram Integration Card
         tg_changed = False
-        if "telegram_bot_token" in data or "telegram_admin_ids" in data:
+        if "telegram_bot_token" in data or "telegram_admin_ids" in data or "telegram_2fa_enabled" in data:
             old_token = get_setting("telegram_bot_token", "")
             old_admin_ids = get_setting("telegram_admin_ids", "")
             
@@ -112,6 +113,9 @@ async def update_settings_api(request: Request):
                 
             set_setting("telegram_bot_token", tg_bot_token)
             set_setting("telegram_admin_ids", tg_admin_ids)
+            
+            if "telegram_2fa_enabled" in data:
+                set_setting("telegram_2fa_enabled", "true" if data.get("telegram_2fa_enabled") in (True, "true") else "false")
             
         # 3. Decoy Site Card
         if "decoy_type" in data:
