@@ -1,0 +1,92 @@
+from urllib.parse import quote
+from backend.links.protocols.utils import get_cert_sha256_fingerprint
+
+def build_vless_link(inbound: dict, client: dict, host: str, port: int, display_name: str, settings: dict, stream_settings: dict, network: str, security: str, flow: str) -> str:
+    uid = client.get('client_uuid_or_pwd') or client.get('id')
+    
+    params = [
+        f"type={network}",
+        f"security={security}"
+    ]
+    
+    if flow:
+        params.append(f"flow={flow}")
+        
+    encryption = settings.get("encryption")
+    if encryption:
+        params.append(f"encryption={encryption}")
+        
+    if security == 'reality':
+        reality_settings = stream_settings.get('realitySettings', {})
+        inner_settings = reality_settings.get('settings', {})
+        
+        fp = inner_settings.get('fingerprint') or reality_settings.get('fingerprint', 'chrome')
+        pbk = inner_settings.get('publicKey') or reality_settings.get('publicKey', '')
+        sni = inner_settings.get('serverName') or reality_settings.get('serverName') or (reality_settings.get('serverNames', [''])[0])
+        spx = inner_settings.get('spiderX') or reality_settings.get('spiderX', '/')
+        
+        params.append(f"fp={fp}")
+        params.append(f"pbk={pbk}")
+        if sni: params.append(f"sni={sni}")
+        
+        short_ids = reality_settings.get('shortIds', [])
+        if short_ids: params.append(f"sid={short_ids[0]}")
+        if spx: params.append(f"spx={quote(spx, safe='')}")
+    
+    elif security == 'tls':
+        tls_settings = stream_settings.get('tlsSettings', {})
+        sni = tls_settings.get('serverName')
+        if sni: params.append(f"sni={sni}")
+        
+        certs = tls_settings.get('certificates', [])
+        cert_path = ""
+        if certs and isinstance(certs, list):
+            cert_path = certs[0].get('certificateFile', '')
+        if not cert_path:
+            from backend.config import CONFIG_DIR
+            p = CONFIG_DIR / "cert.pem"
+            if p.exists():
+                cert_path = str(p)
+        
+        if cert_path:
+            fp_hash = get_cert_sha256_fingerprint(cert_path)
+            if fp_hash:
+                params.append(f"pcs={fp_hash}")
+
+    # Transport parameters
+    if network == 'tcp':
+        tcp_settings = stream_settings.get('tcpSettings', {})
+        header = tcp_settings.get('header', {})
+        if header.get('type') == 'http':
+            params.append("headerType=http")
+            req = header.get('request', {})
+            paths = req.get('path', ['/'])
+            hosts = req.get('headers', {}).get('Host', [])
+            if paths: params.append(f"path={quote(paths[0], safe='')}")
+            if hosts: params.append(f"host={quote(hosts[0], safe='')}")
+    elif network == 'ws':
+        ws_settings = stream_settings.get('wsSettings', {})
+        path = ws_settings.get('path', '/')
+        params.append(f"path={quote(path, safe='')}")
+        ws_host = ws_settings.get('headers', {}).get('Host')
+        if ws_host: params.append(f"host={ws_host}")
+    elif network == 'grpc':
+        grpc_settings = stream_settings.get('grpcSettings', {})
+        service_name = grpc_settings.get('serviceName', 'grpc')
+        params.append(f"serviceName={quote(service_name, safe='')}")
+    elif network == 'h2':
+        h2_settings = stream_settings.get('httpSettings', {})
+        path = h2_settings.get('path', '/')
+        params.append(f"path={quote(path, safe='')}")
+        hosts = h2_settings.get('host', [])
+        if hosts: params.append(f"host={quote(hosts[0], safe='')}")
+    elif network == 'mkcp':
+        kcp_settings = stream_settings.get('kcpSettings', {})
+        header = kcp_settings.get('header', {})
+        header_type = header.get('type', 'none')
+        seed = kcp_settings.get('seed', '')
+        params.append(f"headerType={header_type}")
+        if seed: params.append(f"seed={quote(seed, safe='')}")
+
+    query = "&".join(params)
+    return f"vless://{uid}@{host}:{port}?{query}#{quote(display_name)}"

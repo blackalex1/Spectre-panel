@@ -1,0 +1,56 @@
+from urllib.parse import quote
+from backend.links.protocols.utils import get_cert_sha256_fingerprint, is_ip
+
+def build_hysteria2_link(inbound: dict, client: dict, host: str, port: int, display_name: str, stream_settings: dict, client_email: str) -> str:
+    password = client.get('client_uuid_or_pwd') or client.get('password')
+    
+    hysteria_opts = stream_settings.get('hysteria', {})
+    obfs_password = hysteria_opts.get('obfsPassword', '')
+    hop = hysteria_opts.get('hop', '')
+
+    sni = stream_settings.get('sni')
+    params = []
+    
+    if sni:
+        params.append(f"sni={sni}")
+    elif not is_ip(host):
+        params.append(f"sni={host}")
+        
+    cert_mode = hysteria_opts.get('certMode', 'self')
+    cert_path = ""
+    if cert_mode == 'custom':
+        cert_path = hysteria_opts.get('certPath', '')
+    else:
+        from backend.ssl_utils import SSL_CERT_PATH
+        if SSL_CERT_PATH.exists():
+            cert_path = str(SSL_CERT_PATH)
+        else:
+            from backend.config import CONFIG_DIR
+            # Wait, in protocols.py:
+            # from backend.config import BIN_DIR
+            # But wait! protocols.py lines 299 says CONFIG_DIR / "cert.pem" or BIN_DIR / "hysteria.crt"
+            # Let's import BIN_DIR or CONFIG_DIR or whatever protocols.py did:
+            from backend.config import BIN_DIR
+            p = BIN_DIR / "hysteria.crt"
+            if p.exists():
+                cert_path = str(p)
+            
+    has_pin = False
+    if cert_path:
+        fp_hash = get_cert_sha256_fingerprint(cert_path)
+        if fp_hash:
+            params.append(f"pinSHA256={fp_hash}")
+            has_pin = True
+        
+    if not has_pin:
+        params.append("insecure=1")
+        
+    if obfs_password:
+        params.append("obfs=salamander")
+        params.append(f"obfs-password={quote(obfs_password, safe='')}")
+    if hop:
+        params.append(f"hop={quote(hop, safe='')}")
+        
+    query = "&".join(params)
+    username = quote(client_email, safe='')
+    return f"hysteria2://{username}:{password}@{host}:{port}?{query}#{quote(display_name)}"

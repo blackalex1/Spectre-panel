@@ -1,0 +1,378 @@
+<section id="tab-settings" class="tab-content">
+        <div class="settings-grid">
+        
+        <!-- LEFT COLUMN -->
+        <div class="settings-column-container">
+            <!-- CARD 1: Реквизиты доступа панели -->
+            <div class="glass-card settings-card">
+                <h3 data-i18n="settings_access_credentials">Реквизиты доступа панели</h3>
+                <p class="card-desc" data-i18n="settings_access_desc">Эти значения сгенерированы случайно для обеспечения безопасности. Запишите их.</p>
+                <div class="settings-form-content" style="margin-top: auto;">
+                    <div class="input-group">
+                        <label data-i18n="settings_api_token">Токен API контроллера (Bearer Token)</label>
+                        <div class="copy-input-group">
+                            <input type="text" id="setting-api-token" readonly value="Загрузка...">
+                            <button class="btn copy-btn" data-target="setting-api-token" type="button"><i class="fa-regular fa-copy"></i></button>
+                        </div>
+                        <span class="field-desc" data-i18n="settings_api_desc">Используется вашим Telegram-ботом в заголовке Authorization.</span>
+                    </div>
+                    
+                    <div class="input-group" style="margin-top: 20px;">
+                        <label for="setting-secret-path-input" data-i18n="settings_secret_path">Секретный путь панели</label>
+                        <div class="copy-input-group">
+                            <input type="text" id="setting-secret-path-input" placeholder="Например: ui_xyz" data-i18n-placeholder="settings_secret_path_placeholder">
+                            <button type="button" class="btn copy-btn" id="setting-secret-path-copy-btn" data-target="setting-secret-path-input"><i class="fa-regular fa-copy"></i></button>
+                        </div>
+                        <span class="field-desc" data-i18n="settings_secret_desc">При изменении секретного пути вам нужно будет заново зайти в panel по новому адресу. Используйте только латинские буквы и цифры.</span>
+                    </div>
+
+                    <div class="input-group" style="margin-top: 20px;">
+                        <label for="setting-session-timeout" data-i18n="settings_session_timeout">Срок действия сессии (дней)</label>
+                        <input type="number" id="setting-session-timeout" min="1" placeholder="7">
+                        <span class="field-desc" data-i18n="settings_session_timeout_desc">Количество дней, в течение которых администратор остается авторизованным.</span>
+                    </div>
+
+                    <div class="input-group" style="margin-top: 20px;">
+                        <label for="setting-login-max-attempts" data-i18n="settings_login_max_attempts">Максимум попыток входа</label>
+                        <input type="number" id="setting-login-max-attempts" min="1" placeholder="5">
+                        <span class="field-desc" data-i18n="settings_login_max_attempts_desc">Количество неверных попыток ввода пароля до временной блокировки IP-адреса.</span>
+                    </div>
+
+                    <div class="input-group" style="margin-top: 20px;">
+                        <label for="setting-login-attempts-period" data-i18n="settings_login_attempts_period">Период блокировки (секунд)</label>
+                        <input type="number" id="setting-login-attempts-period" min="1" placeholder="60">
+                        <span class="field-desc" data-i18n="settings_login_attempts_period_desc">Время в секундах, на которое блокируется IP-адрес при превышении попыток.</span>
+                    </div>
+
+                    <div class="input-group" style="margin-top: 20px;">
+                        <label for="setting-login-fail-delay" data-i18n="settings_login_fail_delay">Задержка после неверного ввода (сек)</label>
+                        <input type="number" id="setting-login-fail-delay" min="0" step="0.1" placeholder="1.0">
+                        <span class="field-desc" data-i18n="settings_login_fail_delay_desc">Искусственная задержка выполнения проверки пароля для замедления автоматического перебора.</span>
+                    </div>
+                    
+                    <div style="margin-top: 24px;">
+                        <button type="button" id="btn-save-access" class="btn primary-btn w-100" style="padding: 10px; font-weight: 600;"><i class="fa-solid fa-floppy-disk"></i> <span data-i18n="settings_btn_save_short">Сохранить</span></button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- CARD 1.5: Смена логина и пароля -->
+            <div class="glass-card settings-card">
+                <h3 data-i18n="settings_credentials_title">Смена логина и пароля</h3>
+                <p class="card-desc" data-i18n="settings_credentials_desc">Смена логина и пароля администратора панели.</p>
+                <div class="settings-form-content" style="margin-top: auto;">
+                    <div class="input-group">
+                        <label for="setting-cred-current-pwd" data-i18n="settings_current_password">Текущий пароль</label>
+                        <input type="password" id="setting-cred-current-pwd" placeholder="••••••••">
+                    </div>
+                    
+                    <div class="input-group" style="margin-top: 20px;">
+                        <label for="setting-cred-new-user" data-i18n="settings_new_username">Новый логин</label>
+                        <input type="text" id="setting-cred-new-user" placeholder="Введите новый логин">
+                    </div>
+
+                    <div class="input-group" style="margin-top: 20px;">
+                        <label for="setting-cred-new-pwd" data-i18n="settings_new_password">Новый пароль</label>
+                        <input type="password" id="setting-cred-new-pwd" placeholder="Введите новый пароль (необязательно)">
+                    </div>
+
+                    <div class="input-group" style="margin-top: 20px;">
+                        <label for="setting-cred-confirm-pwd" data-i18n="settings_confirm_password">Подтвердите новый пароль</label>
+                        <input type="password" id="setting-cred-confirm-pwd" placeholder="Повторите новый пароль">
+                    </div>
+                    
+                    <div style="margin-top: 24px;">
+                        <button type="button" id="btn-save-credentials" class="btn primary-btn w-100" style="padding: 10px; font-weight: 600;"><i class="fa-solid fa-key"></i> <span data-i18n="settings_btn_save_credentials">Сохранить учетные данные</span></button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- CARD 1.7: Двухфакторная аутентификация (2FA) -->
+            <div class="glass-card settings-card">
+                <h3 data-i18n="settings_2fa_title">Двухфакторная аутентификация (2FA)</h3>
+                <p class="card-desc" data-i18n="settings_2fa_desc">Защита аккаунта с помощью одноразовых кодов (TOTP).</p>
+                <div class="settings-form-content" style="margin-top: auto;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; background: var(--bg-input); border: 1px solid var(--border-color); border-radius: 12px; padding: 15px 20px; margin-bottom: 20px;">
+                        <span style="color: var(--text-secondary); font-size: 14px;" data-i18n="settings_2fa_status">Статус 2FA</span>
+                        <span id="2fa-status-badge" class="badge warning-badge" style="font-weight: 600; padding: 6px 12px; border-radius: 20px; font-size: 13px;" data-i18n="settings_2fa_disabled">Выключена</span>
+                    </div>
+
+                    <!-- 2FA Setup Panel -->
+                    <div id="2fa-setup-panel" style="display: none; flex-direction: column; gap: 15px; margin-bottom: 20px; padding: 15px; border: 1px dashed var(--border-color); border-radius: 12px; background: rgba(255, 255, 255, 0.02);">
+                        <p style="font-size: 13px; color: var(--text-secondary); line-height: 1.5;" data-i18n="settings_2fa_setup_instructions">
+                            1. Отсканируйте QR-код приложением-аутентификатором или введите секретный ключ вручную. 2. Введите 6-значный код подтверждения ниже, чтобы завершить настройку.
+                        </p>
+                        <div style="display: flex; justify-content: center; margin: 10px 0;">
+                            <div id="2fa-qrcode" style="padding: 10px; background: white; border-radius: 8px; display: inline-block;"></div>
+                        </div>
+                        <div class="input-group">
+                            <label data-i18n="settings_2fa_secret_label">Секретный ключ (Base32)</label>
+                            <div class="copy-input-group">
+                                <input type="text" id="setting-2fa-secret" readonly value="...">
+                                <button class="btn copy-btn" data-target="setting-2fa-secret" type="button"><i class="fa-regular fa-copy"></i></button>
+                            </div>
+                        </div>
+                        <div class="input-group">
+                            <label for="setting-2fa-code-input" data-i18n="login_2fa_placeholder">Введите 6-значный код</label>
+                            <input type="text" id="setting-2fa-code-input" maxlength="6" placeholder="000000" style="text-align: center; font-size: 18px; letter-spacing: 5px; font-weight: 600; background: var(--bg-input); border: 1px solid var(--border-color); color: var(--text-primary); border-radius: 8px; padding: 10px;">
+                        </div>
+                        <button type="button" id="btn-2fa-confirm" class="btn success-btn w-100" style="padding: 10px; font-weight: 600;"><i class="fa-solid fa-check"></i> <span data-i18n="settings_2fa_btn_confirm">Подтвердить и включить</span></button>
+                    </div>
+
+                    <!-- 2FA Disable Panel -->
+                    <div id="2fa-disable-panel" style="display: none; flex-direction: column; gap: 15px; margin-bottom: 20px; padding: 15px; border: 1px dashed var(--border-color); border-radius: 12px; background: rgba(255, 255, 255, 0.02);">
+                        <div class="input-group">
+                            <label for="setting-2fa-disable-code-input" data-i18n="login_2fa_placeholder">Введите 6-значный код</label>
+                            <input type="text" id="setting-2fa-disable-code-input" maxlength="6" placeholder="000000" style="text-align: center; font-size: 18px; letter-spacing: 5px; font-weight: 600; background: var(--bg-input); border: 1px solid var(--border-color); color: var(--text-primary); border-radius: 8px; padding: 10px;">
+                        </div>
+                        <button type="button" id="btn-2fa-disable-confirm" class="btn danger-btn w-100" style="padding: 10px; font-weight: 600; border: 1px solid rgba(255, 71, 87, 0.3);"><i class="fa-solid fa-xmark"></i> <span data-i18n="settings_2fa_btn_disable">Отключить 2FA</span></button>
+                    </div>
+
+                    <!-- Primary Actions -->
+                    <div id="2fa-actions-panel">
+                        <button type="button" id="btn-2fa-setup-trigger" class="btn primary-btn w-100" style="padding: 10px; font-weight: 600;"><i class="fa-solid fa-shield-halved"></i> <span data-i18n="settings_2fa_btn_setup">Настроить 2FA</span></button>
+                        <button type="button" id="btn-2fa-disable-trigger" class="btn danger-btn w-100" style="display: none; padding: 10px; font-weight: 600; border: 1px solid rgba(255, 71, 87, 0.3);"><i class="fa-solid fa-lock-open"></i> <span data-i18n="settings_2fa_btn_disable">Отключить 2FA</span></button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- CARD 3: Маскировка панели (Сайт-заглушка) -->
+            <div class="glass-card settings-card">
+                <h3 data-i18n="settings_decoy_title">Маскировка панели (Сайт-заглушка)</h3>
+                <p class="card-desc" data-i18n="settings_decoy_desc">Заглушка отображается всем, кто переходит по основному адресу сервера без секретного пути.</p>
+                <div class="settings-form-content" style="margin-top: auto;">
+                    <div class="input-group">
+                        <label for="setting-decoy-type" data-i18n="settings_decoy_type">Тип маскировки</label>
+                        <select id="setting-decoy-type">
+                            <option value="none" data-i18n="settings_decoy_type_none">Nginx 404 (Стандартная страница ошибки)</option>
+                            <option value="static" data-i18n="settings_decoy_type_static">Локальный шаблон (Красивый корпоративный лендинг)</option>
+                            <option value="proxy" data-i18n="settings_decoy_type_proxy">Проксирование (Прозрачное отображение стороннего сайта)</option>
+                            <option value="redirect" data-i18n="settings_decoy_type_redirect">Перенаправление (HTTP Redirect 302 на другой сайт)</option>
+                        </select>
+                    </div>
+
+                    <div class="input-group" id="setting-decoy-value-group" style="margin-top: 20px;">
+                        <label for="setting-decoy-value" id="setting-decoy-value-label" data-i18n="settings_decoy_val">Параметр маскировки</label>
+                        <input type="text" id="setting-decoy-value" placeholder="Например: https://wikipedia.org" data-i18n-placeholder="settings_decoy_val_placeholder">
+                        <span class="field-desc" id="setting-decoy-value-desc" data-i18n="settings_decoy_val_desc">Для типа «Проксирование» укажите полный URL сайта с http/https. Для «Локальный шаблон» укажите название шаблона (по умолчанию: company_landing).</span>
+                    </div>
+                    
+                    <div style="margin-top: 24px;">
+                        <button type="button" id="btn-save-decoy" class="btn primary-btn w-100" style="padding: 10px; font-weight: 600;"><i class="fa-solid fa-floppy-disk"></i> <span data-i18n="settings_btn_save_short">Сохранить</span></button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- CARD 5: Системные оптимизации сети -->
+            <div class="glass-card settings-card">
+                <h3 data-i18n="settings_sys_opt_title">Системные оптимизации сети</h3>
+                <p class="card-desc" data-i18n="settings_sys_opt_desc">Оптимизация параметров ядра Linux (sysctl.conf и limits.conf) для работы под высокими нагрузками (1Gbps+). Включает TCP тюнинг и увеличение лимитов открытых файлов.</p>
+                
+                <div style="margin-top: auto;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; background: var(--bg-input); border: 1px solid var(--border-color); border-radius: 12px; padding: 15px 20px; margin-bottom: 20px;">
+                        <span style="color: var(--text-secondary); font-size: 14px;" data-i18n="settings_sys_opt_status">Текущий статус оптимизации</span>
+                        <span id="optimization-status-badge" class="badge secondary-badge" style="font-weight: 600; padding: 6px 12px; border-radius: 20px; font-size: 13px;">...</span>
+                    </div>
+                    
+                    <button type="button" id="btn-apply-optimizations" class="btn primary-btn w-100"><i class="fa-solid fa-gauge-high"></i> <span data-i18n="settings_sys_opt_btn">Применить оптимизации</span></button>
+                </div>
+            </div>
+        </div>
+        
+        <!-- RIGHT COLUMN -->
+        <div class="settings-column-container">
+            <!-- CARD 2: Интеграция с Telegram (Mini App) -->
+            <div class="glass-card settings-card">
+                <h3 data-i18n="settings_telegram_config">Интеграция с Telegram (Mini App)</h3>
+                <p class="card-desc" data-i18n="settings_telegram_desc">Настройки Telegram-бота для оповещений администратора о блокировках и интеграции Mini App.</p>
+                <div class="settings-form-content" style="margin-top: auto;">
+                    <div class="input-group">
+                        <label for="setting-telegram-token" data-i18n="settings_telegram_token">Токен Telegram-бота (Bot Token)</label>
+                        <input type="text" id="setting-telegram-token" placeholder="123456789:ABCDefGhIJKlmNoPQRsT" data-i18n-placeholder="settings_telegram_token_placeholder">
+                    </div>
+
+                    <div class="input-group" style="margin-top: 20px;">
+                        <label for="setting-telegram-admin-ids" data-i18n="settings_telegram_admin_ids">Telegram ID администраторов</label>
+                        <input type="text" id="setting-telegram-admin-ids" placeholder="Например: 123456789,987654321" data-i18n-placeholder="settings_telegram_admin_ids_placeholder">
+                    </div>
+                    
+                    <div style="margin-top: 24px; display: flex; gap: 10px;">
+                        <button type="button" id="btn-save-telegram" class="btn primary-btn w-100" style="padding: 10px; font-weight: 600;"><i class="fa-solid fa-floppy-disk"></i> <span data-i18n="settings_btn_save_short">Сохранить</span></button>
+                        <button type="button" id="btn-restart-telegram-bot" class="btn secondary-btn w-100" style="padding: 10px; font-weight: 600; border-color: rgba(255, 159, 67, 0.3); color: #ff9f43;"><i class="fa-solid fa-arrows-rotate"></i> <span data-i18n="settings_telegram_btn_restart">Перезапустить</span></button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- CARD 4: Управление SSL (Let's Encrypt Certbot) -->
+            <div class="glass-card settings-card">
+                <h3 data-i18n="settings_ssl_title">Управление SSL (Let's Encrypt Certbot)</h3>
+                <p class="card-desc" data-i18n="settings_ssl_desc">Выпуск сертификата требует, чтобы домен был направлен на этот сервер и порт 80 был свободен.</p>
+                <div class="settings-form-content" style="margin-top: auto;">
+                    <div class="input-row" style="display: flex; flex-wrap: wrap; gap: 15px;">
+                        <div class="input-group" style="flex: 1 1 150px;">
+                            <label for="setting-ssl-domain" data-i18n="settings_ssl_domain">Доменное имя</label>
+                            <input type="text" id="setting-ssl-domain" placeholder="example.com">
+                        </div>
+                        <div class="input-group" style="flex: 1 1 150px;">
+                            <label for="setting-ssl-email" data-i18n="settings_ssl_email">Email администратора</label>
+                            <input type="email" id="setting-ssl-email" placeholder="admin@example.com">
+                        </div>
+                    </div>
+
+                    <div style="margin-top: 20px; display: flex; gap: 10px;">
+                        <button type="button" id="btn-save-ssl" class="btn primary-btn w-100" style="padding: 10px; font-weight: 600;"><i class="fa-solid fa-floppy-disk"></i> <span data-i18n="settings_btn_save_short">Сохранить</span></button>
+                        <button type="button" id="btn-generate-ssl" class="btn secondary-btn w-100" style="padding: 10px; font-weight: 600;"><i class="fa-solid fa-shield-halved"></i> <span data-i18n="settings_ssl_btn_generate">Выпустить сертификат</span></button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- CARD 5.5: Cloudflare WARP -->
+            <div class="glass-card settings-card" id="settings-card-warp">
+                <h3 data-i18n="settings_warp_title">Управление Cloudflare WARP</h3>
+                <p class="card-desc" data-i18n="settings_warp_desc">Используется для перенаправления определенного трафика через Cloudflare WARP для обхода ограничений.</p>
+                
+                <div class="settings-form-content" style="margin-top: auto; display: flex; flex-direction: column; gap: 15px;">
+                    <!-- Status Row 1: Installation -->
+                    <div style="display: flex; justify-content: space-between; align-items: center; background: var(--bg-input); border: 1px solid var(--border-color); border-radius: 12px; padding: 12px 18px;">
+                        <span style="color: var(--text-secondary); font-size: 14px;" data-i18n="settings_warp_installed_label">Статус установки</span>
+                        <span id="settings-warp-installed-badge" class="badge secondary-badge" style="font-weight: 600; padding: 5px 11px; border-radius: 20px; font-size: 13px;">...</span>
+                    </div>
+                    
+                    <!-- Status Row 2: Connection -->
+                    <div id="settings-warp-status-row" style="display: none; justify-content: space-between; align-items: center; background: var(--bg-input); border: 1px solid var(--border-color); border-radius: 12px; padding: 12px 18px;">
+                        <span style="color: var(--text-secondary); font-size: 14px;" data-i18n="settings_warp_status_label">Статус подключения</span>
+                        <span id="settings-warp-status-badge" class="badge secondary-badge" style="font-weight: 600; padding: 5px 11px; border-radius: 20px; font-size: 13px;">...</span>
+                    </div>
+
+                    <!-- Status Row 3: Account -->
+                    <div id="settings-warp-account-row" style="display: none; justify-content: space-between; align-items: center; background: var(--bg-input); border: 1px solid var(--border-color); border-radius: 12px; padding: 12px 18px;">
+                        <span style="color: var(--text-secondary); font-size: 14px;" data-i18n="settings_warp_account_label">Тип аккаунта</span>
+                        <span id="settings-warp-account-badge" class="badge secondary-badge" style="font-weight: 600; padding: 5px 11px; border-radius: 20px; font-size: 13px;">...</span>
+                    </div>
+
+                    <!-- Status Row 4: Quota -->
+                    <div id="settings-warp-quota-row" style="display: none; justify-content: space-between; align-items: center; background: var(--bg-input); border: 1px solid var(--border-color); border-radius: 12px; padding: 12px 18px;">
+                        <span style="color: var(--text-secondary); font-size: 14px;" data-i18n="settings_warp_quota_label">Остаток трафика WARP+</span>
+                        <span id="settings-warp-quota-badge" class="badge secondary-badge" style="font-weight: 600; padding: 5px 11px; border-radius: 20px; font-size: 13px;">...</span>
+                    </div>
+
+                    <!-- Action Button: Install -->
+                    <button type="button" id="btn-warp-install" class="btn primary-btn w-100" style="display: none; padding: 12px;"><i class="fa-solid fa-download"></i> <span data-i18n="settings_warp_btn_install">Установить WARP</span></button>
+
+                    <!-- WARP Configuration Panel -->
+                    <div id="settings-warp-config-panel" style="display: none; flex-direction: column; gap: 15px;">
+                        <!-- Key Input -->
+                        <div class="input-group">
+                            <label for="settings-warp-license" data-i18n="settings_warp_license_label">Лицензионный ключ WARP+ (Опционально)</label>
+                            <input type="text" id="settings-warp-license" placeholder="Введите 26-символьный ключ..." data-i18n-placeholder="settings_warp_license_placeholder">
+                        </div>
+
+                        <!-- Key Actions -->
+                        <div style="display: flex; gap: 10px;">
+                            <button type="button" id="btn-warp-apply-key" class="btn primary-btn w-100" style="padding: 10px;"><i class="fa-solid fa-key"></i> <span data-i18n="settings_warp_btn_apply_key">Активировать WARP+</span></button>
+                            <button type="button" id="btn-warp-register-free" class="btn secondary-btn w-100" style="display: none; padding: 10px;"><i class="fa-solid fa-rotate-left"></i> <span data-i18n="settings_warp_btn_register_free">Сбросить на Free</span></button>
+                        </div>
+
+                        <!-- Connection Action Toggles -->
+                        <div style="display: flex; gap: 10px;">
+                            <button type="button" id="btn-warp-connect" class="btn success-btn w-100" style="padding: 10px; background-color: rgba(46, 213, 115, 0.15); color: #2ed573; border: 1px solid rgba(46, 213, 115, 0.3); font-weight: 600;"><i class="fa-solid fa-play"></i> <span data-i18n="settings_warp_btn_connect">Подключить</span></button>
+                            <button type="button" id="btn-warp-disconnect" class="btn danger-btn w-100" style="padding: 10px; background-color: rgba(255, 71, 87, 0.15); color: #ff4757; border: 1px solid rgba(255, 71, 87, 0.3); font-weight: 600;"><i class="fa-solid fa-stop"></i> <span data-i18n="settings_warp_btn_disconnect">Отключить</span></button>
+                        </div>
+
+                        <!-- Uninstall Action -->
+                        <button type="button" id="btn-warp-uninstall" class="btn secondary-btn w-100" style="margin-top: 10px; padding: 10px; border-color: rgba(255, 71, 87, 0.3); color: #ff4757;"><i class="fa-solid fa-trash-can"></i> <span data-i18n="settings_warp_btn_uninstall">Удалить WARP</span></button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- CARD 6: Резервное копирование (Backups) -->
+            <div class="glass-card settings-card">
+                <h3 data-i18n="settings_backups_title">Резервное копирование (Backups)</h3>
+                <p class="card-desc" data-i18n="settings_backups_desc">Настройка автоматического создания бэкапов базы данных и управление файлами резервных копий.</p>
+                <div class="settings-form-content" style="margin-top: auto; display: flex; flex-direction: column; gap: 15px;">
+                    
+                    <div style="display: flex; flex-direction: column; gap: 12px; background: var(--bg-input); border: 1px solid var(--border-color); border-radius: 12px; padding: 15px 20px;">
+                        <label class="checkbox-container" style="display: flex; align-items: center; gap: 10px; cursor: pointer; color: var(--text-secondary); font-size: 14px; font-weight: normal; text-transform: none; margin-bottom: 0;">
+                            <input type="checkbox" id="setting-backup-enable">
+                            <span data-i18n="settings_backup_enable">Создавать бэкапы автоматически</span>
+                        </label>
+                        <label class="checkbox-container" style="display: flex; align-items: center; gap: 10px; cursor: pointer; color: var(--text-secondary); font-size: 14px; font-weight: normal; text-transform: none; margin-bottom: 0;">
+                            <input type="checkbox" id="setting-backup-telegram">
+                            <span data-i18n="settings_backup_telegram">Отправлять копию в Telegram</span>
+                        </label>
+                    </div>
+
+                    <div class="input-row" style="display: flex; flex-wrap: wrap; gap: 15px;">
+                        <div class="input-group" style="flex: 1 1 150px;">
+                            <label for="setting-backup-interval" data-i18n="settings_backup_interval">Интервал создания</label>
+                            <select id="setting-backup-interval">
+                                <option value="hourly">Каждый час</option>
+                                <option value="daily" selected>Раз в сутки</option>
+                                <option value="weekly">Раз в неделю</option>
+                            </select>
+                        </div>
+                        <div class="input-group" style="flex: 1 1 150px;">
+                            <label for="setting-backup-rotation" data-i18n="settings_backup_rotation">Хранить копий (ротация)</label>
+                            <input type="number" id="setting-backup-rotation" min="1" value="7">
+                        </div>
+                    </div>
+
+                    <div style="margin-top: 10px; display: flex; flex-direction: column; gap: 10px;">
+                        <button type="button" id="btn-save-backups" class="btn primary-btn w-100" style="padding: 10px; font-weight: 600;"><i class="fa-solid fa-floppy-disk"></i> <span data-i18n="settings_btn_save_short">Сохранить</span></button>
+                        <div style="display: flex; gap: 10px; width: 100%;">
+                            <button type="button" id="btn-download-backup" class="btn secondary-btn w-100" style="padding: 10px; font-weight: 600;"><i class="fa-solid fa-download"></i> <span>Скачать бэкап</span></button>
+                            <button type="button" id="btn-trigger-upload-backup" class="btn secondary-btn w-100" style="padding: 10px; font-weight: 600; border-color: rgba(255, 71, 87, 0.3); color: #ff4757;"><i class="fa-solid fa-upload"></i> <span>Восстановить</span></button>
+                        </div>
+                        <input type="file" id="backup-file-input" style="display: none;" accept=".json">
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+
+        </div>
+
+    <!-- CARD 7: Журнал аудита действий (Audit Logs) -->
+    <div class="settings-grid" style="margin-top: 24px;">
+        <div class="glass-card settings-card settings-card-wide">
+            <h3 data-i18n="audit_logs_title">Журнал аудита действий (Audit Logs)</h3>
+            <p class="card-desc" data-i18n="audit_logs_desc">История действий администраторов и изменений конфигурации системы.</p>
+            
+            <div style="margin-top: 20px;">
+                <div style="margin-bottom: 15px; display: flex; gap: 10px;">
+                    <div class="search-bar" style="width: 100%;">
+                        <i class="fa-solid fa-magnifying-glass"></i>
+                        <input type="text" id="audit-logs-search" placeholder="Поиск по логам..." data-i18n-placeholder="audit_logs_search">
+                    </div>
+                </div>
+                
+                <div class="table-container">
+                    <table class="glass-table">
+                        <thead>
+                            <tr>
+                                <th style="white-space: nowrap;" data-i18n="audit_logs_th_time">Время</th>
+                                <th style="white-space: nowrap;" data-i18n="audit_logs_th_user">Пользователь</th>
+                                <th style="white-space: nowrap;" data-i18n="audit_logs_th_action">Действие</th>
+                                <th style="white-space: nowrap;" data-i18n="audit_logs_th_target">Объект</th>
+                                <th data-i18n="audit_logs_th_details">Детали</th>
+                            </tr>
+                        </thead>
+                        <tbody id="audit-logs-tbody">
+                            <!-- Заполняется динамически -->
+                        </tbody>
+                    </table>
+                </div>
+                
+                <!-- Пагинация -->
+                <div style="margin-top: 15px; display: flex; justify-content: space-between; align-items: center;">
+                    <span id="audit-logs-total-text" style="font-size: 13px; color: var(--text-secondary);"></span>
+                    <div style="display: flex; gap: 8px;">
+                        <button type="button" id="btn-audit-prev" class="btn secondary-btn icon-btn" style="padding: 6px 12px;"><i class="fa-solid fa-chevron-left"></i></button>
+                        <span id="audit-page-number" style="align-self: center; font-size: 14px; font-weight: 500; min-width: 30px; text-align: center;">1</span>
+                        <button type="button" id="btn-audit-next" class="btn secondary-btn icon-btn" style="padding: 6px 12px;"><i class="fa-solid fa-chevron-right"></i></button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>

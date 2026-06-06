@@ -1,0 +1,28 @@
+:root {
+    /* Цветовая палитра HSL */
+    --bg-main: hsl(222, 47%, 6%);
+    --bg-sidebar: hsla(222, 47%, 4%, 0.6);
+    --bg-card: hsla(223, 47%, 11%, 0.45);
+    --bg-input: hsla(223, 47%, 14%, 0.6);
+    
+    --border-color: hsla(217, 30%, 20%, 0.4);
+    --border-highlight: hsla(217, 30%, 35%, 0.5);
+    
+    --text-primary: hsl(210, 40%, 96%);
+    --text-secondary: hsl(215, 20%, 65%);
+    --text-muted: hsl(215, 15%, 45%);
+    
+    --primary: hsl(263, 70%, 50%); /* Фиолетовый */
+    --primary-hover: hsl(263, 70%, 57%);
+    --primary-glow: hsla(263, 70%, 50%, 0.35);
+    
+    --accent-blue: hsl(217, 91%, 60%);
+    --accent-purple: hsl(271, 91%, 65%);
+    --accent-green: hsl(142, 71%, 45%);
+    --accent-orange: hsl(32, 95%, 44%);
+    --accent-rose: hsl(350, 89%, 60%);
+    
+    --font-family: 'Outfit', sans-serif;
+    --transition-fast: 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    --transition-normal: 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}

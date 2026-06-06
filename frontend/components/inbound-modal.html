@@ -1,0 +1,470 @@
+<div id="inbound-modal" class="modal" style="z-index: 1050;">
+    <div class="glass-card modal-card large-card">
+        <div class="modal-header">
+            <h2 id="inbound-modal-title">Создание подключения</h2>
+            <button type="button" class="btn close-modal-btn"><i class="fa-solid fa-xmark"></i></button>
+        </div>
+        <div class="modal-body">
+            <form id="inbound-form">
+                <!-- Tabs navigation header -->
+                <div class="modal-tabs" style="display: flex; gap: 8px; margin-bottom: 20px; border-bottom: 1px solid var(--border-color); padding-bottom: 10px; overflow-x: auto; white-space: nowrap;">
+                    <button type="button" class="btn secondary-btn modal-tab-btn active" data-tab="basic">Основное</button>
+                    <button type="button" class="btn secondary-btn modal-tab-btn" data-tab="protocol" id="ib-tab-protocol">Протокол</button>
+                    <button type="button" class="btn secondary-btn modal-tab-btn" data-tab="stream" id="ib-tab-stream">Поток</button>
+                    <button type="button" class="btn secondary-btn modal-tab-btn" data-tab="security" id="ib-tab-security">Безопасность</button>
+                    <button type="button" class="btn secondary-btn modal-tab-btn" data-tab="sniffing" id="ib-tab-sniffing">Сниффинг</button>
+                    <button type="button" class="btn secondary-btn modal-tab-btn" data-tab="advanced" id="ib-tab-advanced">JSON шаблон</button>
+                </div>
+
+                <!-- Tab panel 1: Basic (Основное) -->
+                <div id="tab-panel-basic" class="tab-panel active-panel">
+                    <div class="input-group">
+                        <label for="ib-remark">Название (Remark)</label>
+                        <input type="text" id="ib-remark" placeholder="VLESS Reality">
+                    </div>
+                    <div class="input-row">
+                        <div class="input-group">
+                            <label for="ib-port">Порт</label>
+                            <div class="copy-input-group">
+                                <input type="number" id="ib-port" min="1" max="65535" placeholder="443">
+                                <button type="button" class="btn secondary-btn" id="ib-gen-port-btn" title="Подобрать порт" style="margin-left: 5px;"><i class="fa-solid fa-wand-magic-sparkles"></i></button>
+                            </div>
+                        </div>
+                        <div class="input-group">
+                            <label for="ib-protocol">Протокол</label>
+                            <select id="ib-protocol">
+                                <option value="vless">VLESS</option>
+                                <option value="vmess">VMess</option>
+                                <option value="trojan">Trojan</option>
+                                <option value="shadowsocks">Shadowsocks</option>
+                                <option value="hysteria2">Hysteria 2</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="input-row">
+                        <div class="input-group">
+                            <label for="ib-total">Лимит трафика (GB, 0 - безлимит)</label>
+                            <input type="number" id="ib-total" min="0" value="0">
+                        </div>
+                        <div class="input-group">
+                            <label for="ib-expiry-time">Срок действия (Дата окончания)</label>
+                            <input type="datetime-local" id="ib-expiry-time">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Tab panel 2: Protocol (Протокол) -->
+                <div id="tab-panel-protocol" class="tab-panel" style="display: none;">
+                    <!-- Shadowsocks settings -->
+                    <div id="shadowsocks-settings-group" class="settings-subgroup" style="display: none;">
+                        <h4>Настройки Shadowsocks</h4>
+                        <div class="input-group">
+                            <label for="ib-ss-method">Метод шифрования</label>
+                            <select id="ib-ss-method">
+                                <option value="aes-128-gcm">aes-128-gcm</option>
+                                <option value="aes-256-gcm" selected>aes-256-gcm</option>
+                                <option value="chacha20-ietf-poly1305">chacha20-ietf-poly1305</option>
+                                <option value="2022-blake3-aes-128-gcm">2022-blake3-aes-128-gcm</option>
+                                <option value="2022-blake3-aes-256-gcm">2022-blake3-aes-256-gcm</option>
+                                <option value="2022-blake3-chacha20-poly1305">2022-blake3-chacha20-poly1305</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <!-- VLESS settings -->
+                    <div id="vless-protocol-settings-group" class="settings-subgroup" style="display: none;">
+                        <h4>VLESS Шифрование (VLESS Encryption)</h4>
+                        <div class="input-group">
+                            <label for="ib-vless-decryption">Расшифрование (decryption)</label>
+                            <input type="text" id="ib-vless-decryption" placeholder="none" value="none">
+                        </div>
+                        <div class="input-group" style="margin-top: 10px;">
+                            <label for="ib-vless-encryption">Шифрование (encryption - для ссылок клиента)</label>
+                            <input type="text" id="ib-vless-encryption" placeholder="none" value="none">
+                        </div>
+                        <div class="input-group" style="margin-top: 15px; display: flex; gap: 10px; flex-wrap: wrap;">
+                            <button type="button" id="gen-vless-x25519-btn" class="btn secondary-btn" style="padding: 6px 12px; font-size: 13px;"><i class="fa-solid fa-key"></i> Аутентификация X25519</button>
+                            <button type="button" id="gen-vless-mlkem-btn" class="btn secondary-btn" style="padding: 6px 12px; font-size: 13px;"><i class="fa-solid fa-shield-halved"></i> Аутентификация ML-KEM-768</button>
+                            <button type="button" id="clear-vless-enc-btn" class="btn secondary-btn" style="padding: 6px 12px; font-size: 13px; color: var(--accent-rose);"><i class="fa-solid fa-eraser"></i> Очистить</button>
+                        </div>
+                    </div>
+
+                    <!-- Fallbacks (VLESS / Trojan) -->
+                    <div id="fallbacks-settings-group" class="settings-subgroup" style="display: none;">
+                        <h4>Настройки Fallbacks (Перенаправления)</h4>
+                        <div class="input-row">
+                            <div class="input-group">
+                                <label for="ib-fallback-dest">Куда перенаправлять (Dest)</label>
+                                <input type="text" id="ib-fallback-dest" placeholder="80 или 127.0.0.1:80">
+                            </div>
+                            <div class="input-group">
+                                <label for="ib-fallback-path">Путь (Path)</label>
+                                <input type="text" id="ib-fallback-path" placeholder="/masquerade">
+                            </div>
+                        </div>
+                        <div class="input-row" style="margin-top: 15px;">
+                            <div class="input-group">
+                                <label for="ib-fallback-xver">Proxy Protocol (xver)</label>
+                                <select id="ib-fallback-xver">
+                                    <option value="0">0 (отключен)</option>
+                                    <option value="1">1</option>
+                                    <option value="2">2</option>
+                                </select>
+                            </div>
+                            <div class="input-group">
+                                <label for="ib-fallback-alpn">ALPN</label>
+                                <input type="text" id="ib-fallback-alpn" placeholder="h2">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Tab panel 3: Stream (Поток) -->
+                <div id="tab-panel-stream" class="tab-panel" style="display: none;">
+                    <div id="xray-network-security-row" class="input-group">
+                        <label for="ib-network">Транспорт (Network)</label>
+                        <select id="ib-network">
+                            <option value="tcp">TCP</option>
+                            <option value="ws">WebSocket (WS)</option>
+                            <option value="grpc">gRPC</option>
+                            <option value="h2">HTTP/2 (h2)</option>
+                            <option value="mkcp">mKCP (UDP)</option>
+                        </select>
+                    </div>
+
+                    <!-- TCP settings subgroup -->
+                    <div id="tcp-settings-group" class="settings-subgroup" style="display: none;">
+                        <h4>Настройки TCP</h4>
+                        <div class="input-group">
+                            <label for="ib-tcp-type">Тип обфускации заголовка</label>
+                            <select id="ib-tcp-type">
+                                <option value="none">none (без обфускации)</option>
+                                <option value="http">http (имитация HTTP)</option>
+                            </select>
+                        </div>
+                        <div id="tcp-http-settings" style="display: none; margin-top: 15px;">
+                            <div class="input-group">
+                                <label for="ib-tcp-host">Хост (Host, через запятую)</label>
+                                <input type="text" id="ib-tcp-host" placeholder="google.com, yandex.ru">
+                            </div>
+                            <div class="input-group" style="margin-top: 10px;">
+                                <label for="ib-tcp-path">Путь (Path, через запятую)</label>
+                                <input type="text" id="ib-tcp-path" placeholder="/video, /stream">
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- WS settings subgroup -->
+                    <div id="ws-settings-group" class="settings-subgroup" style="display: none;">
+                        <h4>Настройки WebSocket</h4>
+                        <div class="input-row">
+                            <div class="input-group">
+                                <label for="ib-ws-path">Путь (Path)</label>
+                                <input type="text" id="ib-ws-path" placeholder="/">
+                            </div>
+                            <div class="input-group">
+                                <label for="ib-ws-host">Хост (Host)</label>
+                                <input type="text" id="ib-ws-host" placeholder="mydomain.com">
+                            </div>
+                        </div>
+                        <div class="input-group" style="margin-top: 15px;">
+                            <label for="ib-ws-ed">Max Early Data Header Length</label>
+                            <input type="number" id="ib-ws-ed" min="0" value="0">
+                        </div>
+                    </div>
+
+                    <!-- gRPC settings subgroup -->
+                    <div id="grpc-settings-group" class="settings-subgroup" style="display: none;">
+                        <h4>Настройки gRPC</h4>
+                        <div class="input-group">
+                            <label for="ib-grpc-service">Имя сервиса (ServiceName)</label>
+                            <input type="text" id="ib-grpc-service" placeholder="grpc">
+                        </div>
+                        <div class="input-group" style="margin-top: 15px;">
+                            <label class="checkbox-container" style="display: flex; align-items: center; gap: 10px;">
+                                <input type="checkbox" id="ib-grpc-multi-mode">
+                                <span>Multi Mode (Мультирежим)</span>
+                            </label>
+                        </div>
+                    </div>
+
+                    <!-- HTTP/2 settings subgroup -->
+                    <div id="h2-settings-group" class="settings-subgroup" style="display: none;">
+                        <h4>Настройки HTTP/2</h4>
+                        <div class="input-row">
+                            <div class="input-group">
+                                <label for="ib-h2-path">Путь (Path)</label>
+                                <input type="text" id="ib-h2-path" placeholder="/">
+                            </div>
+                            <div class="input-group">
+                                <label for="ib-h2-host">Хост (Host, через запятую)</label>
+                                <input type="text" id="ib-h2-host" placeholder="domain.com">
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- mKCP settings subgroup -->
+                    <div id="mkcp-settings-group" class="settings-subgroup" style="display: none;">
+                        <h4>Настройки mKCP</h4>
+                        <div class="input-row">
+                            <div class="input-group">
+                                <label for="ib-mkcp-header">Тип заголовка</label>
+                                <select id="ib-mkcp-header">
+                                    <option value="none">none</option>
+                                    <option value="srtp">srtp</option>
+                                    <option value="utp">utp</option>
+                                    <option value="wechat-video">wechat-video</option>
+                                    <option value="dtls">dtls</option>
+                                    <option value="wireguard">wireguard</option>
+                                </select>
+                            </div>
+                            <div class="input-group">
+                                <label for="ib-mkcp-seed">Обфус-ключ (Seed)</label>
+                                <input type="text" id="ib-mkcp-seed" placeholder="my_obfs_seed">
+                            </div>
+                        </div>
+                        <div class="input-group" style="margin-top: 15px;">
+                            <label class="checkbox-container" style="display: flex; align-items: center; gap: 10px;">
+                                <input type="checkbox" id="ib-mkcp-congestion">
+                                <span>Контроль перегрузок (Congestion)</span>
+                            </label>
+                        </div>
+                    </div>
+
+                    <!-- Hysteria 2 settings group -->
+                    <div id="hysteria-settings-group" class="settings-subgroup" style="display: none;">
+                        <h4>Настройки Hysteria 2</h4>
+                        
+                        <div class="input-group">
+                            <label for="ib-hysteria-mode">Режим защиты Hysteria 2</label>
+                            <select id="ib-hysteria-mode">
+                                <option value="masq" selected>Маскировка (Masquerade)</option>
+                                <option value="obfs">Обфускация (Obfuscation / Salamander)</option>
+                            </select>
+                        </div>
+
+                        <!-- Группа обфускации -->
+                        <div id="hysteria-obfs-group" style="display: none; margin-top: 15px;">
+                            <div class="input-group">
+                                <label for="ib-hysteria-obfs-password">Пароль обфускации (obfs password)</label>
+                                <div class="copy-input-group">
+                                    <input type="text" id="ib-hysteria-obfs-password" placeholder="Случайный пароль">
+                                    <button type="button" id="btn-gen-obfs" class="btn secondary-btn" title="Сгенерировать"><i class="fa-solid fa-wand-magic-sparkles"></i></button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Группа маскировки -->
+                        <div id="hysteria-masq-group" style="margin-top: 15px;">
+                            <div class="input-row">
+                                <div class="input-group">
+                                    <label for="ib-hysteria-masq-type">Тип маскировки (Masquerade)</label>
+                                    <select id="ib-hysteria-masq-type">
+                                        <option value="proxy">Proxy (Перенаправление на сайт)</option>
+                                        <option value="file">File (Локальный каталог)</option>
+                                        <option value="string">String (Статический ответ)</option>
+                                    </select>
+                                </div>
+                                <div class="input-group">
+                                    <label for="ib-hysteria-masq-value">Значение маскировки</label>
+                                    <input type="text" id="ib-hysteria-masq-value" placeholder="https://google.com">
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="input-row" style="margin-top: 15px;">
+                            <div class="input-group">
+                                <label for="ib-hysteria-up-mbps">Лимит отдачи (Up Mbps)</label>
+                                <input type="number" id="ib-hysteria-up-mbps" min="0" value="100">
+                            </div>
+                            <div class="input-group">
+                                <label for="ib-hysteria-down-mbps">Лимит загрузки (Down Mbps)</label>
+                                <input type="number" id="ib-hysteria-down-mbps" min="0" value="100">
+                            </div>
+                        </div>
+                        <div class="input-group" style="margin-top: 15px;">
+                            <label for="ib-hysteria-cert-mode">Сертификат TLS</label>
+                            <select id="ib-hysteria-cert-mode">
+                                <option value="self">Самоподписанный сертификат</option>
+                                <option value="custom">Указать пути к файлам сертификата</option>
+                            </select>
+                        </div>
+                        <div id="hysteria-custom-cert-fields" style="display: none; margin-top: 15px;">
+                            <div class="input-group">
+                                <label for="ib-hysteria-cert-path">Путь к файлу сертификата (.crt/.pem)</label>
+                                <input type="text" id="ib-hysteria-cert-path" placeholder="/etc/letsencrypt/live/domain/fullchain.pem">
+                            </div>
+                            <div class="input-group" style="margin-top: 10px;">
+                                <label for="ib-hysteria-key-path">Путь к приватному ключу (.key)</label>
+                                <input type="text" id="ib-hysteria-key-path" placeholder="/etc/letsencrypt/live/domain/privkey.pem">
+                            </div>
+                        </div>
+                        <div class="input-group" style="margin-top: 15px;">
+                            <label for="ib-hysteria-hop">Порты hopping (диапазон или список, напр. 20000-30000)</label>
+                            <input type="text" id="ib-hysteria-hop" placeholder="Оставьте пустым для отключения">
+                        </div>
+                        <div class="input-group" style="margin-top: 15px;">
+                            <label class="checkbox-container" style="display: flex; align-items: center; gap: 10px;">
+                                <input type="checkbox" id="ib-hysteria-routing-xray">
+                                <span>Маршрутизировать Hysteria 2 трафик через Xray (SOCKS5)</span>
+                            </label>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Tab panel 4: Security (Безопасность) -->
+                <div id="tab-panel-security" class="tab-panel" style="display: none;">
+                    <div class="input-group">
+                        <label for="ib-security">Тип шифрования/безопасности</label>
+                        <select id="ib-security">
+                            <option value="none">none (без шифрования)</option>
+                            <option value="tls">TLS</option>
+                            <option value="reality">REALITY</option>
+                        </select>
+                    </div>
+
+                    <!-- TLS settings subgroup -->
+                    <div id="tls-settings-group" class="settings-subgroup" style="display: none; margin-top: 15px;">
+                        <h4>Настройки TLS</h4>
+                        <div class="input-row">
+                            <div class="input-group">
+                                <label for="ib-tls-sni">Server Name (SNI)</label>
+                                <input type="text" id="ib-tls-sni" placeholder="mydomain.com">
+                            </div>
+                            <div class="input-group">
+                                <label for="ib-tls-alpn">ALPN (через запятую)</label>
+                                <input type="text" id="ib-tls-alpn" value="h2,http/1.1">
+                            </div>
+                        </div>
+                        <div class="input-row" style="margin-top: 15px;">
+                            <div class="input-group">
+                                <label for="ib-tls-min-ver">Минимальная версия TLS</label>
+                                <select id="ib-tls-min-ver">
+                                    <option value="1.2">1.2</option>
+                                    <option value="1.3" selected>1.3</option>
+                                </select>
+                            </div>
+                            <div class="input-group">
+                                <label for="ib-tls-max-ver">Максимальная версия TLS</label>
+                                <select id="ib-tls-max-ver">
+                                    <option value="1.2">1.2</option>
+                                    <option value="1.3" selected>1.3</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="input-group" style="margin-top: 15px;">
+                            <label class="checkbox-container" style="display: flex; align-items: center; gap: 10px;">
+                                <input type="checkbox" id="ib-tls-insecure">
+                                <span>Разрешить небезопасные сертификаты (Allow Insecure)</span>
+                            </label>
+                        </div>
+                    </div>
+
+                    <!-- Reality settings subgroup -->
+                    <div id="reality-settings-group" class="settings-subgroup" style="display: none; margin-top: 15px;">
+                        <h4>Настройки Reality</h4>
+                        <div class="input-row">
+                            <div class="input-group">
+                                <label for="ib-reality-dest">Направление маскировки (Dest)</label>
+                                <input type="text" id="ib-reality-dest" placeholder="yahoo.com:443">
+                            </div>
+                            <div class="input-group">
+                                <label for="ib-reality-sni">Маскировочный SNI (Server Names)</label>
+                                <input type="text" id="ib-reality-sni" placeholder="yahoo.com">
+                            </div>
+                        </div>
+                        <div class="input-group" style="margin-top: 15px;">
+                            <label for="ib-reality-priv">Приватный ключ (Private Key)</label>
+                            <input type="text" id="ib-reality-priv" placeholder="Приватный ключ">
+                        </div>
+                        <div class="input-group" style="margin-top: 10px;">
+                            <label for="ib-reality-pbk">Публичный ключ (Public Key)</label>
+                            <input type="text" id="ib-reality-pbk" placeholder="Публичный ключ">
+                        </div>
+                        <div class="input-group" style="margin-top: 15px; display: flex; justify-content: flex-end; gap: 10px;">
+                            <button type="button" id="gen-x25519-keys-btn" class="btn secondary-btn" style="padding: 6px 12px; font-size: 13px;"><i class="fa-solid fa-key"></i> Сгенерировать ключи</button>
+                        </div>
+                        <div class="input-row" style="margin-top: 15px;">
+                            <div class="input-group">
+                                <label for="ib-reality-shortids">Short IDs (через запятую, напр. 8f9c2d1b)</label>
+                                <input type="text" id="ib-reality-shortids" placeholder="8f9c2d1b">
+                            </div>
+                            <div class="input-group" style="display: flex; align-items: flex-end; margin-bottom: 2px;">
+                                <button type="button" id="gen-short-ids-btn" class="btn secondary-btn" style="padding: 10px 12px; font-size: 13px; width: 100%;"><i class="fa-solid fa-wand-magic-sparkles"></i> Сгенерировать Short ID</button>
+                            </div>
+                        </div>
+                        <div class="input-row" style="margin-top: 15px;">
+                            <div class="input-group">
+                                <label for="ib-reality-fp">Эмуляция отпечатка браузера (Fingerprint)</label>
+                                <select id="ib-reality-fp">
+                                    <option value="chrome" selected>chrome</option>
+                                    <option value="firefox">firefox</option>
+                                    <option value="safari">safari</option>
+                                    <option value="edge">edge</option>
+                                    <option value="qq">qq</option>
+                                    <option value="opera">opera</option>
+                                    <option value="360">360</option>
+                                    <option value="android">android</option>
+                                    <option value="ios">ios</option>
+                                    <option value="random">random</option>
+                                    <option value="randomized">randomized</option>
+                                </select>
+                            </div>
+                            <div class="input-group">
+                                <label for="ib-reality-spx">SpiderX</label>
+                                <input type="text" id="ib-reality-spx" placeholder="/" value="/">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Tab panel 5: Sniffing (Сниффинг) -->
+                <div id="tab-panel-sniffing" class="tab-panel" style="display: none;">
+                    <div class="input-group">
+                        <label class="checkbox-container" style="display: flex; align-items: center; gap: 10px; cursor: pointer; color: var(--text-secondary);">
+                            <input type="checkbox" id="ib-sniffing">
+                            <span>Включить Сниффинг (Sniffing)</span>
+                        </label>
+                    </div>
+                    
+                    <div id="sniffing-overrides" class="settings-subgroup" style="display: none; margin-top: 15px; flex-direction: column; gap: 10px;">
+                        <h4>Протоколы перехвата</h4>
+                        <label class="checkbox-container" style="display: flex; align-items: center; gap: 10px;">
+                            <input type="checkbox" id="ib-sniffing-http" checked>
+                            <span>HTTP</span>
+                        </label>
+                        <label class="checkbox-container" style="display: flex; align-items: center; gap: 10px;">
+                            <input type="checkbox" id="ib-sniffing-tls" checked>
+                            <span>TLS (HTTPS)</span>
+                        </label>
+                        <label class="checkbox-container" style="display: flex; align-items: center; gap: 10px;">
+                            <input type="checkbox" id="ib-sniffing-quic" checked>
+                            <span>QUIC</span>
+                        </label>
+                        <label class="checkbox-container" style="display: flex; align-items: center; gap: 10px;">
+                            <input type="checkbox" id="ib-sniffing-fakedns">
+                            <span>fakedns</span>
+                        </label>
+                        <div style="border-top: 1px solid var(--border-color); margin-top: 10px; padding-top: 10px;">
+                            <label class="checkbox-container" style="display: flex; align-items: center; gap: 10px;">
+                                <input type="checkbox" id="ib-sniffing-routeonly">
+                                <span>Только для маршрутизации (Route Only)</span>
+                            </label>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Tab panel 6: Advanced (Расширенный JSON шаблон) -->
+                <div id="tab-panel-advanced" class="tab-panel" style="display: none;">
+                    <div class="input-group">
+                        <label for="ib-json-editor">Полный JSON-объект подключения</label>
+                        <textarea id="ib-json-editor" placeholder="Загрузка JSON..." style="width: 100%; height: 350px; font-family: monospace; font-size: 13px; background: #0b0f19; color: #cbd5e1; border: 1px solid var(--border-color); border-radius: 8px; padding: 15px; resize: vertical; outline: none; transition: border-color 0.2s;"></textarea>
+                    </div>
+                </div>
+
+                <!-- Footer submit button -->
+                <button type="submit" class="btn primary-btn w-100" style="margin-top: 25px;">Создать</button>
+            </form>
+        </div>
+    </div>
+</div>

@@ -1,0 +1,241 @@
+import json
+import logging
+from fastapi import APIRouter, Request, Form
+from pydantic import BaseModel
+from typing import Optional
+
+from backend.database import (
+    add_client_db, get_inbound_by_id, update_inbound, get_client_by_id_or_pwd,
+    delete_client_db, get_clients_for_inbound, update_client_db
+)
+from backend.xray import restart_xray
+from backend.hysteria import restart_hysteria
+from backend.links_generator import get_client_links
+import backend.routes.clients
+
+router = APIRouter()
+
+class ClientSettings(BaseModel):
+    id: int # inbound_id
+    settings: str # JSON-строка {"clients": [...]}
+
+@router.post("/panel/api/inbounds/addClient")
+async def add_client_api(request: Request, payload: Optional[ClientSettings] = None, id: Optional[int] = Form(None), settings: Optional[str] = Form(None)):
+    if not backend.routes.clients.check_auth(request):
+        return backend.routes.clients.decoy_response()
+        
+    ib_id = id or (payload.id if payload else None)
+    settings_str = settings or (payload.settings if payload else None)
+    
+    if not ib_id or not settings_str:
+        return {"success": False, "msg": "Неверные параметры запроса"}
+        
+    try:
+        data = json.loads(settings_str)
+        clients = data.get("clients", [])
+        if not clients:
+            return {"success": False, "msg": "Список клиентов пуст"}
+            
+        client = clients[0] # Контроллер шлет по одному клиенту
+        email = client.get("email")
+        c_id = client.get("id") or client.get("password") # UUID для vmess/vless, пароль для trojan/ss
+        total_gb = client.get("totalGB", 0)
+        expiry_time = client.get("expiryTime", 0)
+        limit_ip = client.get("limitIp", 0)
+        enable = 1 if client.get("enable", True) else 0
+        flow = client.get("flow", "")
+        alter_id = client.get("alterId", 0)
+        security = client.get("security", "auto")
+        
+        # Добавляем в базу данных
+        success = add_client_db(ib_id, email, c_id, total_gb, expiry_time, limit_ip, enable)
+        if success:
+            from backend.audit import log_action, get_actor_username
+            actor = get_actor_username(request)
+            log_action(actor, "create_client", target=email, details=f"inbound_id:{ib_id}, total_gb:{total_gb}, limit_ip:{limit_ip}")
+            # Обновляем JSON-настройки самого inbound
+            inbound = get_inbound_by_id(ib_id)
+            ib_settings = json.loads(inbound["settings"] or "{}")
+            ib_clients = ib_settings.get("clients", [])
+            
+            # Удаляем старого клиента с таким же email если есть
+            ib_clients = [c for c in ib_clients if c.get("email") != email]
+            ib_clients.append({
+                "id": c_id,
+                "email": email,
+                "enable": bool(enable),
+                "limitIp": limit_ip,
+                "totalGB": total_gb,
+                "expiryTime": expiry_time,
+                "flow": flow,
+                "alterId": alter_id,
+                "security": security
+            })
+            ib_settings["clients"] = ib_clients
+            
+            update_inbound(
+                ib_id, inbound["remark"], inbound["port"], inbound["protocol"],
+                ib_settings, json.loads(inbound["stream_settings"]), json.loads(inbound["sniffing"]),
+                inbound["enable"], inbound["total"], inbound["expiry_time"]
+            )
+            
+            # Перезапуск Xray и Hysteria
+            restart_xray()
+            restart_hysteria()
+            return {"success": True, "msg": "Клиент добавлен"}
+            
+        return {"success": False, "msg": "Клиент с таким email уже существует"}
+    except Exception as e:
+        return {"success": False, "msg": f"Ошибка: {str(e)}"}
+
+@router.post("/panel/api/inbounds/updateClient/{client_id}")
+async def update_client_api(request: Request, client_id: str, payload: Optional[ClientSettings] = None, id: Optional[int] = Form(None), settings: Optional[str] = Form(None)):
+    if not backend.routes.clients.check_auth(request):
+        return backend.routes.clients.decoy_response()
+        
+    ib_id = id or (payload.id if payload else None)
+    settings_str = settings or (payload.settings if payload else None)
+    
+    if not ib_id or not settings_str:
+        return {"success": False, "msg": "Неверные параметры запроса"}
+        
+    try:
+        data = json.loads(settings_str)
+        clients = data.get("clients", [])
+        if not clients:
+            return {"success": False, "msg": "Список клиентов пуст"}
+            
+        client = clients[0]
+        email = client.get("email")
+        total_gb = client.get("totalGB", 0)
+        expiry_time = client.get("expiryTime", 0)
+        limit_ip = client.get("limitIp", 0)
+        enable = 1 if client.get("enable", True) else 0
+        flow = client.get("flow", "")
+        alter_id = client.get("alterId", 0)
+        security = client.get("security", "auto")
+        
+        # Обновляем в client_stats
+        success = update_client_db(ib_id, email, total_gb, expiry_time, limit_ip, enable)
+        if success:
+            from backend.audit import log_action, get_actor_username
+            actor = get_actor_username(request)
+            log_action(actor, "update_client", target=email, details=f"inbound_id:{ib_id}, total_gb:{total_gb}, limit_ip:{limit_ip}, enable:{enable}")
+            # Сброс IP кэша в планировщике, если клиент активирован (снята блокировка)
+            if enable == 1:
+                try:
+                    from backend.scheduler import ACTIVE_IP_CACHE
+                    if email in ACTIVE_IP_CACHE:
+                        ACTIVE_IP_CACHE[email] = {}
+                except Exception as e:
+                    logging.error(f"Failed to reset active IP cache: {e}")
+            else:
+                # Если заблокирован вручную, мгновенно рвем соединение
+                inbound = get_inbound_by_id(ib_id)
+                if inbound:
+                    if inbound["protocol"] == "hysteria2":
+                        try:
+                            from backend.hysteria import kick_client_hysteria_api
+                            kick_client_hysteria_api(ib_id, email)
+                        except Exception as e:
+                            logging.error(f"Failed to kick Hysteria2 client: {e}")
+                    else:
+                        try:
+                            from backend.xray import remove_client_api
+                            remove_client_api(ib_id, email)
+                        except Exception as e:
+                            logging.error(f"Failed to remove Xray client via API: {e}")
+
+            # Обновляем в настройках inbound
+            inbound = get_inbound_by_id(ib_id)
+            ib_settings = json.loads(inbound["settings"] or "{}")
+            ib_clients = ib_settings.get("clients", [])
+            
+            for c in ib_clients:
+                if c.get("email") == email:
+                    c["enable"] = bool(enable)
+                    c["limitIp"] = limit_ip
+                    c["totalGB"] = total_gb
+                    c["expiryTime"] = expiry_time
+                    c["flow"] = flow
+                    c["alterId"] = alter_id
+                    c["security"] = security
+                    break
+            ib_settings["clients"] = ib_clients
+            
+            update_inbound(
+                ib_id, inbound["remark"], inbound["port"], inbound["protocol"],
+                ib_settings, json.loads(inbound["stream_settings"]), json.loads(inbound["sniffing"]),
+                inbound["enable"], inbound["total"], inbound["expiry_time"]
+            )
+            
+            restart_xray()
+            restart_hysteria()
+            return {"success": True, "msg": "Клиент обновлен"}
+        return {"success": False, "msg": "Клиент не найден"}
+    except Exception as e:
+        return {"success": False, "msg": f"Ошибка: {str(e)}"}
+
+@router.post("/panel/api/inbounds/{inbound_id}/delClient/{client_id}")
+async def delete_client_api(request: Request, inbound_id: int, client_id: str):
+    if not backend.routes.clients.check_auth(request):
+        return backend.routes.clients.decoy_response()
+        
+    client = get_client_by_id_or_pwd(inbound_id, client_id)
+    if not client:
+        return {"success": False, "msg": "Клиент не найден"}
+        
+    email = client["email"]
+    
+    # Удаляем из client_stats
+    success = delete_client_db(inbound_id, email)
+    if success:
+        from backend.audit import log_action, get_actor_username
+        actor = get_actor_username(request)
+        log_action(actor, "delete_client", target=email, details=f"inbound_id:{inbound_id}")
+        # Удаляем из settings inbound
+        inbound = get_inbound_by_id(inbound_id)
+        ib_settings = json.loads(inbound["settings"] or "{}")
+        ib_clients = ib_settings.get("clients", [])
+        ib_clients = [c for c in ib_clients if c.get("email") != email]
+        ib_settings["clients"] = ib_clients
+        
+        update_inbound(
+            inbound_id, inbound["remark"], inbound["port"], inbound["protocol"],
+            ib_settings, json.loads(inbound["stream_settings"]), json.loads(inbound["sniffing"]),
+            inbound["enable"], inbound["total"], inbound["expiry_time"]
+        )
+        
+        restart_xray()
+        restart_hysteria()
+        return {"success": True, "msg": "Клиент удален"}
+        
+    return {"success": False, "msg": "Ошибка удаления"}
+
+@router.get("/panel/api/inbounds/getClientLinks/{inbound_id}/{email}")
+async def get_client_links_api(request: Request, inbound_id: int, email: str):
+    if not backend.routes.clients.check_auth(request):
+        return backend.routes.clients.decoy_response()
+        
+    inbound = get_inbound_by_id(inbound_id)
+    if not inbound:
+        return {"success": False, "msg": "Inbound не найден"}
+        
+    # Ищем клиента в client_stats
+    client = None
+    clients = get_clients_for_inbound(inbound_id)
+    for c in clients:
+        if c["email"] == email:
+            client = c
+            break
+            
+    if not client:
+        return {"success": False, "msg": "Клиент не найден"}
+        
+    # Генерируем ссылки
+    host_header = request.headers.get("Host", "127.0.0.1")
+    proto = request.url.scheme
+    base_url = f"{proto}://{host_header}"
+    
+    links = get_client_links(inbound, client, base_url)
+    return {"success": True, "obj": links}
