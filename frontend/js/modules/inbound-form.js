@@ -745,6 +745,10 @@ export async function openEditInboundModal(id) {
         populateXrayTransportSettings(streamSettings.network, streamSettings);
         
         if (target.protocol === "vless" || target.protocol === "trojan") {
+            if (target.protocol === "vless") {
+                document.getElementById("ib-vless-decryption").value = settings.decryption || "none";
+                document.getElementById("ib-vless-encryption").value = settings.encryption || "none";
+            }
             const fallbacks = settings.fallbacks || [];
             if (fallbacks.length > 0) {
                 const f = fallbacks[0];
@@ -778,6 +782,7 @@ export async function openEditInboundModal(id) {
         document.getElementById("ib-hysteria-routing-xray").checked = ho.routingViaXray || false;
     }
     
+    updateFormToggles();
     switchInboundModalTab("basic");
     document.getElementById("inbound-modal").classList.add("active");
 }
