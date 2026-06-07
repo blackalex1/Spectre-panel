@@ -34,7 +34,7 @@ async def get_settings_api(request: Request):
         "ssl_email": get_setting("ssl_email", ""),
         "language": get_setting("language", "ru"),
         "session_timeout_days": int(get_setting("session_timeout_days", str(settings.SESSION_TIMEOUT_DAYS))),
-        "telegram_bot_token": get_setting("telegram_bot_token", ""),
+        "telegram_bot_token": "••••••••" if get_setting("telegram_bot_token", "") else "",
         "telegram_admin_ids": get_setting("telegram_admin_ids", ""),
         "telegram_2fa_enabled": get_setting("telegram_2fa_enabled", "false") == "true",
         "login_max_attempts": int(get_setting("login_max_attempts", str(settings.LOGIN_MAX_ATTEMPTS))),
@@ -43,7 +43,8 @@ async def get_settings_api(request: Request):
         "backup_enable": get_setting("backup_enable", "false") == "true",
         "backup_interval": get_setting("backup_interval", "daily"),
         "backup_rotation": int(get_setting("backup_rotation", "7")),
-        "backup_telegram": get_setting("backup_telegram", "false") == "true"
+        "backup_telegram": get_setting("backup_telegram", "false") == "true",
+        "backup_encrypt": get_setting("backup_encrypt", "false") == "true"
     }
 
 @router.post("/api/settings/update")
@@ -106,6 +107,8 @@ async def update_settings_api(request: Request):
             old_admin_ids = get_setting("telegram_admin_ids", "")
             
             tg_bot_token = data.get("telegram_bot_token", old_token).strip()
+            if tg_bot_token == "••••••••":
+                tg_bot_token = old_token
             tg_admin_ids = data.get("telegram_admin_ids", old_admin_ids).strip()
             
             if tg_bot_token != old_token or tg_admin_ids != old_admin_ids:
@@ -150,10 +153,27 @@ async def update_settings_api(request: Request):
                 if rot <= 0:
                     raise ValueError()
                 set_setting("backup_rotation", str(rot))
+                
+                # Immediate rotation cleanup
+                from backend.config import BASE_DIR
+                backups_dir = BASE_DIR / "backups"
+                if backups_dir.exists():
+                    backup_files = sorted(
+                        list(backups_dir.glob("backup_*.json")),
+                        key=lambda x: x.stat().st_mtime
+                    )
+                    while len(backup_files) > rot:
+                        oldest_file = backup_files.pop(0)
+                        try:
+                            oldest_file.unlink()
+                        except Exception:
+                            pass
             except ValueError:
                 return {"success": False, "msg": "Количество бэкапов для ротации должно быть целым положительным числом"}
         if "backup_telegram" in data:
             set_setting("backup_telegram", "true" if data.get("backup_telegram") in (True, "true") else "false")
+        if "backup_encrypt" in data:
+            set_setting("backup_encrypt", "true" if data.get("backup_encrypt") in (True, "true") else "false")
 
         # Log action
         from backend.audit import log_action, get_actor_username
@@ -291,8 +311,95 @@ async def upload_backup_api(request: Request):
             return {"success": False, "msg": "Файл не предоставлен"}
         content = await file.read()
         dump_str = content.decode("utf-8")
+        
+        if dump_str.startswith("enc1:"):
+            password = form.get("password")
+            if not password:
+                password = get_setting("backup_password", "")
+                
+            if not password:
+                return {
+                    "success": False,
+                    "code": "password_required",
+                    "msg": "Файл резервной копии зашифрован. Требуется ввод пароля."
+                }
+                
+            try:
+                from backend.backup import decrypt_data
+                dump_str = decrypt_data(dump_str, password)
+            except Exception as e:
+                import logging
+                logging.error(f"[Backup Upload] Failed to decrypt backup data: {e}")
+                return {
+                    "success": False,
+                    "code": "invalid_password",
+                    "msg": "Неверный пароль для расшифровки резервной копии"
+                }
+                
         from backend.backup import restore_backup_dump
         success, msg = restore_backup_dump(dump_str)
         return {"success": success, "msg": msg}
     except Exception as e:
         return {"success": False, "msg": f"Ошибка загрузки бэкапа: {str(e)}"}
+
+@router.post("/api/system/backup/clear")
+async def clear_all_backups_api(request: Request):
+    if not backend.routes.system.check_auth(request):
+        return backend.routes.system.decoy_response()
+    try:
+        from backend.config import BASE_DIR
+        backups_dir = BASE_DIR / "backups"
+        count = 0
+        if backups_dir.exists():
+            for f in backups_dir.glob("backup_*.json"):
+                try:
+                    f.unlink()
+                    count += 1
+                except Exception:
+                    pass
+        
+        # Log action
+        from backend.audit import log_action, get_actor_username
+        actor = get_actor_username(request)
+        log_action(actor, "clear_all_backups", details=f"deleted:{count}")
+        
+        return {"success": True, "msg": f"Все локальные резервные копии ({count}) успешно удалены!"}
+    except Exception as e:
+        return {"success": False, "msg": f"Ошибка удаления бэкапов: {str(e)}"}
+
+@router.post("/api/settings/backup/password")
+async def change_backup_password_api(request: Request):
+    if not backend.routes.system.check_auth(request):
+        return backend.routes.system.decoy_response()
+    try:
+        data = await request.json()
+        current_password = data.get("current_password", "").strip()
+        new_password = data.get("new_password", "").strip()
+        
+        if not current_password or not new_password:
+            return {"success": False, "msg": "Заполните все поля для смены пароля!"}
+            
+        stored_password = get_setting("backup_password", "")
+        if current_password != stored_password:
+            return {"success": False, "msg": "Неверный текущий пароль для шифрования бэкапов"}
+            
+        set_setting("backup_password", new_password)
+        
+        # Log action
+        from backend.audit import log_action, get_actor_username
+        actor = get_actor_username(request)
+        log_action(actor, "change_backup_password", details="status:success")
+        
+        return {"success": True, "msg": "Пароль шифрования бэкапов успешно изменен!"}
+    except Exception as e:
+        return {"success": False, "msg": f"Ошибка смены пароля: {str(e)}"}
+
+@router.get("/api/settings/telegram/token")
+async def get_telegram_token_api(request: Request):
+    if not backend.routes.system.check_auth(request):
+        return backend.routes.system.decoy_response()
+    try:
+        token = get_setting("telegram_bot_token", "")
+        return {"success": True, "token": token}
+    except Exception as e:
+        return {"success": False, "msg": f"Ошибка получения токена: {str(e)}"}

@@ -500,6 +500,44 @@ if dp:
             logging.error(f"Error getting top traffic: {e}")
             await message.reply(f"❌ Ошибка при получении статистики: {e}")
 
+    @dp.message(Command("audit", "logs"))
+    async def cmd_audit(message: Message):
+        user_id = message.from_user.id
+        lang = message.from_user.language_code or "ru"
+        
+        if not is_admin(user_id):
+            await message.reply(t("access_denied_general", lang, "bot"))
+            return
+            
+        try:
+            from backend.database import db_session
+            from backend.models import AuditLog
+            
+            with db_session() as session:
+                logs = session.query(AuditLog).order_by(AuditLog.timestamp.desc()).limit(10).all()
+                
+            if not logs:
+                await message.reply("📁 Лог аудита пуст.")
+                return
+                
+            msg = "📋 <b>Последние действия в панели:</b>\n"
+            msg += "━━━━━━━━━━━━━━━━━━━━━━━━\n"
+            
+            for log in logs:
+                dt = datetime.datetime.fromtimestamp(log.timestamp)
+                time_str = dt.strftime("%d.%m %H:%M:%S")
+                target_str = f" ➔ <code>{html.escape(log.target)}</code>" if log.target else ""
+                details_str = f" (<i>{html.escape(log.details)}</i>)" if log.details else ""
+                
+                msg += f"🕒 <code>{time_str}</code> | 👤 <b>{html.escape(log.username)}</b>\n"
+                msg += f"⚙️ <code>{html.escape(log.action)}</code>{target_str}{details_str}\n"
+                msg += "────────────────────────\n"
+                
+            await message.reply(msg, parse_mode="HTML")
+        except Exception as e:
+            logging.error(f"Failed to get audit logs via bot: {e}")
+            await message.reply(f"❌ Ошибка при получении лога аудита: {e}")
+
     @dp.callback_query(F.data.startswith("tg_2fa_approve:"))
     async def cb_tg_2fa_approve(callback: CallbackQuery):
         token = callback.data.split(":", 1)[1]

@@ -44,5 +44,9 @@ def log_action(username: str, action: str, target: str = None, details: str = No
             )
             session.add(log_entry)
         logging.info(f"[AuditLog] {username} executed '{action}' on target '{target}'")
+        
+        # Отправка Telegram-уведомления при необходимости
+        from backend.telegram_alerts import trigger_telegram_alert
+        trigger_telegram_alert(username, action, target, details)
     except Exception as e:
         logging.error(f"[AuditLog] Failed to write audit log: {e}")

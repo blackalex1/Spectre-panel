@@ -6,7 +6,7 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker, scoped_session
 
 from backend.config import settings, DB_PATH
-from backend.models import Base, User, Inbound, ClientStats, SystemSetting, Outbound, RoutingRule
+from backend.models import Base, User, Inbound, ClientStats, SystemSetting, Outbound, RoutingRule, Node, NodeJoinCode
 import backend.database
 
 # Определяем URL подключения (DML для приложения)
@@ -196,6 +196,24 @@ def init_db():
         tg_admins_setting = session.query(SystemSetting).filter_by(key="telegram_admin_ids").first()
         if not tg_admins_setting:
             session.add(SystemSetting(key="telegram_admin_ids", value=""))
+
+        # Семена настроек бэкапа по умолчанию
+        backup_encrypt_setting = session.query(SystemSetting).filter_by(key="backup_encrypt").first()
+        if not backup_encrypt_setting:
+            session.add(SystemSetting(key="backup_encrypt", value="false"))
+            
+        backup_pwd_setting = session.query(SystemSetting).filter_by(key="backup_password").first()
+        if not backup_pwd_setting:
+            import secrets
+            import string
+            generated_pass = "".join(secrets.choice(string.ascii_letters + string.digits) for _ in range(16))
+            session.add(SystemSetting(key="backup_password", value=generated_pass))
+            
+            logging.info("=" * 60)
+            logging.info("  INITIAL BACKUP ENCRYPTION KEY GENERATED:")
+            logging.info(f"  Backup Password: {generated_pass}")
+            logging.info("  Keep it safe. Enabled backup files will be encrypted with this key.")
+            logging.info("=" * 60)
 
         # 3. Семена исходящих подключений (Outbounds) по умолчанию
         if session.query(Outbound).count() == 0:

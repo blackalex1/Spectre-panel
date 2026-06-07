@@ -340,7 +340,7 @@ def test_warp_endpoints(client, monkeypatch):
 
 
 def test_telegram_settings_api(client, monkeypatch):
-    """Test saving and loading Telegram settings via database."""
+    """Test saving and loading Telegram settings via database, ensuring masking works."""
     import backend.routes.system
     monkeypatch.setattr(backend.routes.system, "check_auth", lambda r: True)
     
@@ -364,16 +364,77 @@ def test_telegram_settings_api(client, monkeypatch):
         assert get_setting("telegram_bot_token") == "987654:XYZ-TEST"
         assert get_setting("telegram_admin_ids") == "11111,22222"
         
-        # Verify retrieved in GET route
+        # Verify retrieved in GET route (should be masked with dots)
         response = client.get("/api/settings")
         assert response.status_code == 200
         data = response.json()
         assert data["success"] is True
-        assert data["telegram_bot_token"] == "987654:XYZ-TEST"
+        assert data["telegram_bot_token"] == "••••••••"
         assert data["telegram_admin_ids"] == "11111,22222"
+
+        # Verify updating with "••••••••" preserves the token in DB
+        payload = {
+            "telegram_bot_token": "••••••••",
+            "telegram_admin_ids": "33333,44444"
+        }
+        response = client.post("/api/settings/update", json=payload)
+        assert response.status_code == 200
+        assert response.json()["success"] is True
+        assert get_setting("telegram_bot_token") == "987654:XYZ-TEST"
+        assert get_setting("telegram_admin_ids") == "33333,44444"
+
+        # Verify empty token is returned as empty string, not masked
+        payload = {
+            "telegram_bot_token": "",
+            "telegram_admin_ids": "33333,44444"
+        }
+        response = client.post("/api/settings/update", json=payload)
+        assert response.status_code == 200
+        assert response.json()["success"] is True
+        assert get_setting("telegram_bot_token") == ""
+        
+        response = client.get("/api/settings")
+        assert response.status_code == 200
+        data = response.json()
+        assert data["telegram_bot_token"] == ""
+        
     finally:
         set_setting("telegram_bot_token", orig_token)
         set_setting("telegram_admin_ids", orig_ids)
+
+
+def test_get_telegram_token_api(client, monkeypatch):
+    """Test retrieving raw Telegram token via the dedicated protected API endpoint."""
+    import backend.routes.system
+    
+    orig_token = get_setting("telegram_bot_token", "")
+    try:
+        set_setting("telegram_bot_token", "my-secret-bot-token")
+        
+        # 1. Unauthenticated request -> should return decoy (404)
+        monkeypatch.setattr(backend.routes.system, "check_auth", lambda r: False)
+        response = client.get("/api/settings/telegram/token")
+        assert response.status_code == 404
+        assert "404 Not Found" in response.text
+        
+        # 2. Authenticated request -> should return the actual token
+        monkeypatch.setattr(backend.routes.system, "check_auth", lambda r: True)
+        response = client.get("/api/settings/telegram/token")
+        assert response.status_code == 200
+        data = response.json()
+        assert data["success"] is True
+        assert data["token"] == "my-secret-bot-token"
+        
+        # 3. Authenticated request when token is empty
+        set_setting("telegram_bot_token", "")
+        response = client.get("/api/settings/telegram/token")
+        assert response.status_code == 200
+        data = response.json()
+        assert data["success"] is True
+        assert data["token"] == ""
+        
+    finally:
+        set_setting("telegram_bot_token", orig_token)
 
 
 def test_restart_telegram_bot_api(client, monkeypatch):
@@ -394,5 +455,51 @@ def test_restart_telegram_bot_api(client, monkeypatch):
     assert response.status_code == 200
     assert response.json()["success"] is False
     assert "Не удалось запустить" in response.json()["msg"]
+
+def test_change_backup_password_api(client, monkeypatch):
+    """Test the POST /api/settings/backup/password API endpoint."""
+    import backend.routes.system
+    monkeypatch.setattr(backend.routes.system, "check_auth", lambda r: True)
+    
+    orig_pwd = get_setting("backup_password", "")
+    set_setting("backup_password", "initial-backup-pwd")
+    
+    try:
+        headers = {"Authorization": "Bearer test_bearer_token"}
+        
+        # 1. Mismatching current password
+        payload = {
+            "current_password": "wrong-current-pwd",
+            "new_password": "new-backup-pwd"
+        }
+        response = client.post("/api/settings/backup/password", json=payload, headers=headers)
+        assert response.status_code == 200
+        assert response.json()["success"] is False
+        assert "Неверный текущий пароль" in response.json()["msg"]
+        
+        # 2. Empty fields
+        payload = {
+            "current_password": "",
+            "new_password": "new-backup-pwd"
+        }
+        response = client.post("/api/settings/backup/password", json=payload, headers=headers)
+        assert response.status_code == 200
+        assert response.json()["success"] is False
+        assert "Заполните все поля" in response.json()["msg"]
+        
+        # 3. Successful password change
+        payload = {
+            "current_password": "initial-backup-pwd",
+            "new_password": "new-backup-pwd"
+        }
+        response = client.post("/api/settings/backup/password", json=payload, headers=headers)
+        assert response.status_code == 200
+        assert response.json()["success"] is True
+        assert "успешно изменен" in response.json()["msg"]
+        
+        # Check database value has changed
+        assert get_setting("backup_password") == "new-backup-pwd"
+    finally:
+        set_setting("backup_password", orig_pwd)
 
 
