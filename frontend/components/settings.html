@@ -194,7 +194,10 @@
                     </div>
                     <div class="input-group">
                         <label for="setting-telegram-token" data-i18n="settings_telegram_token">Токен Telegram-бота (Bot Token)</label>
-                        <input type="text" id="setting-telegram-token" placeholder="123456789:ABCDefGhIJKlmNoPQRsT" data-i18n-placeholder="settings_telegram_token_placeholder">
+                        <div class="copy-input-group">
+                            <input type="password" id="setting-telegram-token" placeholder="123456789:ABCDefGhIJKlmNoPQRsT" data-i18n-placeholder="settings_telegram_token_placeholder">
+                            <button type="button" class="btn" id="btn-toggle-telegram-token"><i class="fa-regular fa-eye"></i></button>
+                        </div>
                     </div>
 
                     <div class="input-group" style="margin-top: 20px;">
@@ -300,12 +303,42 @@
                     <div style="display: flex; flex-direction: column; gap: 12px; background: var(--bg-input); border: 1px solid var(--border-color); border-radius: 12px; padding: 15px 20px;">
                         <label class="checkbox-container" style="display: flex; align-items: center; gap: 10px; cursor: pointer; color: var(--text-secondary); font-size: 14px; font-weight: normal; text-transform: none; margin-bottom: 0;">
                             <input type="checkbox" id="setting-backup-enable">
-                            <span data-i18n="settings_backup_enable">Создавать бэкапы автоматически</span>
+                            <span data-i18n="settings_backup_enable">Хранить бэкапы локально</span>
                         </label>
                         <label class="checkbox-container" style="display: flex; align-items: center; gap: 10px; cursor: pointer; color: var(--text-secondary); font-size: 14px; font-weight: normal; text-transform: none; margin-bottom: 0;">
                             <input type="checkbox" id="setting-backup-telegram">
-                            <span data-i18n="settings_backup_telegram">Отправлять копию в Telegram</span>
+                            <span data-i18n="settings_backup_telegram">Отправлять бэкап в Telegram</span>
                         </label>
+                        <label class="checkbox-container" style="display: flex; align-items: center; gap: 10px; cursor: pointer; color: var(--text-secondary); font-size: 14px; font-weight: normal; text-transform: none; margin-bottom: 0;">
+                            <input type="checkbox" id="setting-backup-encrypt">
+                            <span data-i18n="settings_backup_encrypt">Шифровать файлы бэкапов</span>
+                        </label>
+                    </div>
+
+                    <div class="input-group" id="setting-backup-password-group" style="display: none; margin-top: 15px; border-top: 1px dashed var(--border-color); padding-top: 15px;">
+                        <h4 style="margin-bottom: 15px; font-size: 14px; color: var(--text-primary);" data-i18n="settings_backup_change_pwd_title">Смена пароля шифрования бэкапов</h4>
+                        
+                        <div class="input-group" style="margin-bottom: 12px;">
+                            <label for="setting-backup-current-password" data-i18n="settings_backup_current_password">Текущий пароль шифрования</label>
+                            <input type="password" id="setting-backup-current-password" placeholder="Введите текущий пароль...">
+                        </div>
+                        
+                        <div class="input-group" style="margin-bottom: 12px;">
+                            <label for="setting-backup-new-password" data-i18n="settings_backup_new_password">Новый пароль шифрования</label>
+                            <input type="password" id="setting-backup-new-password" placeholder="Введите новый пароль...">
+                        </div>
+                        
+                        <div class="input-group" style="margin-bottom: 15px;">
+                            <label for="setting-backup-confirm-password" data-i18n="settings_backup_confirm_password">Подтвердите новый пароль</label>
+                            <input type="password" id="setting-backup-confirm-password" placeholder="Повторите новый пароль...">
+                        </div>
+                        
+                        <button type="button" id="btn-change-backup-password" class="btn primary-btn w-100" style="padding: 10px; font-weight: 600; margin-bottom: 15px;"><i class="fa-solid fa-key"></i> <span data-i18n="settings_backup_btn_change_password">Изменить пароль</span></button>
+                        
+                        <div id="setting-backup-password-warning" style="background: rgba(255, 159, 67, 0.1); border: 1px solid rgba(255, 159, 67, 0.25); border-radius: 8px; padding: 12px; color: #ff9f43; font-size: 13px; line-height: 1.4; display: flex; align-items: flex-start; gap: 8px;">
+                            <i class="fa-solid fa-triangle-exclamation" style="margin-top: 2px;"></i>
+                            <span data-i18n="settings_backup_password_warning">⚠️ ВНИМАНИЕ: Обязательно сохраните/запомните этот пароль! Без него восстановление резервных копий будет невозможно.</span>
+                        </div>
                     </div>
 
                     <div class="input-row" style="display: flex; flex-wrap: wrap; gap: 15px;">
@@ -329,6 +362,7 @@
                             <button type="button" id="btn-download-backup" class="btn secondary-btn w-100" style="padding: 10px; font-weight: 600;"><i class="fa-solid fa-download"></i> <span>Скачать бэкап</span></button>
                             <button type="button" id="btn-trigger-upload-backup" class="btn secondary-btn w-100" style="padding: 10px; font-weight: 600; border-color: rgba(255, 71, 87, 0.3); color: #ff4757;"><i class="fa-solid fa-upload"></i> <span>Восстановить</span></button>
                         </div>
+                        <button type="button" id="btn-clear-backups" class="btn danger-btn w-100" style="padding: 10px; font-weight: 600; border: 1px solid rgba(255, 71, 87, 0.3); color: #ff4757; background: rgba(255, 71, 87, 0.1);"><i class="fa-solid fa-trash-can"></i> <span data-i18n="settings_backup_btn_clear">Удалить локальные копии</span></button>
                         <input type="file" id="backup-file-input" style="display: none;" accept=".json">
                     </div>
                 </div>

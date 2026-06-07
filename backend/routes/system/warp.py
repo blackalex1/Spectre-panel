@@ -64,10 +64,17 @@ async def get_warp_status_api(request: Request):
         return backend.routes.system.decoy_response()
         
     status = host_client.send_command("get_warp_status", timeout=15.0)
-    
+    if not isinstance(status, dict):
+        status = {}
+        
     # Синхронизируем состояние БД в зависимости от статуса хоста
-    if isinstance(status, dict) and "connected" in status:
+    if "connected" in status:
         sync_warp_outbound_state(status["connected"])
+        
+    # Добавляем сохраненную лицензию из БД, если на хосте она пустая или не установлена
+    db_license = get_setting("warp_license", "")
+    if not status.get("license") and db_license:
+        status["license"] = db_license
         
     # Находим активные правила маршрутизации, зависящие от warp
     from backend.database import db_session
@@ -152,6 +159,12 @@ async def register_warp_api(request: Request):
         data = {}
         
     license_key = data.get("license_key")
+    
+    # Сохраняем лицензионный ключ в базу данных системных настроек
+    from backend.database import set_setting
+    if license_key is not None:
+        set_setting("warp_license", license_key.strip())
+        
     res = host_client.send_command("register_warp", {"license_key": license_key}, timeout=30.0)
     
     from backend.audit import log_action, get_actor_username

@@ -59,6 +59,29 @@ def check_auth(request: Request) -> bool:
         
     return False
 
+def verify_node_token(request: Request) -> bool:
+    """Проверяет токен ноды (Edge-сервера) во избежание получения decoy заглушки"""
+    node_id = request.headers.get("X-Node-ID")
+    auth_header = request.headers.get("Authorization", "")
+    
+    if not node_id or not auth_header.startswith("Bearer "):
+        return False
+        
+    token = auth_header.split(" ")[1]
+    token_hash = hashlib.sha256(token.encode("utf-8")).hexdigest()
+    
+    try:
+        from backend.database import db_session
+        from backend.models import Node
+        with db_session() as session:
+            node = session.query(Node).filter_by(id=node_id, status="active").first()
+            if node:
+                return hmac.compare_digest(node.api_token_hash, token_hash)
+    except Exception as e:
+        logging.error(f"Error in verify_node_token: {e}")
+        
+    return False
+
 def verify_telegram_webapp(init_data: str) -> Optional[dict]:
     """Криптографически проверяет initData от Telegram Mini App"""
     bot_token = get_setting("telegram_bot_token", "")

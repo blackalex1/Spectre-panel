@@ -21,15 +21,16 @@ services:
     volumes:
       - ./config:/app/config
       - ./bin:/app/bin
+      - ./backups:/app/backups
       - /var/run/vpn_panel:/var/run/vpn_panel
     environment:
       - PYTHONUNBUFFERED=1
     env_file:
       - ./config/.env
-    ulimits:
-      nofile:
-        soft: 1000000
-        hard: 1000000
+    # ulimits:
+    #   nofile:
+    #     soft: 1000000
+    #     hard: 1000000
 
 volumes:
   pgdata:

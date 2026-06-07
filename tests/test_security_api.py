@@ -333,3 +333,35 @@ def test_security_unban_ip(client):
     assert "3.3.3.3" in banned_ips
 
 
+def test_security_audit_logs(client):
+    """
+    Проверка эндпоинта /api/security/audit-logs.
+    """
+    from backend.models import AuditLog
+    import time
+    
+    headers = {"Authorization": "Bearer test_bearer_token"}
+    
+    with db_session() as session:
+        session.query(AuditLog).delete()
+        log1 = AuditLog(timestamp=int(time.time()) - 10, username="admin", action="login_success", target="1.2.3.4", details="Web password login success")
+        log2 = AuditLog(timestamp=int(time.time()), username="bot", action="sync_whitelist", target=None, details="Sync ok")
+        session.add(log1)
+        session.add(log2)
+        session.commit()
+        
+    # 1. Без авторизации -> 404 decoy
+    response = client.get("/api/security/audit-logs")
+    assert response.status_code == 404
+    
+    # 2. С правильной авторизацией -> логи
+    response = client.get("/api/security/audit-logs?limit=5", headers=headers)
+    assert response.status_code == 200
+    data = response.json()
+    assert data["success"] is True
+    assert len(data["logs"]) == 2
+    # Должны быть отсортированы по убыванию времени (новые в начале)
+    assert data["logs"][0]["username"] == "bot"
+    assert data["logs"][1]["username"] == "admin"
+
+

@@ -160,6 +160,16 @@ FINAL_SECRET_PATH=$(grep -E "^PANEL_SECRET_PATH=" "$ENV_FILE" | cut -d'=' -f2 | 
 FINAL_ADMIN_USER=$(grep -E "^ADMIN_USERNAME=" "$ENV_FILE" | cut -d'=' -f2 | tr -d '\r')
 FINAL_ADMIN_PASS=$(grep -E "^ADMIN_PASSWORD=" "$ENV_FILE" | cut -d'=' -f2 | tr -d '\r')
 
+# Query backup password from database (wait up to 30s for database readiness if needed)
+FINAL_BACKUP_PASS=""
+for i in {1..15}; do
+    FINAL_BACKUP_PASS=$(docker compose exec -T vpn-panel python -c "from backend.database import get_setting; print(get_setting('backup_password', ''))" 2>/dev/null | tr -d '\r\n ')
+    if [ -n "$FINAL_BACKUP_PASS" ]; then
+        break
+    fi
+    sleep 2
+done
+
 # Try to get public IP, fallback to 127.0.0.1
 SERVER_IP=$(curl -s https://ifconfig.me 2>/dev/null || curl -s icanhazip.com 2>/dev/null || ip route get 1 | awk '{print $NF;exit}' 2>/dev/null || echo "YOUR_SERVER_IP")
 
@@ -174,6 +184,9 @@ echo ""
 echo "👤 Administrator Credentials:"
 echo "   Username: ${FINAL_ADMIN_USER}"
 echo "   Password: ${FINAL_ADMIN_PASS}"
+if [ -n "$FINAL_BACKUP_PASS" ]; then
+    echo "   Backup Password: ${FINAL_BACKUP_PASS}"
+fi
 echo "===================================================="
 echo "⚠️  Please copy and save these credentials securely!"
 echo "   Use 'docker compose logs -f' to view logs."

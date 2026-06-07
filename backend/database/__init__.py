@@ -7,6 +7,8 @@ from backend.models import (
     UserSession,
     Outbound,
     RoutingRule,
+    Node,
+    NodeJoinCode,
 )
 
 from backend.database.connection import (
@@ -91,6 +93,8 @@ __all__ = [
     "UserSession",
     "Outbound",
     "RoutingRule",
+    "Node",
+    "NodeJoinCode",
     "database_url",
     "engine",
     "session_factory",

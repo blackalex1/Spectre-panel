@@ -130,6 +130,21 @@ export async function loadSettings() {
             backupRotationInput.value = setObj.backup_rotation !== undefined ? setObj.backup_rotation : 7;
         }
         
+        const backupEncryptInput = document.getElementById("setting-backup-encrypt");
+        if (backupEncryptInput) {
+            backupEncryptInput.checked = setObj.backup_encrypt !== undefined ? setObj.backup_encrypt : false;
+        }
+        const currPwd = document.getElementById("setting-backup-current-password");
+        if (currPwd) currPwd.value = "";
+        const newPwd = document.getElementById("setting-backup-new-password");
+        if (newPwd) newPwd.value = "";
+        const confirmPwd = document.getElementById("setting-backup-confirm-password");
+        if (confirmPwd) confirmPwd.value = "";
+        const backupPasswordGroup = document.getElementById("setting-backup-password-group");
+        if (backupPasswordGroup) {
+            backupPasswordGroup.style.display = setObj.backup_encrypt ? "block" : "none";
+        }
+        
         updateDecoyUI(decoyType);
         await loadWarpStatus();
         await loadAuditLogs();
@@ -409,6 +424,7 @@ export function setupSettingsListeners() {
             const interval = document.getElementById("setting-backup-interval").value;
             const rotationInput = document.getElementById("setting-backup-rotation");
             const rotation = rotationInput ? parseInt(rotationInput.value) : 7;
+            const encrypt = document.getElementById("setting-backup-encrypt").checked;
 
             if (isNaN(rotation) || rotation <= 0) {
                 showToast("Количество бэкапов для ротации должно быть целым положительным числом", "error");
@@ -423,13 +439,16 @@ export function setupSettingsListeners() {
                     backup_enable: enable,
                     backup_telegram: telegram,
                     backup_interval: interval,
-                    backup_rotation: rotation
+                    backup_rotation: rotation,
+                    backup_encrypt: encrypt
                 })
             });
             btnSaveBackups.disabled = false;
 
             if (res && res.success) {
                 showToast(t("settings_saved_toast", "Настройки успешно сохранены!"));
+                const checkInput = document.getElementById("setting-backup-password-check");
+                if (checkInput) checkInput.value = "";
                 loadSettings();
             } else {
                 showToast(res ? res.msg : t("settings_save_error", "Не удалось сохранить настройки"), "error");
@@ -444,6 +463,31 @@ export function setupSettingsListeners() {
             window.location.href = "/api/system/backup/download";
         });
     }
+
+    // Card 6: Clear all backups
+    const btnClearBackups = document.getElementById("btn-clear-backups");
+    if (btnClearBackups) {
+        btnClearBackups.addEventListener("click", async () => {
+            if (!confirm(t("confirm_clear_backups", "Вы уверены, что хотите безвозвратно удалить все локальные резервные копии с сервера?"))) {
+                return;
+            }
+            
+            btnClearBackups.disabled = true;
+            try {
+                const res = await apiFetch("/api/system/backup/clear", { method: "POST" });
+                if (res && res.success) {
+                    showToast(res.msg || "Локальные бэкапы успешно удалены!");
+                } else {
+                    showToast(res ? res.msg : "Не удалось удалить локальные бэкапы", "error");
+                }
+            } catch (err) {
+                showToast("Ошибка при удалении бэкапов: " + err, "error");
+            } finally {
+                btnClearBackups.disabled = false;
+            }
+        });
+    }
+
 
     // Card 6: Backups Upload Triggers
     const btnTriggerUpload = document.getElementById("btn-trigger-upload-backup");
@@ -470,10 +514,27 @@ export function setupSettingsListeners() {
             btnTriggerUpload.innerHTML = `<i class="fa-solid fa-circle-notch fa-spin"></i> Восстановление...`;
 
             try {
-                const res = await apiFetch("/api/system/backup/upload", {
+                let res = await apiFetch("/api/system/backup/upload", {
                     method: "POST",
                     body: formData
                 });
+                
+                while (res && !res.success && (res.code === "password_required" || res.code === "invalid_password")) {
+                    const promptMsg = res.code === "password_required"
+                        ? t("settings_backup_pwd_prompt", "Файл бэкапа зашифрован. Введите пароль для расшифровки:")
+                        : t("settings_backup_pwd_invalid_prompt", "Неверный пароль. Пожалуйста, введите корректный пароль для расшифровки:");
+                    
+                    const password = prompt(promptMsg);
+                    if (password === null) {
+                        break;
+                    }
+                    
+                    formData.set("password", password);
+                    res = await apiFetch("/api/system/backup/upload", {
+                        method: "POST",
+                        body: formData
+                    });
+                }
                 
                 if (res && res.success) {
                     showToast(res.msg || "База данных успешно восстановлена!");
@@ -647,6 +708,96 @@ export function setupSettingsListeners() {
                 await loadSettings();
             } else {
                 showToast(res ? res.msg : "Ошибка при отключении 2FA", "error");
+            }
+        });
+    }
+
+    // Backup Encryption inputs visibility toggle
+    const backupEncryptInput = document.getElementById("setting-backup-encrypt");
+    if (backupEncryptInput) {
+        backupEncryptInput.addEventListener("change", (e) => {
+            const backupPasswordGroup = document.getElementById("setting-backup-password-group");
+            if (backupPasswordGroup) {
+                backupPasswordGroup.style.display = e.target.checked ? "block" : "none";
+            }
+        });
+    }
+
+    // Change Backup Password
+    const btnChangeBackupPassword = document.getElementById("btn-change-backup-password");
+    if (btnChangeBackupPassword) {
+        btnChangeBackupPassword.addEventListener("click", async () => {
+            const currentPassword = document.getElementById("setting-backup-current-password").value;
+            const newPassword = document.getElementById("setting-backup-new-password").value;
+            const confirmPassword = document.getElementById("setting-backup-confirm-password").value;
+
+            if (!currentPassword) {
+                showToast(t("settings_backup_current_password_required", "Для смены пароля введите текущий пароль!"), "error");
+                return;
+            }
+            if (!newPassword || !confirmPassword) {
+                showToast(t("settings_backup_fields_required", "Заполните все поля для смены пароля!"), "error");
+                return;
+            }
+            if (newPassword !== confirmPassword) {
+                showToast(t("settings_backup_passwords_mismatch", "Новые пароли не совпадают!"), "error");
+                return;
+            }
+
+            btnChangeBackupPassword.disabled = true;
+            try {
+                const res = await apiFetch("/api/settings/backup/password", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({
+                        current_password: currentPassword,
+                        new_password: newPassword
+                    })
+                });
+
+                if (res && res.success) {
+                    showToast(res.msg || t("settings_backup_pwd_changed", "Пароль шифрования бэкапов успешно изменен!"));
+                    document.getElementById("setting-backup-current-password").value = "";
+                    document.getElementById("setting-backup-new-password").value = "";
+                    document.getElementById("setting-backup-confirm-password").value = "";
+                } else {
+                    showToast(res ? res.msg : "Не удалось изменить пароль", "error");
+                }
+            } catch (err) {
+                showToast("Ошибка при смене пароля: " + err, "error");
+            } finally {
+                btnChangeBackupPassword.disabled = false;
+            }
+        });
+    }
+
+    // Telegram Bot Token visibility toggle & dynamic fetching
+    const btnToggleTelegramToken = document.getElementById("btn-toggle-telegram-token");
+    if (btnToggleTelegramToken) {
+        btnToggleTelegramToken.addEventListener("click", async () => {
+            const tokenInput = document.getElementById("setting-telegram-token");
+            if (!tokenInput) return;
+            
+            const isPassword = tokenInput.type === "password";
+            if (isPassword) {
+                if (tokenInput.value === "••••••••") {
+                    btnToggleTelegramToken.disabled = true;
+                    try {
+                        const res = await apiFetch("/api/settings/telegram/token");
+                        if (res && res.success) {
+                            tokenInput.value = res.token || "";
+                        }
+                    } catch (err) {
+                        showToast("Ошибка получения токена: " + err, "error");
+                    } finally {
+                        btnToggleTelegramToken.disabled = false;
+                    }
+                }
+                tokenInput.type = "text";
+                btnToggleTelegramToken.innerHTML = '<i class="fa-regular fa-eye-slash"></i>';
+            } else {
+                tokenInput.type = "password";
+                btnToggleTelegramToken.innerHTML = '<i class="fa-regular fa-eye"></i>';
             }
         });
     }

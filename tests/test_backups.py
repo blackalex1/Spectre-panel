@@ -40,3 +40,61 @@ def test_backup_restore():
         session.delete(c_db)
         ib_db = session.query(Inbound).filter_by(id=restored_ib["id"]).first()
         session.delete(ib_db)
+
+def test_encrypted_backup_restore():
+    """Test encrypted backup creation and decryption flow."""
+    from backend.database import set_setting
+    from backend.backup import decrypt_data
+    
+    # Enable backup encryption
+    set_setting("backup_encrypt", "true")
+    set_setting("backup_password", "super-safe-password")
+    
+    ib_id = add_inbound("Encrypted Inbound", 61002, "shadowsocks", {"method": "aes-128-gcm"})
+    add_client_db(ib_id, "crypto_user@mail.com", "pwd123", total_gb=50)
+    
+    try:
+        backup_str = create_backup_dump()
+        assert backup_str.startswith("enc1:")
+        
+        # Test decryption fails with wrong password
+        try:
+            decrypt_data(backup_str, "wrong-password")
+            assert False, "Should have raised exception for wrong password"
+        except Exception:
+            pass
+            
+        # Decrypt with correct password
+        decrypted_str = decrypt_data(backup_str, "super-safe-password")
+        backup_data = json.loads(decrypted_str)
+        assert "inbounds" in backup_data
+        
+        # Cleanup original added records to verify restore works
+        with db_session() as session:
+            c_db = session.query(ClientStats).filter_by(inbound_id=ib_id, email="crypto_user@mail.com").first()
+            session.delete(c_db)
+            ib_db = session.query(Inbound).filter_by(id=ib_id).first()
+            session.delete(ib_db)
+            
+        # Restore from decrypted backup
+        success, msg = restore_backup_dump(decrypted_str)
+        assert success is True
+        
+        # Verify restored state
+        inbounds = get_all_inbounds()
+        restored_ib = next((x for x in inbounds if x["port"] == 61002), None)
+        assert restored_ib is not None
+        restored_clients = get_clients_for_inbound(restored_ib["id"])
+        assert len(restored_clients) == 1
+        assert restored_clients[0]["email"] == "crypto_user@mail.com"
+        
+        # Cleanup
+        with db_session() as session:
+            c_db = session.query(ClientStats).filter_by(inbound_id=restored_ib["id"], email="crypto_user@mail.com").first()
+            session.delete(c_db)
+            ib_db = session.query(Inbound).filter_by(id=restored_ib["id"]).first()
+            session.delete(ib_db)
+    finally:
+        # Restore settings to default to not affect other tests
+        set_setting("backup_encrypt", "false")
+        set_setting("backup_password", "")

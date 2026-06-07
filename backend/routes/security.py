@@ -344,7 +344,7 @@ async def get_top_traffic(request: Request, period: str = Query("today")):
     from sqlalchemy import func
     
     today_str = datetime.date.today().isoformat()
-    month_prefix = datetime.date.today().strftime("%Y-%m-%")
+    month_prefix = datetime.date.today().strftime("%Y-%m-") + "%"
     
     with db_session() as session:
         if period == "today":
@@ -417,6 +417,34 @@ async def unban_ip(request: Request, ip: str = Form(...)):
             
         return {"success": True, "msg": f"IP {ip} разблокирован"}
     return {"success": False, "msg": f"IP {ip} не найден в списке заблокированных"}
+
+
+@router.get("/api/security/audit-logs")
+async def get_audit_logs(request: Request, limit: int = 10):
+    if not check_auth(request):
+        return decoy_response()
+        
+    try:
+        from backend.models import AuditLog
+        from backend.database import db_session
+        
+        with db_session() as session:
+            logs = session.query(AuditLog).order_by(AuditLog.timestamp.desc()).limit(limit).all()
+            
+            result = []
+            for log in logs:
+                result.append({
+                    "id": log.id,
+                    "timestamp": log.timestamp,
+                    "username": log.username,
+                    "action": log.action,
+                    "target": log.target,
+                    "details": log.details
+                })
+                
+            return {"success": True, "logs": result}
+    except Exception as e:
+        return {"success": False, "msg": f"Failed to get audit logs: {e}"}
 
 
 

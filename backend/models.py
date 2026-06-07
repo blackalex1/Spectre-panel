@@ -130,3 +130,23 @@ class RoutingRule(Base):
     enable = Column(Integer, default=1)
     sort_order = Column(Integer, default=0)
 
+
+class Node(Base):
+    __tablename__ = "nodes"
+    
+    id = Column(String, primary_key=True)                      # e.g. "edge-node-c1"
+    name = Column(String, nullable=False)
+    api_token_hash = Column(String, nullable=False)            # SHA-256 hash
+    public_key = Column(String, nullable=True)                 # Hex-encoded Ed25519 Public Key
+    status = Column(String, default="active")                  # active, blocked, compromised
+    registered_at = Column(BigInteger, nullable=False)         # UTC epoch seconds
+
+
+class NodeJoinCode(Base):
+    __tablename__ = "node_join_codes"
+    
+    code = Column(String, primary_key=True)                    # Unique activation code
+    expires_at = Column(BigInteger, nullable=False)            # UTC epoch seconds
+    created_at = Column(BigInteger, nullable=False)            # UTC epoch seconds
+
+
