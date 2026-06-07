@@ -92,9 +92,12 @@ def generate_xray_config_json() -> dict:
                 })
             xray_settings = {
                 "clients": clients_list,
-                "decryption": db_settings.get("decryption", "none"),
-                "fallbacks": db_settings.get("fallbacks", [])
             }
+            fallbacks = db_settings.get("fallbacks")
+            if fallbacks:
+                xray_settings["fallbacks"] = fallbacks
+            else:
+                xray_settings["decryption"] = db_settings.get("decryption", "none")
             
         elif protocol == "vmess":
             clients_list = []
