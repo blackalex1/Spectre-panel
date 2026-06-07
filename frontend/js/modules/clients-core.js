@@ -198,7 +198,7 @@ export async function openLinksModal(inboundId, email) {
             height: 200,
             colorDark : "#020617",
             colorLight : "#ffffff",
-            correctLevel : window.QRCode.CorrectLevel.H
+            correctLevel : window.QRCode.CorrectLevel.L
         });
     }
     
