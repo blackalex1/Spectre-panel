@@ -77,6 +77,9 @@
                         <div class="input-group">
                             <label for="ib-vless-decryption">Расшифрование (decryption)</label>
                             <input type="text" id="ib-vless-decryption" placeholder="none" value="none">
+                            <small id="ib-vless-decryption-note" style="color: var(--text-muted); font-size: 11px; margin-top: 4px; display: block;">
+                                ⚠️ Взаимоисключающая опция: несовместима с настройками Fallbacks (перенаправления).
+                            </small>
                         </div>
                         <div class="input-group" style="margin-top: 10px;">
                             <label for="ib-vless-encryption">Шифрование (encryption - для ссылок клиента)</label>
@@ -96,6 +99,9 @@
                             <div class="input-group">
                                 <label for="ib-fallback-dest">Куда перенаправлять (Dest)</label>
                                 <input type="text" id="ib-fallback-dest" placeholder="80 или 127.0.0.1:80">
+                                <small id="ib-fallback-dest-note" style="color: var(--text-muted); font-size: 11px; margin-top: 4px; display: block;">
+                                    ⚠️ Взаимоисключающая опция: несовместима с VLESS Decryption (Расшифрование).
+                                </small>
                             </div>
                             <div class="input-group">
                                 <label for="ib-fallback-path">Путь (Path)</label>

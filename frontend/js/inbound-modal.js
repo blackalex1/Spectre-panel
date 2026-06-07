@@ -136,6 +136,7 @@ export function setupInboundListeners(loadInboundsCallback) {
                 document.getElementById("ib-vless-decryption").value = keys.decryption || "none";
                 document.getElementById("ib-vless-encryption").value = keys.encryption || "none";
                 showToast(t("vless_enc_generated_success", "Ключи VLESS Encryption успешно сгенерированы!"));
+                updateFormToggles();
             }
         } else {
             showToast(res ? res.msg : "Не удалось сгенерировать ключи", "error");
@@ -152,7 +153,18 @@ export function setupInboundListeners(loadInboundsCallback) {
         clearVlessEncBtn.addEventListener("click", () => {
             document.getElementById("ib-vless-decryption").value = "none";
             document.getElementById("ib-vless-encryption").value = "none";
+            updateFormToggles();
         });
+    }
+
+    // Exclusivity dynamic listeners
+    const ibDecryptionInput = document.getElementById("ib-vless-decryption");
+    if (ibDecryptionInput) {
+        ibDecryptionInput.addEventListener("input", () => updateFormToggles());
+    }
+    const ibFallbackDestInput = document.getElementById("ib-fallback-dest");
+    if (ibFallbackDestInput) {
+        ibFallbackDestInput.addEventListener("input", () => updateFormToggles());
     }
 
     document.getElementById("ib-sniffing").addEventListener("change", () => {

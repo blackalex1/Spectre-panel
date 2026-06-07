@@ -80,6 +80,65 @@ export function updateFormToggles() {
         // Fallbacks settings display
         if (fallbacksGroup) fallbacksGroup.style.display = (proto === "vless" || proto === "trojan") ? "block" : "none";
         
+        // Exclusivity between VLESS Decryption and VLESS Fallbacks
+        if (proto === "vless") {
+            const decryptionInput = document.getElementById("ib-vless-decryption");
+            const fallbackDestInput = document.getElementById("ib-fallback-dest");
+            const fallbackPathInput = document.getElementById("ib-fallback-path");
+            const fallbackXverSelect = document.getElementById("ib-fallback-xver");
+            const fallbackAlpnInput = document.getElementById("ib-fallback-alpn");
+            
+            const decNote = document.getElementById("ib-vless-decryption-note");
+            const fallNote = document.getElementById("ib-fallback-dest-note");
+
+            if (decryptionInput && fallbackDestInput) {
+                const hasFallback = fallbackDestInput.value.trim() !== "";
+                const hasDecryption = decryptionInput.value.trim() !== "" && decryptionInput.value.trim() !== "none";
+
+                if (hasFallback) {
+                    decryptionInput.value = "none";
+                    decryptionInput.disabled = true;
+                    if (decNote) {
+                        decNote.style.color = "var(--accent-rose)";
+                        decNote.innerHTML = "🛑 Отключено: при использовании Fallbacks функция decryption не поддерживается.";
+                    }
+                } else {
+                    decryptionInput.disabled = false;
+                    if (decNote) {
+                        decNote.style.color = "var(--text-muted)";
+                        decNote.innerHTML = "⚠️ Взаимоисключающая опция: несовместима с настройками Fallbacks (перенаправления).";
+                    }
+                }
+
+                if (hasDecryption) {
+                    fallbackDestInput.value = "";
+                    fallbackPathInput.value = "";
+                    fallbackXverSelect.value = "0";
+                    fallbackAlpnInput.value = "";
+
+                    fallbackDestInput.disabled = true;
+                    fallbackPathInput.disabled = true;
+                    fallbackXverSelect.disabled = true;
+                    fallbackAlpnInput.disabled = true;
+
+                    if (fallNote) {
+                        fallNote.style.color = "var(--accent-rose)";
+                        fallNote.innerHTML = "🛑 Отключено: при использовании VLESS Decryption функция Fallbacks не поддерживается.";
+                    }
+                } else {
+                    fallbackDestInput.disabled = false;
+                    fallbackPathInput.disabled = false;
+                    fallbackXverSelect.disabled = false;
+                    fallbackAlpnInput.disabled = false;
+
+                    if (fallNote) {
+                        fallNote.style.color = "var(--text-muted)";
+                        fallNote.innerHTML = "⚠️ Взаимоисключающая опция: несовместима с VLESS Decryption (Расшифрование).";
+                    }
+                }
+            }
+        }
+        
         // Custom security restrictions
         if (proto === "vmess" || proto === "trojan") {
             const realityOption = document.querySelector("#ib-security option[value='reality']");
