@@ -196,7 +196,7 @@ async def list_inbounds_api(request: Request):
         db_settings_dict = json.loads(ib["settings"] or "{}")
         db_clients_list = db_settings_dict.get("clients", [])
         
-        settings_dict = {}
+        settings_dict = db_settings_dict.copy()
         settings_dict["clients"] = []
         for c in clients:
             flow = ""
