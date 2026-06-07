@@ -207,6 +207,11 @@ def generate_xray_config_json() -> dict:
             
         xray_outbounds.append(ob_dict)
         
+    # Сортируем outbounds, чтобы direct (Freedom) всегда шел первым.
+    # Xray использует первый элемент списка outbounds в качестве шлюза по умолчанию (default gateway).
+    # Если первым будет blocked (blackhole), то весь немаршрутизированный трафик будет заблокирован.
+    xray_outbounds.sort(key=lambda x: 0 if x.get("tag") == "direct" else (1 if x.get("tag") == "blocked" else 2))
+        
     if not xray_outbounds:
         xray_outbounds = [
             {"protocol": "freedom", "settings": {}, "tag": "direct"},
