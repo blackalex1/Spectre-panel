@@ -194,7 +194,17 @@ if frontend_dir.exists():
                 request = Request(scope)
                 if not check_auth(request):
                     return decoy_response()
-            return await super().get_response(path, scope)
+            
+            response = await super().get_response(path, scope)
+            
+            # Отключаем кэширование для index.html (пустой путь или непосредственно index.html)
+            clean_path = path.strip("/")
+            if clean_path == "" or clean_path == "index.html":
+                response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
+                response.headers["Pragma"] = "no-cache"
+                response.headers["Expires"] = "0"
+                
+            return response
 
     from starlette.responses import Response
     app.mount(
