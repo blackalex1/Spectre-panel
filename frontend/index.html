@@ -3,6 +3,55 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <!-- Diagnostic JS Error Logger -->
+    <script>
+        window.onerror = function(message, source, lineno, colno, error) {
+            var errDiv = document.getElementById('diag-err-div');
+            if (!errDiv) {
+                errDiv = document.createElement('div');
+                errDiv.id = 'diag-err-div';
+                errDiv.style.position = 'fixed';
+                errDiv.style.top = '0';
+                errDiv.style.left = '0';
+                errDiv.style.width = '100%';
+                errDiv.style.background = '#dc2626';
+                errDiv.style.color = '#ffffff';
+                errDiv.style.zIndex = '99999';
+                errDiv.style.padding = '12px';
+                errDiv.style.fontSize = '13px';
+                errDiv.style.fontWeight = '600';
+                errDiv.style.fontFamily = 'monospace';
+                errDiv.style.wordBreak = 'break-all';
+                errDiv.style.boxShadow = '0 4px 6px -1px rgba(0,0,0,0.5)';
+                document.documentElement.appendChild(errDiv);
+            }
+            errDiv.innerText = 'JS Error: ' + message + '\nFile: ' + source + ':' + lineno + ':' + colno;
+            console.error('Diag Error:', message, source, lineno, colno, error);
+        };
+        window.onunhandledrejection = function(event) {
+            var errDiv = document.getElementById('diag-rej-div');
+            if (!errDiv) {
+                errDiv = document.createElement('div');
+                errDiv.id = 'diag-rej-div';
+                errDiv.style.position = 'fixed';
+                errDiv.style.top = '60px';
+                errDiv.style.left = '0';
+                errDiv.style.width = '100%';
+                errDiv.style.background = '#ea580c';
+                errDiv.style.color = '#ffffff';
+                errDiv.style.zIndex = '99999';
+                errDiv.style.padding = '12px';
+                errDiv.style.fontSize = '13px';
+                errDiv.style.fontWeight = '600';
+                errDiv.style.fontFamily = 'monospace';
+                errDiv.style.wordBreak = 'break-all';
+                errDiv.style.boxShadow = '0 4px 6px -1px rgba(0,0,0,0.5)';
+                document.documentElement.appendChild(errDiv);
+            }
+            errDiv.innerText = 'Promise Reject: ' + event.reason;
+            console.error('Diag Promise Reject:', event.reason);
+        };
+    </script>
     <title>Spectre Panel</title>
     <!-- Favicon -->
     <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🛡️</text></svg>">
