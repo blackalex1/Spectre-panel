@@ -6,7 +6,7 @@ from backend.database import (
     delete_routing_rule, update_rules_priority
 )
 from backend.auth_utils import check_auth, decoy_response
-from backend.xray import write_xray_config, restart_xray
+from backend.xray import write_xray_config, restart_xray, clean_stream_settings
 from backend.audit import log_action, get_actor_username
 
 router = APIRouter()
@@ -230,6 +230,56 @@ def extract_address_port(protocol: str, settings: dict) -> tuple:
         return settings.get("address"), settings.get("port")
     return None, None
 
+def system_ping(host: str, timeout: float = 3.0) -> dict:
+    import sys
+    import subprocess
+    import re
+    import time
+    
+    if not host:
+        return {"success": False, "msg": "Не указан адрес"}
+        
+    try:
+        if sys.platform == "win32":
+            cmd = ["ping", "-n", "1", "-w", str(int(timeout * 1000)), host]
+        else:
+            cmd = ["ping", "-c", "1", "-W", str(int(timeout)), host]
+            
+        creationflags = 0
+        if sys.platform == "win32":
+            creationflags = subprocess.CREATE_NO_WINDOW
+            
+        start_time = time.perf_counter()
+        res = subprocess.run(
+            cmd,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True,
+            timeout=timeout + 1.0,
+            creationflags=creationflags
+        )
+        latency = (time.perf_counter() - start_time) * 1000
+        
+        if res.returncode == 0:
+            match = re.search(r"(?:time|время)[=<]([\d\.]+)\s*(?:ms|мс)?", res.stdout, re.IGNORECASE)
+            if match:
+                try:
+                    parsed_latency = float(match.group(1))
+                    return {"success": True, "ping": round(parsed_latency, 2)}
+                except ValueError:
+                    pass
+            return {"success": True, "ping": round(latency, 2)}
+        else:
+            err_msg = res.stderr.strip() if res.stderr else res.stdout.strip()
+            if "not found" in err_msg or "not recognized" in err_msg or "не является внутренней" in err_msg:
+                return {"success": False, "msg": f"Утилита ping не установлена в системе: {err_msg}"}
+            return {"success": False, "msg": "Хост недоступен (Ping не прошел)"}
+    except subprocess.TimeoutExpired:
+        return {"success": False, "msg": "Превышено время ожидания (Timeout)"}
+    except Exception as e:
+        return {"success": False, "msg": f"Ошибка ping: {str(e)}"}
+
+
 def tcp_ping(host: str, port: int, timeout: float = 4.0) -> dict:
     import socket
     import time
@@ -293,11 +343,11 @@ def test_outbound_transit(protocol: str, settings: dict, stream_settings: dict =
         "tag": "test-out"
     }
     if stream_settings:
-        outbound["streamSettings"] = stream_settings
+        outbound["streamSettings"] = clean_stream_settings(stream_settings)
         
     config = {
         "log": {
-            "loglevel": "warning"
+            "loglevel": "debug"
         },
         "inbounds": [
             {
@@ -353,7 +403,7 @@ def test_outbound_transit(protocol: str, settings: dict, stream_settings: dict =
             stderr_out = ""
             try:
                 stdout, stderr = process.communicate(timeout=0.5)
-                stderr_out = stderr or stdout or ""
+                stderr_out = f"STDOUT:\n{stdout or ''}\nSTDERR:\n{stderr or ''}"
             except Exception:
                 pass
             
@@ -375,17 +425,44 @@ def test_outbound_transit(protocol: str, settings: dict, stream_settings: dict =
         start_time = time.perf_counter()
         
         try:
-            resp = requests.get(test_url, proxies=proxies, timeout=5.0)
+            resp = requests.get(test_url, proxies=proxies, timeout=12.0)
             latency = (time.perf_counter() - start_time) * 1000
             
             if resp.status_code in (204, 200):
                 return {"success": True, "ping": round(latency, 2)}
             else:
-                return {"success": False, "msg": f"Неожиданный статус ответа: {resp.status_code}"}
+                stderr_out = ""
+                if process:
+                    try:
+                        process.terminate()
+                        stdout, stderr = process.communicate(timeout=1.0)
+                        stderr_out = f"STDOUT:\n{stdout or ''}\nSTDERR:\n{stderr or ''}"
+                    except Exception:
+                        pass
+                error_details = f" ({stderr_out.strip()})" if stderr_out else ""
+                return {"success": False, "msg": f"Неожиданный статус ответа: {resp.status_code}{error_details}"}
         except requests.exceptions.Timeout:
-            return {"success": False, "msg": "Превышено время ожидания (Timeout)"}
+            stderr_out = ""
+            if process:
+                try:
+                    process.terminate()
+                    stdout, stderr = process.communicate(timeout=1.0)
+                    stderr_out = f"STDOUT:\n{stdout or ''}\nSTDERR:\n{stderr or ''}"
+                except Exception:
+                    pass
+            error_details = f" ({stderr_out.strip()})" if stderr_out else ""
+            return {"success": False, "msg": f"Превышено время ожидания (Timeout){error_details}"}
         except Exception as e:
-            return {"success": False, "msg": f"Ошибка проверки транзита: {str(e)}"}
+            stderr_out = ""
+            if process:
+                try:
+                    process.terminate()
+                    stdout, stderr = process.communicate(timeout=1.0)
+                    stderr_out = f"STDOUT:\n{stdout or ''}\nSTDERR:\n{stderr or ''}"
+                except Exception:
+                    pass
+            error_details = f" ({stderr_out.strip()})" if stderr_out else ""
+            return {"success": False, "msg": f"Ошибка проверки транзита: {str(e)}{error_details}"}
             
     finally:
         if process:
@@ -441,6 +518,12 @@ async def test_outbound_api(request: Request, payload: dict):
             else:
                 return {"success": False, "msg": f"Прямое подключение недоступно: {res['msg']}"}
                 
+        if protocol == "hysteria":
+            host, port = extract_address_port(protocol, settings)
+            if not host:
+                return {"success": False, "msg": "Не удалось определить адрес для этого протокола"}
+            return system_ping(host)
+            
         host, port = extract_address_port(protocol, settings)
         if not host or not port:
             return {"success": False, "msg": "Не удалось определить адрес и порт для этого протокола"}
@@ -499,10 +582,31 @@ async def test_outbound_by_id_api(request: Request, id: int, test_type: str = "t
             else:
                 return {"success": False, "msg": f"Прямое подключение недоступно: {res['msg']}"}
                 
+        if protocol == "hysteria":
+            host, port = extract_address_port(protocol, settings)
+            if not host:
+                return {"success": False, "msg": "Не удалось определить адрес"}
+            return system_ping(host)
+            
         host, port = extract_address_port(protocol, settings)
         if not host or not port:
             return {"success": False, "msg": "Не удалось определить адрес и порт"}
             
         res = tcp_ping(host, port)
         return res
+
+
+@router.post("/api/routing/outbounds/generate-warp")
+async def generate_warp_api(request: Request):
+    if not check_auth(request):
+        return decoy_response()
+        
+    from backend.utils.warp import register_warp
+    import asyncio
+    
+    warp_data = await asyncio.to_thread(register_warp)
+    if not warp_data:
+        return {"success": False, "msg": "Не удалось зарегистрировать аккаунт Cloudflare WARP. Попробуйте еще раз."}
+        
+    return {"success": True, "obj": warp_data}
 

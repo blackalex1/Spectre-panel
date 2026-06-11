@@ -38,6 +38,13 @@ def build_vless_link(inbound: dict, client: dict, host: str, port: int, display_
         sni = tls_settings.get('serverName')
         if sni: params.append(f"sni={sni}")
         
+        alpn = tls_settings.get('alpn', [])
+        if alpn:
+            params.append(f"alpn={quote(','.join(alpn), safe='')}")
+        
+        fp = tls_settings.get('fingerprint', 'chrome')
+        if fp: params.append(f"fp={fp}")
+        
         certs = tls_settings.get('certificates', [])
         cert_path = ""
         if certs and isinstance(certs, list):
@@ -87,6 +94,20 @@ def build_vless_link(inbound: dict, client: dict, host: str, port: int, display_
         seed = kcp_settings.get('seed', '')
         params.append(f"headerType={header_type}")
         if seed: params.append(f"seed={quote(seed, safe='')}")
+    elif network == 'httpupgrade':
+        hu_settings = stream_settings.get('httpupgradeSettings', {})
+        path = hu_settings.get('path', '/')
+        params.append(f"path={quote(path, safe='')}")
+        hu_host = hu_settings.get('host')
+        if hu_host: params.append(f"host={hu_host}")
+    elif network == 'xhttp':
+        xhttp_settings = stream_settings.get('xhttpSettings', {})
+        path = xhttp_settings.get('path', '/')
+        params.append(f"path={quote(path, safe='')}")
+        xhttp_host = xhttp_settings.get('host')
+        if xhttp_host: params.append(f"host={xhttp_host}")
+        mode = xhttp_settings.get('mode', 'auto')
+        if mode and mode != 'auto': params.append(f"mode={mode}")
 
     query = "&".join(params)
     return f"vless://{uid}@{host}:{port}?{query}#{quote(display_name)}"

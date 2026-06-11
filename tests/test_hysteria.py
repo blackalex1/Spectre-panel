@@ -69,8 +69,8 @@ def test_advanced_hysteria_configs():
     assert config["tls"]["key"] == "/path/to/key.pem"
 
     # Verify status masquerade
-    assert config["masquerade"]["type"] == "status"
-    assert config["masquerade"]["status"]["code"] == 403
+    assert config["masquerade"]["type"] == "string"
+    assert config["masquerade"]["string"]["statusCode"] == 403
 
     # Verify port hopping listen
     assert config["listen"] == ":60020"

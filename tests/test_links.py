@@ -157,3 +157,205 @@ def test_vless_encryption_link():
     assert len(links) == 1
     assert "encryption=mlkem768x25519plus.native.0rtt.myclientenckey" in links[0]
 
+
+def test_vless_tls_fingerprint_alpn():
+    """Test VLESS TLS link includes fp and alpn parameters."""
+    vless_inbound = {
+        "protocol": "vless",
+        "port": 443,
+        "remark": "VlessTLS",
+        "settings": json.dumps({
+            "clients": [{"email": "alice", "flow": ""}]
+        }),
+        "stream_settings": json.dumps({
+            "network": "ws",
+            "security": "tls",
+            "tlsSettings": {
+                "serverName": "mydomain.com",
+                "alpn": ["h2", "http/1.1"],
+                "fingerprint": "chrome"
+            },
+            "wsSettings": {"path": "/ws", "headers": {"Host": "mydomain.com"}}
+        })
+    }
+    client = {"client_uuid_or_pwd": "uuid-tls-1", "email": "alice"}
+    links = get_client_links(vless_inbound, client, "mydomain.com")
+    
+    assert len(links) == 1
+    assert "fp=chrome" in links[0]
+    assert "alpn=" in links[0]
+    assert "sni=mydomain.com" in links[0]
+    assert "type=ws" in links[0]
+
+
+def test_trojan_tcp_type_and_tls_params():
+    """Test Trojan link includes type=tcp and TLS fp/alpn."""
+    trojan_inbound = {
+        "protocol": "trojan",
+        "port": 443,
+        "remark": "TrojanTCP",
+        "settings": json.dumps({"clients": []}),
+        "stream_settings": json.dumps({
+            "network": "tcp",
+            "security": "tls",
+            "tlsSettings": {
+                "serverName": "example.com",
+                "alpn": ["h2", "http/1.1"],
+                "fingerprint": "firefox"
+            },
+            "tcpSettings": {"header": {"type": "none"}}
+        })
+    }
+    client = {"client_uuid_or_pwd": "trojan-pass-1", "email": "bob"}
+    links = get_client_links(trojan_inbound, client, "example.com")
+    
+    assert len(links) == 1
+    assert "type=tcp" in links[0]
+    assert "fp=firefox" in links[0]
+    assert "alpn=" in links[0]
+    assert "sni=example.com" in links[0]
+
+
+def test_vmess_tls_alpn_fp():
+    """Test VMess TLS link JSON includes alpn and fp fields."""
+    import base64
+    vmess_inbound = {
+        "protocol": "vmess",
+        "port": 443,
+        "remark": "VMessTLS",
+        "settings": json.dumps({
+            "clients": [{"email": "user1", "alterId": 0, "security": "auto"}]
+        }),
+        "stream_settings": json.dumps({
+            "network": "ws",
+            "security": "tls",
+            "tlsSettings": {
+                "serverName": "ws.example.com",
+                "alpn": ["h2", "http/1.1"],
+                "fingerprint": "safari"
+            },
+            "wsSettings": {"path": "/vmess"}
+        })
+    }
+    client = {"client_uuid_or_pwd": "vmess-uuid-1", "email": "user1"}
+    links = get_client_links(vmess_inbound, client, "ws.example.com")
+    
+    assert len(links) == 1
+    b64_part = links[0].split("vmess://")[1]
+    decoded = json.loads(base64.b64decode(b64_part).decode('utf-8'))
+    
+    assert decoded["alpn"] == "h2,http/1.1"
+    assert decoded["fp"] == "safari"
+    assert decoded["sni"] == "ws.example.com"
+
+
+def test_hysteria2_password_url_encoded():
+    """Test Hysteria2 link correctly URL-encodes passwords with special chars."""
+    hyst_inbound = {
+        "protocol": "hysteria2",
+        "port": 443,
+        "remark": "HystSpecial",
+        "settings": "{}",
+        "stream_settings": json.dumps({
+            "hysteria": {}
+        })
+    }
+    client = {"client_uuid_or_pwd": "p@ss:word/test#123", "email": "user1"}
+    links = get_client_links(hyst_inbound, client, "1.2.3.4")
+    
+    assert len(links) == 1
+    # Password should be URL-encoded, not contain raw @ : / #
+    assert "p%40ss%3Aword%2Ftest%23123" in links[0]
+    assert "p@ss:word" not in links[0]
+
+
+def test_hysteria2_custom_sni():
+    """Test Hysteria2 link uses custom SNI from hysteria opts."""
+    hyst_inbound = {
+        "protocol": "hysteria2",
+        "port": 443,
+        "remark": "HystSNI",
+        "settings": "{}",
+        "stream_settings": json.dumps({
+            "hysteria": {
+                "sni": "custom-sni.example.com"
+            }
+        })
+    }
+    client = {"client_uuid_or_pwd": "pass123", "email": "user1"}
+    links = get_client_links(hyst_inbound, client, "1.2.3.4")
+    
+    assert "sni=custom-sni.example.com" in links[0]
+
+
+def test_vless_httpupgrade_link():
+    """Test VLESS HTTPUpgrade transport link generation."""
+    inbound = {
+        "protocol": "vless",
+        "port": 443,
+        "remark": "VlessHTTPUp",
+        "settings": json.dumps({"clients": [{"email": "alice", "flow": ""}]}),
+        "stream_settings": json.dumps({
+            "network": "httpupgrade",
+            "security": "tls",
+            "tlsSettings": {"serverName": "hu.example.com", "fingerprint": "chrome"},
+            "httpupgradeSettings": {"path": "/upgrade", "host": "hu.example.com"}
+        })
+    }
+    client = {"client_uuid_or_pwd": "uuid-hu", "email": "alice"}
+    links = get_client_links(inbound, client, "hu.example.com")
+    
+    assert len(links) == 1
+    assert "type=httpupgrade" in links[0]
+    assert "path=%2Fupgrade" in links[0]
+    assert "host=hu.example.com" in links[0]
+
+
+def test_vless_xhttp_link():
+    """Test VLESS XHTTP (SplitHTTP) transport link generation."""
+    inbound = {
+        "protocol": "vless",
+        "port": 443,
+        "remark": "VlessXHTTP",
+        "settings": json.dumps({"clients": [{"email": "alice", "flow": ""}]}),
+        "stream_settings": json.dumps({
+            "network": "xhttp",
+            "security": "reality",
+            "realitySettings": {
+                "serverName": "yahoo.com",
+                "publicKey": "xhttpkey123",
+                "shortIds": ["aabb"]
+            },
+            "xhttpSettings": {"path": "/xhttp", "host": "yahoo.com", "mode": "packet-up"}
+        })
+    }
+    client = {"client_uuid_or_pwd": "uuid-xh", "email": "alice"}
+    links = get_client_links(inbound, client, "myserver.com")
+    
+    assert len(links) == 1
+    assert "type=xhttp" in links[0]
+    assert "path=%2Fxhttp" in links[0]
+    assert "mode=packet-up" in links[0]
+    assert "pbk=xhttpkey123" in links[0]
+
+
+def test_trojan_httpupgrade_link():
+    """Test Trojan HTTPUpgrade transport link generation."""
+    inbound = {
+        "protocol": "trojan",
+        "port": 443,
+        "remark": "TrojanHTTPUp",
+        "settings": json.dumps({"clients": []}),
+        "stream_settings": json.dumps({
+            "network": "httpupgrade",
+            "security": "tls",
+            "tlsSettings": {"serverName": "t.example.com"},
+            "httpupgradeSettings": {"path": "/trojan-up"}
+        })
+    }
+    client = {"client_uuid_or_pwd": "trojan-pass", "email": "bob"}
+    links = get_client_links(inbound, client, "t.example.com")
+    
+    assert len(links) == 1
+    assert "type=httpupgrade" in links[0]
+    assert "path=%2Ftrojan-up" in links[0]

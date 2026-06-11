@@ -16,7 +16,7 @@ export function setupSslListeners() {
             
             btnGenerateSsl.disabled = true;
             btnGenerateSsl.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin"></i> Выпускается...';
-            showToast(t("ssl_issue_started", "Запущен процесс выпуска сертификата Certbot. Это может занять до 1 минуты."), "info");
+            showToast(t("ssl_issue_started", "Запущен процесс автоматического выпуска SSL. Это может занять до 1 минуты."), "info");
             
             const res = await apiFetch("/api/ssl/generate", {
                 method: "POST",

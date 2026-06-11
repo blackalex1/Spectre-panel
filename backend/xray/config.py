@@ -1,9 +1,50 @@
 import json
 import logging
 from backend.config import XRAY_CONFIG_PATH, XRAY_LOG_PATH
-from backend.database import get_all_inbounds, get_clients_for_inbound, get_all_outbounds, get_all_routing_rules
+from backend.database import get_all_inbounds, get_clients_for_inbound, get_all_outbounds, get_all_routing_rules, get_setting
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
+
+def clean_stream_settings(stream_settings: dict) -> dict:
+    """Удаляет устаревшие параметры (например, allowInsecure) из streamSettings для совместимости с новыми версиями Xray"""
+    if not isinstance(stream_settings, dict):
+        return stream_settings
+    
+    # Очищаем tlsSettings
+    if "tlsSettings" in stream_settings and isinstance(stream_settings["tlsSettings"], dict):
+        if "allowInsecure" in stream_settings["tlsSettings"]:
+            del stream_settings["tlsSettings"]["allowInsecure"]
+            
+    # Очищаем realitySettings
+    if "realitySettings" in stream_settings and isinstance(stream_settings["realitySettings"], dict):
+        if "allowInsecure" in stream_settings["realitySettings"]:
+            del stream_settings["realitySettings"]["allowInsecure"]
+            
+    # Преобразуем obfs в udpmasks для Hysteria / Hysteria 2 в Xray-core
+    if stream_settings.get("network") == "hysteria" or "hysteriaSettings" in stream_settings:
+        hyst_settings = stream_settings.get("hysteriaSettings")
+        if isinstance(hyst_settings, dict):
+            obfs_type = hyst_settings.get("obfs") or hyst_settings.get("obfs_type")
+            obfs_pwd = hyst_settings.get("obfsPassword") or hyst_settings.get("obfs_password")
+            
+            # Удаляем устаревшие/нестандартные поля из hysteriaSettings
+            for key in ["obfs", "obfs_type", "obfsPassword", "obfs_password"]:
+                if key in hyst_settings:
+                    del hyst_settings[key]
+            
+            if obfs_type:
+                stream_settings["finalmask"] = {
+                    "udp": [
+                        {
+                            "type": obfs_type,
+                            "settings": {
+                                "password": obfs_pwd or ""
+                            }
+                        }
+                    ]
+                }
+            
+    return stream_settings
 
 def generate_xray_config_json() -> dict:
     """Генерирует JSON конфигурации для Xray на основе данных из БД"""
@@ -156,10 +197,9 @@ def generate_xray_config_json() -> dict:
         }
         
         if stream_settings:
+            stream_settings = clean_stream_settings(stream_settings)
             tls_settings = stream_settings.get("tlsSettings", {})
             if tls_settings:
-                if "allowInsecure" in tls_settings:
-                    del tls_settings["allowInsecure"]
                 if not tls_settings.get("certificates"):
                     from backend.ssl_utils import SSL_CERT_PATH, SSL_KEY_PATH
                     if SSL_CERT_PATH.exists() and SSL_KEY_PATH.exists():
@@ -200,7 +240,7 @@ def generate_xray_config_json() -> dict:
             "settings": settings_dict
         }
         if stream_settings_dict:
-            ob_dict["streamSettings"] = stream_settings_dict
+            ob_dict["streamSettings"] = clean_stream_settings(stream_settings_dict)
             
         if ob["tag"]:
             ob_dict["tag"] = ob["tag"]
@@ -218,9 +258,53 @@ def generate_xray_config_json() -> dict:
             {"protocol": "blackhole", "settings": {}, "tag": "blocked"}
         ]
         
-    # Загружаем правила маршрутизации (Routing Rules) из БД
-    db_rules = get_all_routing_rules()
     rules = []
+    
+    # 1. API rule first
+    rules.append({
+        "type": "field",
+        "inboundTag": ["api"],
+        "outboundTag": "api"
+    })
+    
+    # 2. System Quick Block Rules
+    if get_setting("block_bittorrent") == "true":
+        rules.append({
+            "type": "field",
+            "outboundTag": "blocked",
+            "protocol": ["bittorrent"]
+        })
+        rules.append({
+            "type": "field",
+            "outboundTag": "blocked",
+            "domain": ["geosite:torrent", "torrent", "tracker", "peerexchange"]
+        })
+        
+    if get_setting("block_ads") == "true":
+        rules.append({
+            "type": "field",
+            "outboundTag": "blocked",
+            "domain": ["geosite:category-ads-all"]
+        })
+        
+    blocked_countries = []
+    if get_setting("block_cn") == "true":
+        blocked_countries.append("cn")
+    if get_setting("block_ru") == "true":
+        blocked_countries.append("ru")
+    if get_setting("block_us") == "true":
+        blocked_countries.append("us")
+        
+    if blocked_countries:
+        rules.append({
+            "type": "field",
+            "outboundTag": "blocked",
+            "ip": [f"geoip:{c}" for c in blocked_countries],
+            "domain": [f"geosite:{c}" for c in blocked_countries]
+        })
+
+    # 3. User Routing Rules from DB
+    db_rules = get_all_routing_rules()
     for r in db_rules:
         if r["enable"] != 1:
             continue
@@ -243,13 +327,6 @@ def generate_xray_config_json() -> dict:
             
         if len(rule_dict) > 2:
             rules.append(rule_dict)
-            
-    if not rules:
-        rules.append({
-            "type": "field",
-            "inboundTag": ["api"],
-            "outboundTag": "api"
-        })
 
     config = {
         "log": {

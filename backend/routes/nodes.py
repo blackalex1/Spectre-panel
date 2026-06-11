@@ -10,7 +10,7 @@ from cryptography.hazmat.primitives.asymmetric import ed25519
 
 from backend.auth_utils import check_auth, decoy_response, verify_node_token
 from backend.database import db_session
-from backend.models import Node, NodeJoinCode
+from backend.models import Node, NodeJoinCode, ClientStats, Inbound
 
 router = APIRouter(prefix="/api/nodes", tags=["nodes"])
 
@@ -29,8 +29,9 @@ class NodeRegisterResponse(BaseModel):
 
 class NodeReportRequest(BaseModel):
     incident_id: str
-    action: str  # e.g., "client_banned"
+    action: str  # e.g., "client_banned", "investigation_result", "investigation_failed"
     client_email: str
+    tunnel_email: Optional[str] = None   # email инбаунда/туннеля который был забанен мастером
     details: Optional[str] = ""
     signature: str  # Hex-encoded signature of the JSON body (excluding this field)
 
@@ -179,7 +180,11 @@ async def report_incident(request: Request, body: NodeReportRequest):
                 
             # 2. Second layer auth: Verify Ed25519 digital signature of request body
             # Reconstruct the message that was signed (excluding the signature field)
-            payload_dict = body.model_dump()
+            try:
+                payload_dict = await request.json()
+            except Exception:
+                payload_dict = body.model_dump()
+                
             sig_hex = payload_dict.pop("signature", "")
             
             message_str = json.dumps(payload_dict, sort_keys=True)
@@ -198,24 +203,123 @@ async def report_incident(request: Request, body: NodeReportRequest):
             # Signature is valid!
             logging.info(f"[Nodes API] Verified report from node {node_id}: {body.action} for client {body.client_email}")
             
-            # Handle action (e.g. log the resolution / unban the transit channel)
-            if body.action == "client_banned":
-                # Find if there's an active temporary ban on the Master for this node
-                # Since the ban was for the transit client/tunnel corresponding to C1:
-                # We block the client on the master side as well, then restore the transit tunnel if needed.
-                from backend.database.crud.clients import block_client_db
-                from backend.models import ClientStats
+            if body.action == "investigation_result":
+                # ✅ Слейв-бот успешно расследовал инцидент
+                # 1. Глобальный бан виновника на мастер-панели
+                if body.client_email:
+                    culprit = session.query(ClientStats).filter_by(email=body.client_email).first()
+                    if culprit:
+                        culprit.enable = 0
+                        culprit.block_reason = f"IPS: resolved by {node_id}"
+                        logging.info(f"[Nodes API] Globally banned culprit {body.client_email} on Master (reported by {node_id})")
                 
-                # Check if this email exists locally on the master
+                # 2. Разбан инбаунда/туннеля на мастер-панели
+                tunnel_unbanned = False
+                if body.tunnel_email:
+                    tunnel_clients = session.query(ClientStats).filter_by(email=body.tunnel_email).all()
+                    for tc in tunnel_clients:
+                        if tc.enable == 0:
+                            tc.enable = 1
+                            tc.block_reason = None
+                            tunnel_unbanned = True
+                            # Обновить JSON settings инбаунда
+                            inbound = session.query(Inbound).filter_by(id=tc.inbound_id).first()
+                            if inbound:
+                                try:
+                                    ib_settings = json.loads(inbound.settings or "{}")
+                                    for sc in ib_settings.get("clients", []):
+                                        if sc.get("email") == body.tunnel_email:
+                                            sc["enable"] = True
+                                            break
+                                    inbound.settings = json.dumps(ib_settings)
+                                except Exception as e:
+                                    logging.error(f"[Nodes API] Error updating inbound settings for tunnel unban: {e}")
+                    
+                    if tunnel_unbanned:
+                        logging.info(f"[Nodes API] Unbanned tunnel {body.tunnel_email} on Master after successful investigation by {node_id}")
+                
+                session.commit()
+                
+                # Перезапуск ядер для применения изменений
+                try:
+                    from backend.xray import restart_xray
+                    from backend.hysteria import restart_hysteria
+                    restart_xray()
+                    restart_hysteria()
+                except Exception as e:
+                    logging.error(f"[Nodes API] Error restarting cores after investigation report: {e}")
+                
+                # 3. Telegram-уведомление администраторам
+                from backend.telegram_alerts import trigger_investigation_result_alert
+                trigger_investigation_result_alert(
+                    culprit=body.client_email,
+                    tunnel=body.tunnel_email or "",
+                    node_id=node_id,
+                    details=body.details or ""
+                )
+                
+            elif body.action == "investigation_failed":
+                # ⚠️ Расследование не удалось — инбаунд остаётся в бане
+                # Только уведомляем админа, инбаунд НЕ разбаниваем
+                logging.warning(f"[Nodes API] Investigation FAILED on node {node_id} for tunnel {body.tunnel_email}")
+                
+                from backend.telegram_alerts import trigger_investigation_failed_alert
+                trigger_investigation_failed_alert(
+                    tunnel=body.tunnel_email or "",
+                    node_id=node_id,
+                    details=body.details or ""
+                )
+                
+            elif body.action == "client_banned":
+                # Старый кейс: нода сама забанила клиента
                 client = session.query(ClientStats).filter_by(email=body.client_email).first()
                 if client:
                     client.enable = 0
                     client.block_reason = f"Cooperative ban from node {node_id}"
+                    # Синхронизация inbound.settings JSON
+                    inbound = session.query(Inbound).filter_by(id=client.inbound_id).first()
+                    if inbound:
+                        try:
+                            ib_settings = json.loads(inbound.settings or "{}")
+                            for sc in ib_settings.get("clients", []):
+                                if sc.get("email") == body.client_email:
+                                    sc["enable"] = False
+                                    break
+                            inbound.settings = json.dumps(ib_settings)
+                        except Exception as e:
+                            logging.error(f"[Nodes API] Error updating inbound settings for client ban: {e}")
                     logging.info(f"[Nodes API] Banned client {body.client_email} on Master after node resolution.")
                     
-                # Safe-unban logic: find the temporary IP ban or tunnel ban for this node and lift it
-                # If we have a transit tunnel inbound corresponding to this node, re-enable it.
-                # Find inbound representing this node's transit tunnel and make sure it is enabled.
+                # Разбан туннеля если указан
+                if body.tunnel_email:
+                    tunnel_clients = session.query(ClientStats).filter_by(email=body.tunnel_email).all()
+                    for tc in tunnel_clients:
+                        if tc.enable == 0:
+                            tc.enable = 1
+                            tc.block_reason = None
+                            # Синхронизация inbound.settings JSON
+                            inbound = session.query(Inbound).filter_by(id=tc.inbound_id).first()
+                            if inbound:
+                                try:
+                                    ib_settings = json.loads(inbound.settings or "{}")
+                                    for sc in ib_settings.get("clients", []):
+                                        if sc.get("email") == body.tunnel_email:
+                                            sc["enable"] = True
+                                            break
+                                    inbound.settings = json.dumps(ib_settings)
+                                except Exception as e:
+                                    logging.error(f"[Nodes API] Error updating inbound settings for tunnel unban: {e}")
+                    
+                session.commit()
+                
+                # Перезапуск ядер для применения изменений
+                try:
+                    from backend.xray import restart_xray
+                    from backend.hysteria import restart_hysteria
+                    restart_xray()
+                    restart_hysteria()
+                except Exception as e:
+                    logging.error(f"[Nodes API] Error restarting cores after client_banned report: {e}")
                 
             return {"status": "success", "message": "Incident resolution report accepted."}
     except Exception as e:

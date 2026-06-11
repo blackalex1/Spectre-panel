@@ -27,6 +27,7 @@ export function compileXraySecuritySettings(security, streamSettings) {
         const alpnInput = document.getElementById("ib-tls-alpn").value || "h2,http/1.1";
         const alpn = alpnInput.split(",").map(s => s.trim()).filter(Boolean);
         const allowInsecure = document.getElementById("ib-tls-insecure").checked;
+        const fp = document.getElementById("ib-tls-fp").value || "chrome";
         const minVer = document.getElementById("ib-tls-min-ver").value || "1.3";
         const maxVer = document.getElementById("ib-tls-max-ver").value || "1.3";
         
@@ -34,6 +35,7 @@ export function compileXraySecuritySettings(security, streamSettings) {
             serverName: sni,
             allowInsecure: allowInsecure,
             alpn: alpn,
+            fingerprint: fp,
             minVersion: minVer,
             maxVersion: maxVer,
             certificates: []
@@ -57,6 +59,7 @@ export function populateXraySecuritySettings(security, streamSettings) {
         document.getElementById("ib-tls-sni").value = ts.serverName || "";
         document.getElementById("ib-tls-alpn").value = (ts.alpn || []).join(", ");
         document.getElementById("ib-tls-insecure").checked = ts.allowInsecure || false;
+        document.getElementById("ib-tls-fp").value = ts.fingerprint || "chrome";
         document.getElementById("ib-tls-min-ver").value = ts.minVersion || "1.3";
         document.getElementById("ib-tls-max-ver").value = ts.maxVersion || "1.3";
     }
@@ -127,6 +130,30 @@ export function compileXrayTransportSettings(network, streamSettings) {
             seed: seed,
             congestion: congestion
         };
+    } else if (network === "httpupgrade") {
+        const path = document.getElementById("ib-httpupgrade-path").value || "/";
+        const host = document.getElementById("ib-httpupgrade-host").value || "";
+        streamSettings.httpupgradeSettings = {
+            path: path,
+            host: host || undefined
+        };
+    } else if (network === "xhttp") {
+        const path = document.getElementById("ib-xhttp-path").value || "/";
+        const host = document.getElementById("ib-xhttp-host").value || "";
+        const mode = document.getElementById("ib-xhttp-mode").value || "auto";
+        const extraStr = document.getElementById("ib-xhttp-extra").value || "";
+        const settings = {
+            path: path,
+            host: host || undefined,
+            mode: mode
+        };
+        if (extraStr) {
+            try {
+                const extra = JSON.parse(extraStr);
+                Object.assign(settings, extra);
+            } catch(e) { /* ignore invalid JSON */ }
+        }
+        streamSettings.xhttpSettings = settings;
     }
 }
 
@@ -166,5 +193,21 @@ export function populateXrayTransportSettings(network, streamSettings) {
         document.getElementById("ib-mkcp-header").value = header.type || "none";
         document.getElementById("ib-mkcp-seed").value = ks.seed || "";
         document.getElementById("ib-mkcp-congestion").checked = ks.congestion || false;
+    } else if (network === "httpupgrade") {
+        const hu = streamSettings.httpupgradeSettings || {};
+        document.getElementById("ib-httpupgrade-path").value = hu.path || "/";
+        document.getElementById("ib-httpupgrade-host").value = hu.host || "";
+    } else if (network === "xhttp") {
+        const xh = streamSettings.xhttpSettings || {};
+        document.getElementById("ib-xhttp-path").value = xh.path || "/";
+        document.getElementById("ib-xhttp-host").value = xh.host || "";
+        document.getElementById("ib-xhttp-mode").value = xh.mode || "auto";
+        // Reconstruct extra JSON from unknown keys
+        const knownKeys = ["path", "host", "mode"];
+        const extra = {};
+        for (const key of Object.keys(xh)) {
+            if (!knownKeys.includes(key)) extra[key] = xh[key];
+        }
+        document.getElementById("ib-xhttp-extra").value = Object.keys(extra).length ? JSON.stringify(extra, null, 2) : "";
     }
 }

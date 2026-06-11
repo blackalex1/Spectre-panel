@@ -93,3 +93,60 @@ def trigger_telegram_alert(username: str, action: str, target: str = None, detai
     except RuntimeError:
         # Если цикл не запущен (например, при тестировании или старте из CLI)
         pass
+
+
+async def _send_alert_to_all_admins(text: str):
+    """Отправляет HTML-сообщение всем администраторам через Telegram Bot API."""
+    bot_token = get_setting("telegram_bot_token", "")
+    admin_ids_str = get_setting("telegram_admin_ids", "")
+    if not bot_token or not admin_ids_str:
+        return
+        
+    admin_ids = [x.strip() for x in admin_ids_str.split(",") if x.strip()]
+    if not admin_ids:
+        return
+
+    async with httpx.AsyncClient(timeout=5.0) as client:
+        for admin_id in admin_ids:
+            try:
+                url = f"https://api.telegram.org/bot{bot_token}/sendMessage"
+                payload = {
+                    "chat_id": admin_id,
+                    "text": text,
+                    "parse_mode": "HTML"
+                }
+                await client.post(url, json=payload)
+            except Exception as e:
+                logging.error(f"[Telegram Alert] Не удалось отправить сообщение администратору {admin_id}: {e}")
+
+
+def trigger_investigation_result_alert(culprit: str, tunnel: str, node_id: str, details: str):
+    """✅ Telegram-алерт: edge-нода успешно расследовала инцидент."""
+    text = (
+        f"✅ <b>[IPS: Расследование от Edge-ноды завершено]</b>\n\n"
+        f"🔍 Нода: <code>{node_id}</code>\n"
+        f"👤 Нарушитель заблокирован глобально: <code>{culprit}</code>\n"
+        f"🔓 Инбаунд/туннель разблокирован: <code>{tunnel}</code>\n"
+        f"📋 Детали: <i>{details}</i>"
+    )
+    try:
+        loop = asyncio.get_running_loop()
+        loop.create_task(_send_alert_to_all_admins(text))
+    except RuntimeError:
+        pass
+
+
+def trigger_investigation_failed_alert(tunnel: str, node_id: str, details: str):
+    """⚠️ Telegram-алерт: расследование на edge-ноде не удалось, нужно ручное вмешательство."""
+    text = (
+        f"⚠️ <b>[IPS: Расследование не удалось (Edge-нода)]</b>\n\n"
+        f"🔍 Нода: <code>{node_id}</code>\n"
+        f"🚨 Инбаунд оставлен в бане: <code>{tunnel}</code>\n"
+        f"📋 Детали: <i>{details}</i>\n\n"
+        f"👇 <b>Разблокируйте инбаунд вручную</b>, когда проведёте расследование самостоятельно."
+    )
+    try:
+        loop = asyncio.get_running_loop()
+        loop.create_task(_send_alert_to_all_admins(text))
+    except RuntimeError:
+        pass

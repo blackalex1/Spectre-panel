@@ -447,4 +447,31 @@ async def get_audit_logs(request: Request, limit: int = 10):
         return {"success": False, "msg": f"Failed to get audit logs: {e}"}
 
 
+class ReportToMasterRequest(BaseModel):
+    action: str                         # "investigation_result" | "investigation_failed"
+    client_email: str = ""
+    tunnel_email: str = ""
+    details: str = ""
 
+@router.post("/api/security/report-to-master")
+async def report_to_master(request: Request, body: ReportToMasterRequest):
+    """
+    Контроллер-бот дёргает этот эндпоинт на своей панели после расследования.
+    Если панель зарегистрирована как edge-нода (есть node_config.json),
+    она подпишет отчёт Ed25519 и перешлёт мастер-панели через POST /api/nodes/report.
+    """
+    if not check_auth(request):
+        return decoy_response()
+    
+    from backend.node_agent import load_node_config, send_report_to_master
+    config = load_node_config()
+    if not config:
+        return {"success": True, "reported": False, "reason": "Not a slave node"}
+    
+    success = await send_report_to_master(
+        action=body.action,
+        client_email=body.client_email,
+        tunnel_email=body.tunnel_email,
+        details=body.details
+    )
+    return {"success": True, "reported": success}

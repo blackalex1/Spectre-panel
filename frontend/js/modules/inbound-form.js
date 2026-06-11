@@ -37,6 +37,8 @@ export function updateFormToggles() {
     const grpcGroup = document.getElementById("grpc-settings-group");
     const tcpGroup = document.getElementById("tcp-settings-group");
     const h2Group = document.getElementById("h2-settings-group");
+    const httpupgradeGroup = document.getElementById("httpupgrade-settings-group");
+    const xhttpGroup = document.getElementById("xhttp-settings-group");
     const mkcpGroup = document.getElementById("mkcp-settings-group");
     const ssGroup = document.getElementById("shadowsocks-settings-group");
     const hysteriaGroup = document.getElementById("hysteria-settings-group");
@@ -68,6 +70,8 @@ export function updateFormToggles() {
         if (wsGroup) wsGroup.style.display = (network === "ws") ? "block" : "none";
         if (grpcGroup) grpcGroup.style.display = (network === "grpc") ? "block" : "none";
         if (h2Group) h2Group.style.display = (network === "h2") ? "block" : "none";
+        if (httpupgradeGroup) httpupgradeGroup.style.display = (network === "httpupgrade") ? "block" : "none";
+        if (xhttpGroup) xhttpGroup.style.display = (network === "xhttp") ? "block" : "none";
         if (mkcpGroup) mkcpGroup.style.display = (network === "mkcp") ? "block" : "none";
         
         // TCP HTTP masquerade fields toggle
@@ -163,6 +167,8 @@ export function updateFormToggles() {
         if (wsGroup) wsGroup.style.display = "none";
         if (grpcGroup) grpcGroup.style.display = "none";
         if (h2Group) h2Group.style.display = "none";
+        if (httpupgradeGroup) httpupgradeGroup.style.display = "none";
+        if (xhttpGroup) xhttpGroup.style.display = "none";
         if (mkcpGroup) mkcpGroup.style.display = "none";
         if (ssGroup) ssGroup.style.display = "block";
         if (hysteriaGroup) hysteriaGroup.style.display = "none";
@@ -176,6 +182,8 @@ export function updateFormToggles() {
         if (wsGroup) wsGroup.style.display = "none";
         if (grpcGroup) grpcGroup.style.display = "none";
         if (h2Group) h2Group.style.display = "none";
+        if (httpupgradeGroup) httpupgradeGroup.style.display = "none";
+        if (xhttpGroup) xhttpGroup.style.display = "none";
         if (mkcpGroup) mkcpGroup.style.display = "none";
         if (ssGroup) ssGroup.style.display = "none";
         if (hysteriaGroup) hysteriaGroup.style.display = "block";
@@ -341,18 +349,22 @@ export function serializeFormToJson() {
         const masqValue = hystMode === "masq" ? (document.getElementById("ib-hysteria-masq-value").value || "") : "";
         const hop = document.getElementById("ib-hysteria-hop").value || "";
         const routingViaXray = document.getElementById("ib-hysteria-routing-xray").checked;
+        const ignoreClientBandwidth = document.getElementById("ib-hysteria-ignore-bw").checked;
+        const hystSni = document.getElementById("ib-hysteria-sni").value || "";
         
         streamSettings = {
             hysteria: {
                 obfsPassword: obfsPassword,
                 upMbps: upMbps,
                 downMbps: downMbps,
+                ignoreClientBandwidth: ignoreClientBandwidth,
                 certMode: certMode,
                 certPath: certPath,
                 keyPath: keyPath,
                 masqType: masqType,
                 masqValue: masqValue,
                 hop: hop,
+                sni: hystSni,
                 routingViaXray: routingViaXray
             }
         };
@@ -474,7 +486,9 @@ export function populateFormFromJson(payload) {
         document.getElementById("ib-hysteria-masq-type").value = ho.masqType || "proxy";
         document.getElementById("ib-hysteria-masq-value").value = ho.masqValue || "";
         document.getElementById("ib-hysteria-hop").value = ho.hop || "";
+        document.getElementById("ib-hysteria-sni").value = ho.sni || "";
         document.getElementById("ib-hysteria-routing-xray").checked = ho.routingViaXray || false;
+        document.getElementById("ib-hysteria-ignore-bw").checked = ho.ignoreClientBandwidth || false;
     }
     
     if (settings.clients) {
@@ -779,7 +793,9 @@ export async function openEditInboundModal(id) {
         document.getElementById("ib-hysteria-masq-type").value = ho.masqType || "proxy";
         document.getElementById("ib-hysteria-masq-value").value = ho.masqValue || "";
         document.getElementById("ib-hysteria-hop").value = ho.hop || "";
+        document.getElementById("ib-hysteria-sni").value = ho.sni || "";
         document.getElementById("ib-hysteria-routing-xray").checked = ho.routingViaXray || false;
+        document.getElementById("ib-hysteria-ignore-bw").checked = ho.ignoreClientBandwidth || false;
     }
     
     updateFormToggles();
