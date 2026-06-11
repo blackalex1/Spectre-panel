@@ -24,6 +24,19 @@ async def generate_ssl_api(request: Request):
             set_setting("ssl_domain", domain)
             set_setting("ssl_email", email)
             log_action(actor, "generate_ssl", target=domain, details=f"email:{email}, status:success")
+            
+            # Restart the panel server to load the new SSL certificate.
+            # Since the Docker container has 'restart: always', it will start up immediately with the new cert.
+            import threading
+            import time
+            import os
+            import logging
+            def auto_restart():
+                time.sleep(1.5)
+                logging.info("[SSL] Exiting panel process to trigger Docker container restart and load new SSL certificates...")
+                os._exit(0)
+            
+            threading.Thread(target=auto_restart).start()
             return {"success": True, "msg": msg}
         else:
             log_action(actor, "generate_ssl", target=domain, details=f"email:{email}, status:failed, error:{msg}")
