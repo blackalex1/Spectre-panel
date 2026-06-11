@@ -170,8 +170,8 @@ for i in {1..15}; do
     sleep 2
 done
 
-# Try to get public IP, fallback to 127.0.0.1
-SERVER_IP=$(curl -s https://ifconfig.me 2>/dev/null || curl -s icanhazip.com 2>/dev/null || ip route get 1 | awk '{print $NF;exit}' 2>/dev/null || echo "YOUR_SERVER_IP")
+# Try to get public IP, fallback to primary interface IP or placeholder
+SERVER_IP=$(curl -s https://ifconfig.me 2>/dev/null || curl -s icanhazip.com 2>/dev/null || ip route get 1 | awk 'BEGIN {found=0} {for(i=1;i<=NF;i++) if($i=="src") {print $(i+1); found=1; exit}} END {if(!found) exit 1}' 2>/dev/null || echo "YOUR_SERVER_IP")
 
 echo ""
 echo "===================================================="
