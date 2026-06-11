@@ -85,12 +85,17 @@ def verify_node_token(request: Request) -> bool:
 def verify_telegram_webapp(init_data: str) -> Optional[dict]:
     """Криптографически проверяет initData от Telegram Mini App"""
     bot_token = get_setting("telegram_bot_token", "")
-    if not bot_token or not init_data:
+    if not bot_token:
+        logging.warning("[verify_telegram_webapp] telegram_bot_token is empty in database settings!")
+        return None
+    if not init_data:
+        logging.warning("[verify_telegram_webapp] init_data is empty!")
         return None
         
     try:
         parsed = dict(parse_qsl(init_data, keep_blank_values=True))
         if "hash" not in parsed:
+            logging.warning("[verify_telegram_webapp] 'hash' parameter is missing from initData!")
             return None
             
         received_hash = parsed.pop("hash")
@@ -106,18 +111,27 @@ def verify_telegram_webapp(init_data: str) -> Optional[dict]:
         calculated_hash = hmac.new(secret_key, data_check_string.encode(), hashlib.sha256).hexdigest()
         
         if calculated_hash != received_hash:
+            logging.warning(
+                f"[verify_telegram_webapp] Signature hash mismatch! "
+                f"Check that the bot token set in the panel matches the bot you are using to open the WebApp. "
+                f"Configured token starts with: '{bot_token[:6]}...'"
+            )
             return None
             
         # Проверяем дату (устаревание initData через 24 часа)
         auth_date = int(parsed.get("auth_date", 0))
-        if time.time() - auth_date > 86400:
+        time_diff = time.time() - auth_date
+        logging.info(f"[verify_telegram_webapp] Signature verified successfully. auth_date diff: {time_diff:.1f}s")
+        
+        if time_diff > 86400:
+            logging.warning(f"[verify_telegram_webapp] initData expired. auth_date diff is {time_diff:.1f}s (> 86400s)")
             return None
             
         user_json = parsed.get("user")
         if user_json:
             return json.loads(user_json)
     except Exception as e:
-        logging.error(f"Telegram webapp signature verification error: {e}")
+        logging.error(f"[verify_telegram_webapp] Telegram webapp signature verification error: {e}")
     return None
 
 
