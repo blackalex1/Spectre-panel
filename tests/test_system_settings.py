@@ -349,12 +349,14 @@ def test_telegram_settings_api(client, monkeypatch):
     
     orig_token = get_setting("telegram_bot_token", "")
     orig_ids = get_setting("telegram_admin_ids", "")
+    orig_bot_enabled = get_setting("telegram_bot_enabled", "true")
     
     try:
         # Save new values
         payload = {
             "telegram_bot_token": "987654:XYZ-TEST",
-            "telegram_admin_ids": "11111,22222"
+            "telegram_admin_ids": "11111,22222",
+            "telegram_bot_enabled": False
         }
         response = client.post("/api/settings/update", json=payload)
         assert response.status_code == 200
@@ -363,6 +365,7 @@ def test_telegram_settings_api(client, monkeypatch):
         # Verify saved in database
         assert get_setting("telegram_bot_token") == "987654:XYZ-TEST"
         assert get_setting("telegram_admin_ids") == "11111,22222"
+        assert get_setting("telegram_bot_enabled") == "false"
         
         # Verify retrieved in GET route (should be masked with dots)
         response = client.get("/api/settings")
@@ -371,22 +374,26 @@ def test_telegram_settings_api(client, monkeypatch):
         assert data["success"] is True
         assert data["telegram_bot_token"] == "••••••••"
         assert data["telegram_admin_ids"] == "11111,22222"
+        assert data["telegram_bot_enabled"] is False
 
         # Verify updating with "••••••••" preserves the token in DB
         payload = {
             "telegram_bot_token": "••••••••",
-            "telegram_admin_ids": "33333,44444"
+            "telegram_admin_ids": "33333,44444",
+            "telegram_bot_enabled": True
         }
         response = client.post("/api/settings/update", json=payload)
         assert response.status_code == 200
         assert response.json()["success"] is True
         assert get_setting("telegram_bot_token") == "987654:XYZ-TEST"
         assert get_setting("telegram_admin_ids") == "33333,44444"
+        assert get_setting("telegram_bot_enabled") == "true"
 
         # Verify empty token is returned as empty string, not masked
         payload = {
             "telegram_bot_token": "",
-            "telegram_admin_ids": "33333,44444"
+            "telegram_admin_ids": "33333,44444",
+            "telegram_bot_enabled": True
         }
         response = client.post("/api/settings/update", json=payload)
         assert response.status_code == 200
@@ -401,6 +408,7 @@ def test_telegram_settings_api(client, monkeypatch):
     finally:
         set_setting("telegram_bot_token", orig_token)
         set_setting("telegram_admin_ids", orig_ids)
+        set_setting("telegram_bot_enabled", orig_bot_enabled)
 
 
 def test_get_telegram_token_api(client, monkeypatch):

@@ -207,6 +207,10 @@ def init_db():
         if not tg_admins_setting:
             session.add(SystemSetting(key="telegram_admin_ids", value=""))
 
+        tg_bot_enabled_setting = session.query(SystemSetting).filter_by(key="telegram_bot_enabled").first()
+        if not tg_bot_enabled_setting:
+            session.add(SystemSetting(key="telegram_bot_enabled", value="true"))
+
         # Семена настроек бэкапа по умолчанию
         backup_encrypt_setting = session.query(SystemSetting).filter_by(key="backup_encrypt").first()
         if not backup_encrypt_setting:

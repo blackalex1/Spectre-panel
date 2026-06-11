@@ -37,6 +37,7 @@ async def get_settings_api(request: Request):
         "telegram_bot_token": "••••••••" if get_setting("telegram_bot_token", "") else "",
         "telegram_admin_ids": get_setting("telegram_admin_ids", ""),
         "telegram_2fa_enabled": get_setting("telegram_2fa_enabled", "false") == "true",
+        "telegram_bot_enabled": get_setting("telegram_bot_enabled", "true") == "true",
         "login_max_attempts": int(get_setting("login_max_attempts", str(settings.LOGIN_MAX_ATTEMPTS))),
         "login_attempts_period": int(get_setting("login_attempts_period", str(settings.LOGIN_ATTEMPTS_PERIOD))),
         "login_fail_delay": float(get_setting("login_fail_delay", str(settings.LOGIN_FAIL_DELAY))),
@@ -107,20 +108,23 @@ async def update_settings_api(request: Request):
 
         # 2. Telegram Integration Card
         tg_changed = False
-        if "telegram_bot_token" in data or "telegram_admin_ids" in data or "telegram_2fa_enabled" in data:
+        if "telegram_bot_token" in data or "telegram_admin_ids" in data or "telegram_2fa_enabled" in data or "telegram_bot_enabled" in data:
             old_token = get_setting("telegram_bot_token", "")
             old_admin_ids = get_setting("telegram_admin_ids", "")
+            old_bot_enabled = get_setting("telegram_bot_enabled", "true")
             
             tg_bot_token = data.get("telegram_bot_token", old_token).strip()
             if tg_bot_token == "••••••••":
                 tg_bot_token = old_token
             tg_admin_ids = data.get("telegram_admin_ids", old_admin_ids).strip()
+            tg_bot_enabled = "true" if data.get("telegram_bot_enabled", old_bot_enabled) in (True, "true") else "false"
             
-            if tg_bot_token != old_token or tg_admin_ids != old_admin_ids:
+            if tg_bot_token != old_token or tg_admin_ids != old_admin_ids or tg_bot_enabled != old_bot_enabled:
                 tg_changed = True
                 
             set_setting("telegram_bot_token", tg_bot_token)
             set_setting("telegram_admin_ids", tg_admin_ids)
+            set_setting("telegram_bot_enabled", tg_bot_enabled)
             
             if "telegram_2fa_enabled" in data:
                 set_setting("telegram_2fa_enabled", "true" if data.get("telegram_2fa_enabled") in (True, "true") else "false")

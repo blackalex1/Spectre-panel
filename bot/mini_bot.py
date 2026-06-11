@@ -74,11 +74,17 @@ def is_admin(user_id: int) -> bool:
 try:
     from backend.database import get_setting
     bot_token = get_setting("telegram_bot_token", "")
+    bot_enabled = get_setting("telegram_bot_enabled", "true") == "true"
 except Exception:
     bot_token = ""
+    bot_enabled = True
 
 if not bot_token:
     logging.warning("TELEGRAM_BOT_TOKEN не задан ни в БД, ни в .env. Бот не запустится.")
+    bot = None
+    dp = None
+elif not bot_enabled:
+    logging.warning("Встроенный Telegram-бот отключен в настройках. Бот не запустится.")
     bot = None
     dp = None
 else:
