@@ -129,7 +129,7 @@ export function translatePage() {
             if (icon) {
                 // Очищаем текстовые ноды, оставляя иконку
                 el.childNodes.forEach(node => {
-                    if (node.nodeType === Node.TEXT_NODE) {
+                    if (node.nodeType === 3) {
                         node.textContent = "";
                     }
                 });
