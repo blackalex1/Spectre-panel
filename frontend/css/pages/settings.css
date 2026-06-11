@@ -67,24 +67,131 @@
     white-space: pre-wrap;
 }
 
-.settings-form {
-    max-width: 700px;
-}
-
-/* Настройки */
-.settings-form-container {
-    max-width: 800px;
+/* Настройки - Новый премиальный лейаут */
+.settings-wrapper {
+    display: flex;
+    gap: 30px;
+    max-width: 1300px;
     margin: 0 auto;
+    align-items: flex-start;
 }
 
+.settings-nav-sidebar {
+    flex: 0 0 280px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    background: var(--bg-sidebar);
+    border: 1px solid var(--border-color);
+    border-radius: 16px;
+    padding: 16px;
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+}
+
+.settings-nav-item {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    background: transparent;
+    border: 1px solid transparent;
+    border-radius: 12px;
+    padding: 12px 16px;
+    cursor: pointer;
+    text-align: left;
+    color: var(--text-secondary);
+    transition: all var(--transition-fast) ease;
+    width: 100%;
+}
+
+.settings-nav-item i {
+    font-size: 18px;
+    width: 24px;
+    text-align: center;
+    color: var(--text-secondary);
+    transition: color var(--transition-fast) ease;
+}
+
+.settings-nav-item .nav-text {
+    display: flex;
+    flex-direction: column;
+}
+
+.settings-nav-item .nav-title {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--text-primary);
+}
+
+.settings-nav-item .nav-subtitle {
+    font-size: 11px;
+    color: var(--text-muted);
+    margin-top: 2px;
+}
+
+.settings-nav-item:hover {
+    background: rgba(255, 255, 255, 0.03);
+    border-color: rgba(255, 255, 255, 0.05);
+}
+
+.settings-nav-item:hover i {
+    color: var(--primary-hover);
+}
+
+.settings-nav-item.active {
+    background: rgba(124, 58, 237, 0.12);
+    border-left: 3px solid var(--primary);
+    border-top-left-radius: 0;
+    border-bottom-left-radius: 0;
+    padding-left: 13px;
+}
+
+.settings-nav-item.active i {
+    color: var(--primary);
+}
+
+.settings-sections-content {
+    flex: 1;
+}
+
+.settings-section-panel {
+    display: none;
+    flex-direction: column;
+    gap: 24px;
+}
+
+.settings-section-panel.active {
+    display: flex;
+    animation: settingsFadeIn var(--transition-normal) ease forwards;
+}
+
+@keyframes settingsFadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(8px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Специфические настройки карточек */
 .settings-card {
-    padding: 30px;
-    margin-bottom: 25px;
+    padding: 24px;
     border-radius: 16px;
     position: relative;
     overflow: hidden;
     display: flex;
     flex-direction: column;
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
+    box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.25);
+    transition: border-color var(--transition-fast) ease, box-shadow var(--transition-fast) ease;
+}
+
+.settings-card:hover {
+    border-color: var(--border-highlight);
 }
 
 .settings-card h3 {
@@ -99,42 +206,149 @@
 
 .settings-card .card-desc {
     color: var(--text-secondary);
-    font-size: 14px;
-    margin-bottom: 25px;
+    font-size: 13.5px;
+    margin-bottom: 24px;
+    line-height: 1.5;
 }
 
-.settings-grid {
+/* Улучшение форм и полей ввода */
+.input-group {
+    display: flex;
+    flex-direction: column;
+}
+
+.input-group label {
+    font-size: 12px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: var(--text-secondary);
+    margin-bottom: 8px;
+}
+
+.input-group input:not([type="checkbox"]):not([type="radio"]),
+.input-group select,
+.input-group textarea {
+    background: var(--bg-input);
+    border: 1px solid var(--border-color);
+    color: var(--text-primary);
+    border-radius: 10px;
+    padding: 12px 14px;
+    font-size: 14px;
+    outline: none;
+    transition: all var(--transition-fast) ease;
+}
+
+.input-group input:not([type="checkbox"]):not([type="radio"]):focus,
+.input-group select:focus,
+.input-group textarea:focus {
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px var(--primary-glow);
+    background: hsla(223, 47%, 16%, 0.8);
+}
+
+.input-group input::placeholder,
+.input-group textarea::placeholder {
+    color: var(--text-muted);
+    opacity: 0.7;
+}
+
+/* Вспомогательные описания полей */
+.field-desc {
+    font-size: 12px;
+    color: var(--text-muted);
+    margin-top: 6px;
+    line-height: 1.4;
+}
+
+/* Копирование в инпуте */
+.copy-input-group {
+    display: flex;
+    position: relative;
+}
+
+.copy-input-group input {
+    flex: 1;
+    padding-right: 50px !important;
+}
+
+.copy-input-group .btn {
+    position: absolute;
+    right: 0;
+    top: 0;
+    height: 100%;
+    padding: 0 16px;
+    background: transparent;
+    border: none;
+    border-left: 1px solid var(--border-color);
+    border-radius: 0 10px 10px 0;
+    cursor: pointer;
+    color: var(--text-secondary);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all var(--transition-fast) ease;
+}
+
+.copy-input-group .btn:hover {
+    background: rgba(255, 255, 255, 0.05);
+    color: var(--text-primary);
+}
+
+/* Сетки для карточек внутри секций */
+.settings-section-grid-2 {
     display: grid;
     grid-template-columns: repeat(2, 1fr);
     gap: 24px;
-    max-width: 1200px;
-    margin: 0 auto;
-    align-items: start;
-}
-
-.settings-grid .settings-card {
-    margin-bottom: 0;
-    height: auto;
-}
-
-.settings-column-container {
-    display: flex;
-    flex-direction: column;
-    gap: 24px;
-}
-
-.settings-column-container .settings-card {
-    height: auto;
 }
 
 .settings-card-wide {
     grid-column: span 2;
 }
 
+/* Адаптивность для настроек */
 @media (max-width: 1024px) {
-    .settings-grid {
+    .settings-wrapper {
+        flex-direction: column;
+        gap: 24px;
+    }
+    
+    .settings-nav-sidebar {
+        flex: none;
+        width: 100%;
+        flex-direction: row;
+        overflow-x: auto;
+        padding: 10px;
+        gap: 8px;
+        white-space: nowrap;
+        -webkit-overflow-scrolling: touch;
+    }
+    
+    .settings-nav-item {
+        width: auto;
+        flex: 0 0 auto;
+        padding: 10px 14px;
+        border-left: none;
+        border-bottom: 2px solid transparent;
+        border-radius: 8px;
+    }
+    
+    .settings-nav-item.active {
+        border-left: none;
+        border-bottom: 3px solid var(--primary);
+        border-radius: 8px;
+        padding-left: 14px;
+        background: rgba(124, 58, 237, 0.1);
+    }
+    
+    .settings-nav-item .nav-subtitle {
+        display: none;
+    }
+    
+    .settings-section-grid-2 {
         grid-template-columns: 1fr;
     }
+    
     .settings-card-wide {
         grid-column: span 1;
     }

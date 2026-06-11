@@ -30,6 +30,11 @@ export async function loadSettings() {
         if (credNewUserInput) {
             credNewUserInput.value = setObj.admin_username || "";
         }
+
+        const navUsername = document.getElementById("nav-username");
+        if (navUsername && setObj.admin_username) {
+            navUsername.innerText = setObj.admin_username;
+        }
         
         const badge2fa = document.getElementById("2fa-status-badge");
         const btnSetup2fa = document.getElementById("btn-2fa-setup-trigger");
@@ -844,6 +849,20 @@ export function setupSettingsListeners() {
             }
         });
     }
+
+    // Инициализация переключения суб-вкладок настроек
+    const navItems = document.querySelectorAll(".settings-nav-item");
+    const sections = document.querySelectorAll(".settings-section-panel");
+    navItems.forEach(item => {
+        item.addEventListener("click", () => {
+            const targetSection = item.getAttribute("data-settings-section");
+            navItems.forEach(ni => ni.classList.remove("active"));
+            sections.forEach(sec => sec.classList.remove("active"));
+            item.classList.add("active");
+            const targetEl = document.getElementById(`sec-${targetSection}`);
+            if (targetEl) targetEl.classList.add("active");
+        });
+    });
 }
 
 export async function loadActiveSessions() {
