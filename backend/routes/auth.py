@@ -197,6 +197,22 @@ async def login_api(request: Request, response: Response):
                         ))
                         session.commit()
                         
+                        # Записываем в 2fa.log для контроллера
+                        try:
+                            from backend.config import CONFIG_DIR
+                            log_file = CONFIG_DIR / "2fa.log"
+                            with open(log_file, "a", encoding="utf-8") as f:
+                                log_data = {
+                                    "timestamp": int(time.time()),
+                                    "status": "PENDING",
+                                    "username": uname,
+                                    "client_ip": client_ip,
+                                    "token": tg_token
+                                }
+                                f.write(json.dumps(log_data) + "\n")
+                        except Exception as e:
+                            logging.error(f"Failed to write 2fa.log: {e}")
+                        
                         bot_token = get_setting("telegram_bot_token", "")
                         tg_admin_ids = get_setting("telegram_admin_ids", "")
                         

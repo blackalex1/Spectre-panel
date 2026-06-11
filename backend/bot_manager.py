@@ -37,7 +37,16 @@ def restart_telegram_bot() -> bool:
         except (psutil.NoSuchProcess, psutil.AccessDenied):
             pass
 
-    # 2. Определение пути к скрипту бота
+    # 2. Проверка, включен ли бот в настройках и задан ли токен
+    from backend.database.crud.settings import get_setting
+    bot_token = get_setting("telegram_bot_token", "")
+    bot_enabled = get_setting("telegram_bot_enabled", "true") == "true"
+    
+    if not bot_token or not bot_enabled:
+        logging.info("[Bot Manager] Telegram bot is disabled or token is empty. Not starting bot process.")
+        return True
+
+    # 3. Определение пути к скрипту бота
     # Корневой каталог проекта: backend/bot_manager.py -> parent of backend -> panel
     project_root = Path(__file__).resolve().parent.parent
     bot_path = project_root / "bot" / "mini_bot.py"

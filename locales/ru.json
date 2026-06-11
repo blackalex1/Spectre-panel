@@ -121,6 +121,8 @@
     "settings_telegram_admin_ids_placeholder": "Например: 123456789,987654321",
     "settings_telegram_admin_ids_desc": "Список ID пользователей Telegram через запятую, которые будут иметь доступ к боту и получать уведомления об автоблокировках клиентов.",
     "settings_telegram_btn_restart": "Перезапустить Telegram-бота",
+    "settings_telegram_2fa_enable": "Использовать подтверждение входа через Telegram (2FA)",
+    "settings_telegram_bot_enable": "Запускать встроенного Telegram-бота (polling)",
     "settings_routing_filtering": "Маршрутизация и фильтрация трафика",
     "settings_routing_desc": "Глобальные правила фильтрации трафика для клиентов Xray.",
     "settings_block_torrent": "Блокировать Torrent-трафик (BitTorrent)",

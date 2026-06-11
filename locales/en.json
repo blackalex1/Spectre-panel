@@ -121,6 +121,8 @@
     "settings_telegram_admin_ids_placeholder": "e.g., 123456789,987654321",
     "settings_telegram_admin_ids_desc": "Comma-separated list of Telegram User IDs authorized to access the bot and receive automated notifications.",
     "settings_telegram_btn_restart": "Restart Telegram Bot",
+    "settings_telegram_2fa_enable": "Enable Telegram Login Confirmation (2FA)",
+    "settings_telegram_bot_enable": "Run built-in Telegram Bot (polling)",
     "settings_routing_filtering": "Routing and Traffic Filtering",
     "settings_routing_desc": "Global traffic filtering rules for Xray clients.",
     "settings_block_torrent": "Block Torrent Traffic (BitTorrent)",
