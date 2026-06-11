@@ -59,7 +59,7 @@ def ensure_postgres_db_exists(admin_url: str):
 
     # Даем приложению (DML пользователю) права в тестовой базе
     try:
-        app_user = "vpn_app"
+        app_user = "spectre_app"
         if test_app_url:
             parsed_app = urllib.parse.urlparse(test_app_url)
             if parsed_app.username:
@@ -84,22 +84,26 @@ if not test_app_url:
     orig_admin_url = backend.config.settings.DATABASE_ADMIN_URL or orig_app_url
     
     if orig_app_url and "postgresql" in orig_app_url:
-        # Автоматически перенаправляем на vpn_panel_test
+        # Автоматически перенаправляем на spectre_db_test
         parsed_app = urllib.parse.urlparse(orig_app_url)
         path_app = parsed_app.path
-        if path_app.endswith("/vpn_panel"):
-            new_path_app = path_app.replace("/vpn_panel", "/vpn_panel_test")
+        if path_app.endswith("/spectre_db"):
+            new_path_app = path_app.replace("/spectre_db", "/spectre_db_test")
+        elif path_app.endswith("/vpn_panel"):
+            new_path_app = path_app.replace("/vpn_panel", "/spectre_db_test")
         else:
-            new_path_app = "/vpn_panel_test"
+            new_path_app = "/spectre_db_test"
         parsed_app = parsed_app._replace(path=new_path_app)
         test_app_url = urllib.parse.urlunparse(parsed_app)
         
         parsed_admin = urllib.parse.urlparse(orig_admin_url)
         path_admin = parsed_admin.path
-        if path_admin.endswith("/vpn_panel"):
-            new_path_admin = path_admin.replace("/vpn_panel", "/vpn_panel_test")
+        if path_admin.endswith("/spectre_db"):
+            new_path_admin = path_admin.replace("/spectre_db", "/spectre_db_test")
+        elif path_admin.endswith("/vpn_panel"):
+            new_path_admin = path_admin.replace("/vpn_panel", "/spectre_db_test")
         else:
-            new_path_admin = "/vpn_panel_test"
+            new_path_admin = "/spectre_db_test"
         parsed_admin = parsed_admin._replace(path=new_path_admin)
         test_admin_url = urllib.parse.urlunparse(parsed_admin)
     else:

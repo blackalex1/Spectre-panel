@@ -1,7 +1,7 @@
 services:
   db:
     image: postgres:16-alpine
-    container_name: vpn-db
+    container_name: spectre-db
     restart: always
     ports:
       - "127.0.0.1:5432:5432"
@@ -11,9 +11,9 @@ services:
       - pgdata:/var/lib/postgresql/data
       - ./config/init-roles.sh:/docker-entrypoint-initdb.d/init-roles.sh:ro
 
-  vpn-panel:
+  spectre-panel:
     build: .
-    container_name: vpn-panel
+    container_name: spectre-panel
     restart: always
     network_mode: host
     depends_on:
@@ -22,7 +22,7 @@ services:
       - ./config:/app/config
       - ./bin:/app/bin
       - ./backups:/app/backups
-      - /var/run/vpn_panel:/var/run/vpn_panel
+      - /var/run/spectre:/var/run/spectre
     environment:
       - PYTHONUNBUFFERED=1
     env_file:
