@@ -99,6 +99,16 @@ def init_db():
                     conn.execute(text("ALTER TABLE outbounds ADD COLUMN up BIGINT DEFAULT 0"))
                     conn.execute(text("ALTER TABLE outbounds ADD COLUMN down BIGINT DEFAULT 0"))
                     conn.commit()
+            if "user_sessions" in inspector.get_table_names():
+                columns = [col["name"] for col in inspector.get_columns("user_sessions")]
+                if "ip_address" not in columns:
+                    logging.info("[Migration] Adding ip_address to user_sessions table...")
+                    conn.execute(text("ALTER TABLE user_sessions ADD COLUMN ip_address VARCHAR DEFAULT NULL"))
+                    conn.commit()
+                if "user_agent" not in columns:
+                    logging.info("[Migration] Adding user_agent to user_sessions table...")
+                    conn.execute(text("ALTER TABLE user_sessions ADD COLUMN user_agent VARCHAR DEFAULT NULL"))
+                    conn.commit()
 
             # Создание индексов (поддерживается и в PostgreSQL, и в SQLite через IF NOT EXISTS)
             if "client_stats" in inspector.get_table_names():

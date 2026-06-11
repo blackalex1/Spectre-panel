@@ -250,7 +250,8 @@ async def login_api(request: Request, response: Response):
         # Получаем срок действия сессии из настроек и сохраняем в БД
         from backend.database import add_session_db
         timeout_days = int(get_setting("session_timeout_days", str(settings.SESSION_TIMEOUT_DAYS)))
-        add_session_db(session_id, uname, timeout_days)
+        user_agent = request.headers.get("user-agent", "unknown")
+        add_session_db(session_id, uname, timeout_days, ip_address=client_ip, user_agent=user_agent)
         ACTIVE_SESSIONS.add(session_id)
         
         # Генерируем CSRF
@@ -314,7 +315,8 @@ async def telegram_webapp_auth(request: Request, response: Response, payload: di
     # Получаем срок действия сессии из настроек и сохраняем сессию в БД
     from backend.database import get_setting, add_session_db
     timeout_days = int(get_setting("session_timeout_days", str(settings.SESSION_TIMEOUT_DAYS)))
-    add_session_db(session_id, username_tg, timeout_days)
+    user_agent = request.headers.get("user-agent", "unknown")
+    add_session_db(session_id, username_tg, timeout_days, ip_address=client_ip, user_agent=user_agent)
     ACTIVE_SESSIONS.add(session_id)
     
     csrf_token = secrets.token_hex(16)
@@ -513,7 +515,9 @@ async def tg_2fa_poll(request: Request, response: Response, token: str):
             uname = data.get("username", "admin")
             session_id = secrets.token_hex(16)
             timeout_days = int(get_setting("session_timeout_days", str(settings.SESSION_TIMEOUT_DAYS)))
-            add_session_db(session_id, uname, timeout_days)
+            client_ip = request.client.host if request.client else "unknown"
+            user_agent = request.headers.get("user-agent", "unknown")
+            add_session_db(session_id, uname, timeout_days, ip_address=client_ip, user_agent=user_agent)
             ACTIVE_SESSIONS.add(session_id)
             
             csrf_token = secrets.token_hex(16)

@@ -98,6 +98,8 @@ class UserSession(Base):
     username = Column(String, nullable=False)
     created_at = Column(BigInteger, nullable=False)  # UTC epoch seconds
     expires_at = Column(BigInteger, nullable=False, index=True)  # UTC epoch seconds
+    ip_address = Column(String, nullable=True)
+    user_agent = Column(String, nullable=True)
 
 
 class Outbound(Base):

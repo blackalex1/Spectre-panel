@@ -149,6 +149,7 @@ export async function loadSettings() {
         await loadWarpStatus();
         await loadAuditLogs();
         await loadOptimizationStatus();
+        await loadActiveSessions();
     }
 }
 
@@ -800,5 +801,98 @@ export function setupSettingsListeners() {
                 btnToggleTelegramToken.innerHTML = '<i class="fa-regular fa-eye"></i>';
             }
         });
+    }
+}
+
+export async function loadActiveSessions() {
+    const tbody = document.getElementById("active-sessions-tbody");
+    if (!tbody) return;
+    
+    tbody.innerHTML = '<tr><td colspan="5" style="text-align: center;"><i class="fa-solid fa-spinner fa-spin"></i> Загрузка сессий...</td></tr>';
+    
+    const res = await apiFetch("/api/security/sessions");
+    if (res && res.success) {
+        if (!res.sessions || res.sessions.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="5" style="text-align: center;">Активных сессий не найдено</td></tr>';
+            return;
+        }
+        
+        tbody.innerHTML = "";
+        res.sessions.forEach(s => {
+            const tr = document.createElement("tr");
+            
+            const created = new Date(s.created_at * 1000).toLocaleString();
+            const expires = new Date(s.expires_at * 1000).toLocaleString();
+            
+            let deviceText = s.user_agent;
+            // Simple parsing to make User Agent user-friendly
+            if (s.user_agent.includes("Windows")) {
+                deviceText = "Windows / ";
+            } else if (s.user_agent.includes("Macintosh")) {
+                deviceText = "macOS / ";
+            } else if (s.user_agent.includes("Linux")) {
+                deviceText = "Linux / ";
+            } else if (s.user_agent.includes("iPhone")) {
+                deviceText = "iPhone / ";
+            } else if (s.user_agent.includes("Android")) {
+                deviceText = "Android / ";
+            } else {
+                deviceText = "";
+            }
+            
+            if (s.user_agent.includes("Chrome")) {
+                deviceText += "Chrome";
+            } else if (s.user_agent.includes("Firefox")) {
+                deviceText += "Firefox";
+            } else if (s.user_agent.includes("Safari")) {
+                deviceText += "Safari";
+            } else if (s.user_agent.includes("Edge")) {
+                deviceText += "Edge";
+            } else if (s.user_agent.includes("Opera")) {
+                deviceText += "Opera";
+            } else {
+                deviceText += s.user_agent.split(" ")[0] || "Unknown Client";
+            }
+            
+            // Highlight current device
+            const currentBadge = s.is_current ? ' <span class="badge success-badge" style="font-size: 10px; background: rgba(46, 213, 115, 0.15); color: #2ed573; padding: 2px 6px; margin-left: 6px;">Это устройство</span>' : '';
+            
+            // Terminate button
+            const actionHtml = s.is_current 
+                ? '<span style="color: var(--text-secondary); font-size: 13px;">Текущая сессия</span>' 
+                : `<button class="btn danger-btn btn-terminate-session" data-id="${s.session_id}" style="padding: 4px 8px; font-size: 12px; height: auto;"><i class="fa-solid fa-right-from-bracket"></i> Завершить</button>`;
+            
+            tr.innerHTML = `
+                <td style="white-space: nowrap;"><strong>${s.ip_address}</strong>${currentBadge}</td>
+                <td style="max-width: 200px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="${s.user_agent}">${deviceText}</td>
+                <td style="white-space: nowrap;">${created}</td>
+                <td style="white-space: nowrap;">${expires}</td>
+                <td style="text-align: right; white-space: nowrap;">${actionHtml}</td>
+            `;
+            tbody.appendChild(tr);
+        });
+        
+        // Add click listener for terminate buttons
+        document.querySelectorAll(".btn-terminate-session").forEach(btn => {
+            btn.addEventListener("click", async (e) => {
+                const sid = e.currentTarget.getAttribute("data-id");
+                if (!confirm("Вы уверены, что хотите принудительно завершить эту сессию?")) return;
+                
+                const deleteRes = await apiFetch("/api/security/sessions/terminate", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ session_id: sid })
+                });
+                
+                if (deleteRes && deleteRes.success) {
+                    showToast("Сессия успешно завершена!");
+                    loadActiveSessions();
+                } else {
+                    showToast(deleteRes ? deleteRes.msg : "Не удалось завершить сессию", "error");
+                }
+            });
+        });
+    } else {
+        tbody.innerHTML = '<tr><td colspan="5" style="text-align: center; color: var(--danger-color);">Не удалось загрузить активные сессии</td></tr>';
     }
 }
