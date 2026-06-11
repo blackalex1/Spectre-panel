@@ -108,9 +108,19 @@ if dp:
         port = settings.PANEL_PORT
         secret_path = settings.PANEL_SECRET_PATH
         
-        webapp_url = f"http://{public_ip}:{port}/{secret_path}/"
-        if port == 443:
-            webapp_url = f"https://{public_ip}/{secret_path}/"
+        from backend.database import get_setting
+        from backend.ssl_utils import SSL_CERT_PATH, SSL_KEY_PATH
+        
+        ssl_domain = get_setting("ssl_domain", "")
+        has_ssl = SSL_CERT_PATH.exists() and SSL_KEY_PATH.exists()
+        
+        host = ssl_domain if ssl_domain else public_ip
+        scheme = "https" if (ssl_domain or has_ssl or port == 443) else "http"
+        
+        if (port == 443 and scheme == "https") or (port == 80 and scheme == "http"):
+            webapp_url = f"{scheme}://{host}/{secret_path}/"
+        else:
+            webapp_url = f"{scheme}://{host}:{port}/{secret_path}/"
             
         markup = InlineKeyboardMarkup(inline_keyboard=[
             [
