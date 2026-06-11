@@ -144,9 +144,15 @@ class AcmeClient:
         """Registers a new ACME account with Let's Encrypt."""
         new_account_url = self.directory.get("newAccount")
         payload = {
-            "termsOfServiceAgreed": True,
-            "contact": [f"mailto:{email}"]
+            "termsOfServiceAgreed": True
         }
+        if email and isinstance(email, str):
+            email = email.strip()
+            if email and "@" in email:
+                payload["contact"] = [f"mailto:{email}"]
+            elif email:
+                logging.warning(f"[ACME Client] Invalid email format '{email}', omitting contact info.")
+        
         status, res_json, headers = self._sign_and_post(new_account_url, payload)
         if status in (200, 201):
             self.account_url = headers.get("location")
