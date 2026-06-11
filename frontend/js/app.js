@@ -8,11 +8,16 @@ if (tg) {
     tg.expand();
 }
 
-document.addEventListener("DOMContentLoaded", async () => {
-    await initI18n();
-    setupLoginListener();
-    await initApp();
-});
+// Запуск инициализации приложения сразу (так как type="module" выполняется после парсинга DOM)
+(async () => {
+    try {
+        await initI18n();
+        setupLoginListener();
+        await initApp();
+    } catch (e) {
+        console.error("Critical app initialization error:", e);
+    }
+})();
 
 async function initApp() {
     document.getElementById("loading-overlay").classList.add("active");
