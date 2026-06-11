@@ -60,6 +60,7 @@ from backend.database.crud.settings import (
 from backend.database.crud.sessions import (
     add_session_db,
     get_session_db,
+    get_all_sessions_db,
     delete_session_db,
     clean_expired_sessions_db,
 )
@@ -128,6 +129,7 @@ __all__ = [
     "set_setting",
     "add_session_db",
     "get_session_db",
+    "get_all_sessions_db",
     "delete_session_db",
     "clean_expired_sessions_db",
     "outbound_to_dict",

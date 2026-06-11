@@ -372,6 +372,33 @@
 
         </div>
 
+    <!-- CARD 6.5: Активные сессии (Active Sessions) -->
+    <div class="settings-grid" style="margin-top: 24px;">
+        <div class="glass-card settings-card settings-card-wide">
+            <h3 data-i18n="active_sessions_title">Активные сессии (Active Sessions)</h3>
+            <p class="card-desc" data-i18n="active_sessions_desc">Список устройств и браузеров, вошедших в панель под вашей учетной записью.</p>
+            
+            <div style="margin-top: 20px;">
+                <div class="table-container">
+                    <table class="glass-table">
+                        <thead>
+                            <tr>
+                                <th style="white-space: nowrap;">IP-адрес</th>
+                                <th style="white-space: nowrap;">Браузер / Устройство</th>
+                                <th style="white-space: nowrap;">Создана</th>
+                                <th style="white-space: nowrap;">Истекает</th>
+                                <th style="text-align: right; width: 100px;">Действие</th>
+                            </tr>
+                        </thead>
+                        <tbody id="active-sessions-tbody">
+                            <!-- Заполняется динамически -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- CARD 7: Журнал аудита действий (Audit Logs) -->
     <div class="settings-grid" style="margin-top: 24px;">
         <div class="glass-card settings-card settings-card-wide">
