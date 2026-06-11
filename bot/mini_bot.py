@@ -566,9 +566,8 @@ if dp:
 
     @dp.callback_query(F.data.startswith("tg_2fa_block:"))
     async def cb_tg_2fa_block(callback: CallbackQuery):
-        parts = callback.data.split(":", 2)
+        parts = callback.data.split(":", 1)
         token = parts[1]
-        ip = parts[2] if len(parts) > 2 else "unknown"
         
         import aiohttp
         url = f"http://127.0.0.1:{settings.PANEL_PORT}/api/auth/tg-2fa/action"
@@ -578,7 +577,7 @@ if dp:
                     if resp.status == 200:
                         res = await resp.json()
                         if res.get("success"):
-                            await callback.message.edit_text(f"🛑 <b>IP {ip} заблокирован.</b>", parse_mode="HTML")
+                            await callback.message.edit_text("🛑 <b>IP-адрес заблокирован.</b>", parse_mode="HTML")
                         else:
                             await callback.answer(f"❌ Ошибка: {res.get('msg')}", show_alert=True)
                     else:
