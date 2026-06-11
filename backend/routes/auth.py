@@ -185,7 +185,7 @@ async def login_api(request: Request, response: Response):
                         
                     # Если Telegram 2FA включена, отправляем подтверждение
                     if telegram_active:
-                        tg_token = secrets.token_hex(32)
+                        tg_token = secrets.token_hex(16)
                         from backend.models import SystemSetting
                         session.add(SystemSetting(
                             key=f"tg_2fa_req_{tg_token}",
@@ -225,7 +225,7 @@ async def login_api(request: Request, response: Response):
                             kb = InlineKeyboardMarkup(inline_keyboard=[
                                 [
                                     InlineKeyboardButton(text="✅ Да, разрешить", callback_data=f"tg_2fa_approve:{tg_token}"),
-                                    InlineKeyboardButton(text="❌ Заблокировать IP", callback_data=f"tg_2fa_block:{tg_token}:{client_ip}")
+                                    InlineKeyboardButton(text="❌ Заблокировать IP", callback_data=f"tg_2fa_block:{tg_token}")
                                 ]
                             ])
                             
