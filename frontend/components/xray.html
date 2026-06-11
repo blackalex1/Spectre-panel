@@ -18,8 +18,72 @@
         </div>
     </div>
 
+    <!-- GeoIP / GeoSite файлы -->
+    <div class="core-controls glass-card" style="margin-top: 20px;" id="geo-files-card">
+        <h3 style="margin-bottom: 16px;"><i class="fa-solid fa-earth-americas" style="margin-right: 8px; color: var(--accent-blue);"></i><span data-i18n="geo_title">Geo-файлы маршрутизации (geoip.dat / geosite.dat)</span></h3>
+
+        <!-- Статус файлов -->
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 20px;" id="geo-status-grid">
+            <div class="geo-file-status glass-card" id="geo-geoip-status" style="padding: 14px 16px; border-radius: 10px; border: 1px solid var(--border-color);">
+                <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 6px;">
+                    <i class="fa-solid fa-database" style="color: var(--accent-purple);"></i>
+                    <strong style="font-size: 14px;">geoip.dat</strong>
+                    <span id="geo-geoip-badge" class="tag-badge tag-badge-proxy" style="font-size: 11px; padding: 2px 8px;">Загрузка...</span>
+                </div>
+                <p id="geo-geoip-meta" style="font-size: 12px; color: var(--text-secondary); margin: 0;">—</p>
+            </div>
+            <div class="geo-file-status glass-card" id="geo-geosite-status" style="padding: 14px 16px; border-radius: 10px; border: 1px solid var(--border-color);">
+                <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 6px;">
+                    <i class="fa-solid fa-globe" style="color: var(--accent-teal);"></i>
+                    <strong style="font-size: 14px;">geosite.dat</strong>
+                    <span id="geo-geosite-badge" class="tag-badge tag-badge-proxy" style="font-size: 11px; padding: 2px 8px;">Загрузка...</span>
+                </div>
+                <p id="geo-geosite-meta" style="font-size: 12px; color: var(--text-secondary); margin: 0;">—</p>
+            </div>
+        </div>
+
+        <!-- Настройка URL источников -->
+        <div style="margin-bottom: 16px;">
+            <p style="font-size: 13px; color: var(--text-secondary); margin-bottom: 12px;" data-i18n="geo_url_desc">
+                Укажите кастомные URL для скачивания geo-файлов. Оставьте поле пустым, чтобы использовать официальный репозиторий Loyalsoldier (рекомендуется).
+            </p>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;" id="geo-url-inputs">
+                <div class="input-group" style="margin-bottom: 0;">
+                    <label for="geo-geoip-url" style="font-size: 12px; color: var(--text-secondary);">
+                        <i class="fa-solid fa-link" style="margin-right: 4px;"></i>URL для geoip.dat
+                    </label>
+                    <input type="url" id="geo-geoip-url" class="glass-input" style="font-size: 13px;"
+                           placeholder="https://github.com/.../geoip.dat">
+                </div>
+                <div class="input-group" style="margin-bottom: 0;">
+                    <label for="geo-geosite-url" style="font-size: 12px; color: var(--text-secondary);">
+                        <i class="fa-solid fa-link" style="margin-right: 4px;"></i>URL для geosite.dat
+                    </label>
+                    <input type="url" id="geo-geosite-url" class="glass-input" style="font-size: 13px;"
+                           placeholder="https://github.com/.../geosite.dat">
+                </div>
+            </div>
+        </div>
+
+        <!-- Кнопки действий -->
+        <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
+            <button id="geo-save-btn" class="btn secondary-btn" style="min-width: 160px;">
+                <i class="fa-solid fa-floppy-disk" style="margin-right: 6px;"></i>
+                <span data-i18n="geo_btn_save">Сохранить URL</span>
+            </button>
+            <button id="geo-update-btn" class="btn primary-btn" style="min-width: 200px;">
+                <i class="fa-solid fa-cloud-arrow-down" style="margin-right: 6px;"></i>
+                <span data-i18n="geo_btn_update">Обновить geo-файлы</span>
+            </button>
+            <button id="geo-reset-btn" class="btn icon-btn" title="Сбросить URL к дефолтным" style="padding: 8px 12px;">
+                <i class="fa-solid fa-rotate-left"></i>
+            </button>
+            <span id="geo-update-status" style="font-size: 12px; color: var(--text-secondary); display: none;"></span>
+        </div>
+    </div>
+
     <!-- Логи терминала -->
-    <div class="terminal-card glass-card">
+    <div class="terminal-card glass-card" style="margin-top: 20px;">
         <div class="terminal-header">
             <span><i class="fa-solid fa-square-poll-horizontal"></i> <span data-i18n="xray_terminal_title">Логи ядра Xray (в реальном времени)</span></span>
             <div style="display: flex; gap: 8px;">

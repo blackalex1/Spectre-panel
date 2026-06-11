@@ -3,6 +3,7 @@ import { loadHysteriaCoreInfo, loadHysteriaLogs } from "../hysteria.js";
 import { loadOutbounds, loadRoutingRules } from "../routing.js";
 import { loadSettings, loadOptimizationStatus } from "./settings-ui.js";
 import { loadAuditLogs } from "./audit-logs.js";
+import { loadGeoInfo } from "./xray-core.js";
 import { t } from "../i18n.js";
 
 export let currentTab = "dashboard";
@@ -48,6 +49,7 @@ export function switchTab(tabId, loadInbounds, loadCoreInfo, loadLogs) {
     } else if (tabId === "xray") {
         document.getElementById("current-tab-title").innerText = t("xray_title", "Логи и управление ядром");
         loadCoreInfo();
+        loadGeoInfo();
         loadLogs();
         logsInterval = setInterval(loadLogs, 2000);
     } else if (tabId === "hysteria") {

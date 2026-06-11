@@ -26,16 +26,31 @@ export async function loadHysteriaCoreInfo() {
     
     // Получаем текущий статус запущенности Hysteria и настраиваем кнопку Остановить/Запустить
     const statusRes = await apiFetch("/api/hysteria/status");
-    const stopBtn = document.getElementById("hysteria-stop-btn");
-    if (statusRes && stopBtn) {
-        if (statusRes.running) {
-            stopBtn.className = "btn danger-btn";
-            stopBtn.innerHTML = `<i class="fa-solid fa-stop"></i> <span>${t("hysteria_btn_stop", "Остановить")}</span>`;
-            stopBtn.setAttribute("data-action", "stop");
-        } else {
-            stopBtn.className = "btn success-btn";
-            stopBtn.innerHTML = `<i class="fa-solid fa-play"></i> <span>${t("hysteria_btn_start", "Запустить")}</span>`;
-            stopBtn.setAttribute("data-action", "start");
+    if (statusRes) {
+        const stopBtn = document.getElementById("hysteria-stop-btn");
+        if (stopBtn) {
+            if (statusRes.running) {
+                stopBtn.className = "btn danger-btn";
+                stopBtn.innerHTML = `<i class="fa-solid fa-stop"></i> <span>${t("hysteria_btn_stop", "Остановить")}</span>`;
+                stopBtn.setAttribute("data-action", "stop");
+            } else {
+                stopBtn.className = "btn success-btn";
+                stopBtn.innerHTML = `<i class="fa-solid fa-play"></i> <span>${t("hysteria_btn_start", "Запустить")}</span>`;
+                stopBtn.setAttribute("data-action", "start");
+            }
+        }
+        
+        // Update top-bar badge
+        const hBadge = document.getElementById("hysteria-status-badge");
+        const hStatusText = hBadge ? hBadge.querySelector(".status-text") : null;
+        if (hBadge && hStatusText) {
+            if (statusRes.running) {
+                hBadge.className = "status-badge running";
+                hStatusText.innerText = t("hysteria_status_active", "Hysteria: Активен");
+            } else {
+                hBadge.className = "status-badge stopped";
+                hStatusText.innerText = t("hysteria_status_stopped", "Hysteria: Остановлен");
+            }
         }
     }
     

@@ -18,6 +18,21 @@ logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(
 
 # Фоновые задачи
 polling_task = None
+port_scan_task = None
+
+async def poll_port_scan_detector_loop():
+    logging.info("Started background port scan detector task.")
+    await asyncio.sleep(5)
+    while True:
+        try:
+            await asyncio.sleep(10)
+            from backend.scheduler import detect_and_block_port_scans
+            await asyncio.to_thread(detect_and_block_port_scans)
+        except asyncio.CancelledError:
+            logging.info("Background port scan detector task cancelled.")
+            break
+        except Exception as e:
+            logging.error(f"Error in port scan detector loop: {e}")
 
 async def poll_xray_stats_loop():
     logging.info("Started background traffic statistics polling task.")
@@ -89,12 +104,15 @@ async def lifespan(app: FastAPI):
     
     # Запуск фонового опроса трафика
     polling_task = asyncio.create_task(poll_xray_stats_loop())
+    port_scan_task = asyncio.create_task(poll_port_scan_detector_loop())
     
     yield
     
     # Отмена фоновой задачи
     if polling_task:
         polling_task.cancel()
+    if port_scan_task:
+        port_scan_task.cancel()
         
     # Остановка Xray и Hysteria 2
     stop_xray()
@@ -142,6 +160,14 @@ async def add_no_cache_headers(request: Request, call_next):
 
 # Подключаем API роутер
 app.include_router(router)
+
+# Роут для Let's Encrypt HTTP-01 верификации
+@app.get("/.well-known/acme-challenge/{token}")
+async def acme_challenge(token: str):
+    from backend.acme_client import ACME_CHALLENGES
+    if token in ACME_CHALLENGES:
+        return Response(content=ACME_CHALLENGES[token], media_type="text/plain")
+    return Response(content="Challenge not found", status_code=404, media_type="text/plain")
 
 # Роут для отдачи приманки (Decoy) на корневом пути
 @app.get("/")

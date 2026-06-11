@@ -23,6 +23,7 @@ def generate_hysteria_config(inbound_id: int, port: int, clients: list, stream_s
     hop = hysteria_opts.get("hop", "")
 
     # Настройка TLS
+    sni = hysteria_opts.get("sni", "")
     if cert_mode == "custom" and cert_path and key_path:
         tls_config = {
             "cert": cert_path,
@@ -40,6 +41,8 @@ def generate_hysteria_config(inbound_id: int, port: int, clients: list, stream_s
                 "cert": str(backend.hysteria.HYSTERIA_CERT_PATH),
                 "key": str(backend.hysteria.HYSTERIA_KEY_PATH)
             }
+    if sni:
+        tls_config["sni"] = sni
 
     # Настройка Masquerade
     if masq_type == "file":
@@ -55,9 +58,13 @@ def generate_hysteria_config(inbound_id: int, port: int, clients: list, stream_s
         except ValueError:
             status_code = 404
         masq_config = {
-            "type": "status",
-            "status": {
-                "code": status_code
+            "type": "string",
+            "string": {
+                "content": str(status_code),
+                "headers": {
+                    "Content-Type": "text/plain"
+                },
+                "statusCode": status_code
             }
         }
     else:  # proxy
@@ -125,7 +132,11 @@ def generate_hysteria_config(inbound_id: int, port: int, clients: list, stream_s
             }
         }
 
-    if up_mbps > 0 or down_mbps > 0:
+    ignore_bw = hysteria_opts.get("ignoreClientBandwidth", False)
+    
+    if ignore_bw:
+        config["ignoreClientBandwidth"] = True
+    elif up_mbps > 0 or down_mbps > 0:
         config["bandwidth"] = {}
         if up_mbps > 0:
             config["bandwidth"]["up"] = f"{up_mbps} mbps"

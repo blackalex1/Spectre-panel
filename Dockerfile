@@ -30,13 +30,14 @@ ENV LANG=C.UTF-8
 ENV LC_ALL=C.UTF-8
 ENV PYTHONPATH=/app
 
-# Install runtime system dependencies (including procps and psmisc for process control)
+# Install runtime system dependencies (including procps, psmisc, and iputils-ping)
 RUN apt-get update && apt-get install -y --no-install-recommends \
     openssl \
     procps \
     psmisc \
     curl \
     git \
+    iputils-ping \
     && rm -rf /var/lib/apt/lists/*
 
 # Set working directory

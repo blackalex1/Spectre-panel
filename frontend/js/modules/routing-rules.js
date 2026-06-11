@@ -1,4 +1,4 @@
-import { apiFetch } from "../api.js";
+import { apiFetch, getCsrfToken } from "../api.js";
 import { showToast } from "../ui.js";
 import { t } from "../i18n.js";
 import { populateOutboundDropdowns } from "./routing-outbounds.js";
@@ -82,6 +82,32 @@ export async function loadRoutingRules() {
         `;
         tbody.appendChild(tr);
     });
+
+    // Load Quick Security Rules settings
+    try {
+        const setRes = await fetch("/api/settings", {
+            headers: { "Authorization": `Bearer ${getCsrfToken()}` }
+        });
+        if (setRes.status === 200) {
+            const setObj = await setRes.json();
+            const bittorrentCb = document.getElementById("quick-block-bittorrent");
+            if (bittorrentCb) bittorrentCb.checked = setObj.block_bittorrent || false;
+            
+            const adsCb = document.getElementById("quick-block-ads");
+            if (adsCb) adsCb.checked = setObj.block_ads || false;
+            
+            const cnCb = document.getElementById("quick-block-cn");
+            if (cnCb) cnCb.checked = setObj.block_cn || false;
+            
+            const ruCb = document.getElementById("quick-block-ru");
+            if (ruCb) ruCb.checked = setObj.block_ru || false;
+            
+            const usCb = document.getElementById("quick-block-us");
+            if (usCb) usCb.checked = setObj.block_us || false;
+        }
+    } catch (err) {
+        console.error("Failed to load quick security rules:", err);
+    }
 }
 
 export async function openRoutingRuleModal(id = null) {
@@ -298,6 +324,38 @@ export function setupRoutingRulesListeners() {
                 loadRoutingRules();
             } else {
                 showToast(res ? res.msg : "Error", "error");
+            }
+        });
+    }
+
+    const btnSaveQuickRules = document.getElementById("btn-save-quick-rules");
+    if (btnSaveQuickRules) {
+        btnSaveQuickRules.addEventListener("click", async () => {
+            const block_bittorrent = document.getElementById("quick-block-bittorrent").checked;
+            const block_ads = document.getElementById("quick-block-ads").checked;
+            const block_cn = document.getElementById("quick-block-cn").checked;
+            const block_ru = document.getElementById("quick-block-ru").checked;
+            const block_us = document.getElementById("quick-block-us").checked;
+            
+            btnSaveQuickRules.disabled = true;
+            const res = await apiFetch("/api/settings/update", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    block_bittorrent,
+                    block_ads,
+                    block_cn,
+                    block_ru,
+                    block_us
+                })
+            });
+            btnSaveQuickRules.disabled = false;
+            
+            if (res && res.success) {
+                showToast(t("settings_saved_toast", "Настройки успешно сохранены!"));
+                loadRoutingRules();
+            } else {
+                showToast(res ? res.msg : t("settings_save_error", "Не удалось сохранить настройки"), "error");
             }
         });
     }

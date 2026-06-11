@@ -12,10 +12,15 @@ from backend.xray.core import (
     download_xray_core,
     ensure_xray_installed,
     get_installed_xray_version,
+    download_geo_files,
+    get_geo_files_info,
+    DEFAULT_GEOIP_URL,
+    DEFAULT_GEOSITE_URL,
 )
 from backend.xray.config import (
     generate_xray_config_json,
     write_xray_config,
+    clean_stream_settings,
 )
 from backend.xray.service import (
     start_xray,
@@ -42,8 +47,13 @@ __all__ = [
     "download_xray_core",
     "ensure_xray_installed",
     "get_installed_xray_version",
+    "download_geo_files",
+    "get_geo_files_info",
+    "DEFAULT_GEOIP_URL",
+    "DEFAULT_GEOSITE_URL",
     "generate_xray_config_json",
     "write_xray_config",
+    "clean_stream_settings",
     "start_xray",
     "stop_xray",
     "restart_xray",

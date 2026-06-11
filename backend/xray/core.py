@@ -1,4 +1,5 @@
 import os
+import time
 import logging
 import zipfile
 import shutil
@@ -6,6 +7,10 @@ import subprocess
 import requests
 import platform
 import backend.xray
+
+# Дефолтные URL для geo-файлов (официальный репозиторий Loyalsoldier)
+DEFAULT_GEOIP_URL = "https://github.com/Loyalsoldier/v2ray-rules-dat/releases/latest/download/geoip.dat"
+DEFAULT_GEOSITE_URL = "https://github.com/Loyalsoldier/v2ray-rules-dat/releases/latest/download/geosite.dat"
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
 
@@ -137,6 +142,93 @@ def download_xray_core(download_url: str = None):
                 pass
                 
     return version
+
+
+def download_geo_files(geoip_url: str = None, geosite_url: str = None) -> dict:
+    """
+    Скачивает geoip.dat и geosite.dat по указанным URL.
+    Если URL не указаны, берёт сохранённые в БД или использует дефолтные.
+    Возвращает словарь: {'geoip': True/False, 'geosite': True/False, 'errors': [...]}
+    """
+    from backend.database import get_setting
+
+    if not geoip_url:
+        geoip_url = get_setting("geo_geoip_url", "") or DEFAULT_GEOIP_URL
+    if not geosite_url:
+        geosite_url = get_setting("geo_geosite_url", "") or DEFAULT_GEOSITE_URL
+
+    result = {"geoip": False, "geosite": False, "errors": []}
+
+    def _safe_download(url: str, dest_name: str) -> bool:
+        """Скачивает один файл по URL и сохраняет его в BIN_DIR."""
+        try:
+            # Проверяем URL — должен быть https и заканчиваться на .dat
+            from urllib.parse import urlparse
+            parsed = urlparse(url)
+            if parsed.scheme not in ("https", "http"):
+                raise ValueError(f"Недопустимая схема URL: {parsed.scheme}. Используйте https://")
+            if not url.lower().endswith(".dat"):
+                raise ValueError(f"URL должен указывать на .dat файл")
+
+            dest_path = backend.xray.BIN_DIR / dest_name
+            tmp_path = backend.xray.BIN_DIR / f"{dest_name}.tmp"
+
+            logging.info(f"Скачивание {dest_name} из {url}...")
+            response = requests.get(url, stream=True, timeout=60, allow_redirects=True)
+            response.raise_for_status()
+
+            with open(tmp_path, "wb") as f:
+                for chunk in response.iter_content(chunk_size=8192):
+                    f.write(chunk)
+
+            # Проверяем что файл не пустой
+            if tmp_path.stat().st_size < 1024:
+                raise ValueError(f"Скачанный файл слишком мал ({tmp_path.stat().st_size} байт) — возможно, неверный URL")
+
+            # Атомарная замена
+            if dest_path.exists():
+                os.remove(dest_path)
+            shutil.move(str(tmp_path), str(dest_path))
+            logging.info(f"{dest_name} успешно обновлён ({dest_path.stat().st_size} байт)")
+            return True
+        except Exception as e:
+            logging.error(f"Ошибка при скачивании {dest_name}: {e}")
+            result["errors"].append(f"{dest_name}: {str(e)}")
+            # Удаляем временный файл если остался
+            tmp_path = backend.xray.BIN_DIR / f"{dest_name}.tmp"
+            if tmp_path.exists():
+                try:
+                    os.remove(tmp_path)
+                except Exception:
+                    pass
+            return False
+
+    result["geoip"] = _safe_download(geoip_url, "geoip.dat")
+    result["geosite"] = _safe_download(geosite_url, "geosite.dat")
+    return result
+
+
+def get_geo_files_info() -> dict:
+    """
+    Возвращает метаданные установленных geo-файлов (размер, дата обновления).
+    """
+    from backend.database import get_setting
+    info = {}
+    for name in ("geoip.dat", "geosite.dat"):
+        path = backend.xray.BIN_DIR / name
+        if path.exists():
+            stat = path.stat()
+            info[name] = {
+                "exists": True,
+                "size_kb": round(stat.st_size / 1024, 1),
+                "updated_at": time.strftime("%Y-%m-%d %H:%M UTC", time.gmtime(stat.st_mtime))
+            }
+        else:
+            info[name] = {"exists": False, "size_kb": 0, "updated_at": None}
+
+    info["geoip_url"] = get_setting("geo_geoip_url", "") or DEFAULT_GEOIP_URL
+    info["geosite_url"] = get_setting("geo_geosite_url", "") or DEFAULT_GEOSITE_URL
+    return info
 
 def ensure_xray_installed():
     """Проверяет наличие Xray, скачивает при необходимости"""

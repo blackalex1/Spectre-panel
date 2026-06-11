@@ -8,7 +8,7 @@ def build_hysteria2_link(inbound: dict, client: dict, host: str, port: int, disp
     obfs_password = hysteria_opts.get('obfsPassword', '')
     hop = hysteria_opts.get('hop', '')
 
-    sni = stream_settings.get('sni')
+    sni = hysteria_opts.get('sni') or stream_settings.get('sni')
     params = []
     
     if sni:
@@ -25,11 +25,6 @@ def build_hysteria2_link(inbound: dict, client: dict, host: str, port: int, disp
         if SSL_CERT_PATH.exists():
             cert_path = str(SSL_CERT_PATH)
         else:
-            from backend.config import CONFIG_DIR
-            # Wait, in protocols.py:
-            # from backend.config import BIN_DIR
-            # But wait! protocols.py lines 299 says CONFIG_DIR / "cert.pem" or BIN_DIR / "hysteria.crt"
-            # Let's import BIN_DIR or CONFIG_DIR or whatever protocols.py did:
             from backend.config import BIN_DIR
             p = BIN_DIR / "hysteria.crt"
             if p.exists():
@@ -53,4 +48,5 @@ def build_hysteria2_link(inbound: dict, client: dict, host: str, port: int, disp
         
     query = "&".join(params)
     username = quote(client_email, safe='')
-    return f"hysteria2://{username}:{password}@{host}:{port}?{query}#{quote(display_name)}"
+    encoded_password = quote(password, safe='')
+    return f"hysteria2://{username}:{encoded_password}@{host}:{port}?{query}#{quote(display_name)}"

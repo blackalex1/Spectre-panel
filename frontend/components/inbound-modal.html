@@ -134,6 +134,8 @@
                             <option value="ws">WebSocket (WS)</option>
                             <option value="grpc">gRPC</option>
                             <option value="h2">HTTP/2 (h2)</option>
+                            <option value="httpupgrade">HTTPUpgrade</option>
+                            <option value="xhttp">XHTTP (SplitHTTP)</option>
                             <option value="mkcp">mKCP (UDP)</option>
                         </select>
                     </div>
@@ -209,6 +211,49 @@
                         </div>
                     </div>
 
+                    <!-- HTTPUpgrade settings subgroup -->
+                    <div id="httpupgrade-settings-group" class="settings-subgroup" style="display: none;">
+                        <h4>Настройки HTTPUpgrade</h4>
+                        <div class="input-row">
+                            <div class="input-group">
+                                <label for="ib-httpupgrade-path">Путь (Path)</label>
+                                <input type="text" id="ib-httpupgrade-path" placeholder="/" value="/">
+                            </div>
+                            <div class="input-group">
+                                <label for="ib-httpupgrade-host">Хост (Host)</label>
+                                <input type="text" id="ib-httpupgrade-host" placeholder="mydomain.com">
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- XHTTP (SplitHTTP) settings subgroup -->
+                    <div id="xhttp-settings-group" class="settings-subgroup" style="display: none;">
+                        <h4>Настройки XHTTP (SplitHTTP)</h4>
+                        <div class="input-row">
+                            <div class="input-group">
+                                <label for="ib-xhttp-path">Путь (Path)</label>
+                                <input type="text" id="ib-xhttp-path" placeholder="/" value="/">
+                            </div>
+                            <div class="input-group">
+                                <label for="ib-xhttp-host">Хост (Host)</label>
+                                <input type="text" id="ib-xhttp-host" placeholder="mydomain.com">
+                            </div>
+                        </div>
+                        <div class="input-group" style="margin-top: 15px;">
+                            <label for="ib-xhttp-mode">Режим (Mode)</label>
+                            <select id="ib-xhttp-mode">
+                                <option value="auto" selected>auto (автоматический)</option>
+                                <option value="packet-up">packet-up</option>
+                                <option value="stream-up">stream-up</option>
+                                <option value="stream-one">stream-one</option>
+                            </select>
+                        </div>
+                        <div class="input-group" style="margin-top: 15px;">
+                            <label for="ib-xhttp-extra">Extra (JSON, дополнительные параметры)</label>
+                            <textarea id="ib-xhttp-extra" placeholder='{"noGRPCHeader": false, "noSSEHeader": false}' style="width: 100%; height: 80px; font-family: monospace; font-size: 12px; background: #0b0f19; color: #cbd5e1; border: 1px solid var(--border-color); border-radius: 8px; padding: 10px; resize: vertical;"></textarea>
+                        </div>
+                    </div>
+
                     <!-- mKCP settings subgroup -->
                     <div id="mkcp-settings-group" class="settings-subgroup" style="display: none;">
                         <h4>Настройки mKCP</h4>
@@ -268,7 +313,7 @@
                                     <select id="ib-hysteria-masq-type">
                                         <option value="proxy">Proxy (Перенаправление на сайт)</option>
                                         <option value="file">File (Локальный каталог)</option>
-                                        <option value="string">String (Статический ответ)</option>
+                                        <option value="status">Status Code (HTTP код ответа)</option>
                                     </select>
                                 </div>
                                 <div class="input-group">
@@ -287,6 +332,19 @@
                                 <label for="ib-hysteria-down-mbps">Лимит загрузки (Down Mbps)</label>
                                 <input type="number" id="ib-hysteria-down-mbps" min="0" value="100">
                             </div>
+                        </div>
+                        <div class="input-group" style="margin-top: 15px;">
+                            <label class="checkbox-container" style="display: flex; align-items: center; gap: 10px;">
+                                <input type="checkbox" id="ib-hysteria-ignore-bw">
+                                <span>Игнорировать лимиты клиента (BBR вместо Brutal)</span>
+                            </label>
+                            <small style="color: var(--text-muted); font-size: 11px; margin-top: 4px; display: block;">
+                                При включении сервер использует BBR congestion control и игнорирует bandwidth-хинты клиентов. Взаимоисключающе с лимитами выше.
+                            </small>
+                        </div>
+                        <div class="input-group" style="margin-top: 15px;">
+                            <label for="ib-hysteria-sni">SNI (Server Name Indication)</label>
+                            <input type="text" id="ib-hysteria-sni" placeholder="Оставьте пустым для авто (используется домен/IP хоста)">
                         </div>
                         <div class="input-group" style="margin-top: 15px;">
                             <label for="ib-hysteria-cert-mode">Сертификат TLS</label>
@@ -344,12 +402,30 @@
                         </div>
                         <div class="input-row" style="margin-top: 15px;">
                             <div class="input-group">
+                                <label for="ib-tls-fp">Эмуляция отпечатка браузера (Fingerprint)</label>
+                                <select id="ib-tls-fp">
+                                    <option value="chrome" selected>chrome</option>
+                                    <option value="firefox">firefox</option>
+                                    <option value="safari">safari</option>
+                                    <option value="edge">edge</option>
+                                    <option value="qq">qq</option>
+                                    <option value="opera">opera</option>
+                                    <option value="360">360</option>
+                                    <option value="android">android</option>
+                                    <option value="ios">ios</option>
+                                    <option value="random">random</option>
+                                    <option value="randomized">randomized</option>
+                                </select>
+                            </div>
+                            <div class="input-group">
                                 <label for="ib-tls-min-ver">Минимальная версия TLS</label>
                                 <select id="ib-tls-min-ver">
                                     <option value="1.2">1.2</option>
                                     <option value="1.3" selected>1.3</option>
                                 </select>
                             </div>
+                        </div>
+                        <div class="input-row" style="margin-top: 15px;">
                             <div class="input-group">
                                 <label for="ib-tls-max-ver">Максимальная версия TLS</label>
                                 <select id="ib-tls-max-ver">

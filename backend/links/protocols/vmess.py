@@ -26,6 +26,14 @@ def build_vmess_link(inbound: dict, client: dict, host: str, port: int, display_
         tls_settings = stream_settings.get('tlsSettings', {})
         vmess_obj["sni"] = tls_settings.get('serverName', '')
         
+        alpn = tls_settings.get('alpn', [])
+        if alpn:
+            vmess_obj["alpn"] = ','.join(alpn)
+        
+        fp = tls_settings.get('fingerprint', 'chrome')
+        if fp:
+            vmess_obj["fp"] = fp
+        
         certs = tls_settings.get('certificates', [])
         cert_path = ""
         if certs and isinstance(certs, list):
@@ -72,6 +80,14 @@ def build_vmess_link(inbound: dict, client: dict, host: str, port: int, display_
         header = kcp_settings.get('header', {})
         vmess_obj["type"] = header.get('type', 'none')
         vmess_obj["path"] = kcp_settings.get('seed', '')
+    elif network == 'httpupgrade':
+        hu_settings = stream_settings.get('httpupgradeSettings', {})
+        vmess_obj["path"] = hu_settings.get('path', '/')
+        vmess_obj["host"] = hu_settings.get('host', '')
+    elif network == 'xhttp':
+        xhttp_settings = stream_settings.get('xhttpSettings', {})
+        vmess_obj["path"] = xhttp_settings.get('path', '/')
+        vmess_obj["host"] = xhttp_settings.get('host', '')
 
     json_str = json.dumps(vmess_obj)
     b64_str = base64.b64encode(json_str.encode('utf-8')).decode('utf-8')

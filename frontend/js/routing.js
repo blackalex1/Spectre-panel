@@ -84,6 +84,11 @@ export function setupRoutingListeners() {
         securitySelect.addEventListener("change", updateOutboundFormFields);
     }
     
+    const obfsSelect = document.getElementById("ob-hysteria-obfs");
+    if (obfsSelect) {
+        obfsSelect.addEventListener("change", updateOutboundFormFields);
+    }
+    
     const importLinkInput = document.getElementById("ob-import-link");
     if (importLinkInput) {
         importLinkInput.addEventListener("input", (e) => {
@@ -97,6 +102,7 @@ export function setupRoutingListeners() {
                 lowerVal.startsWith("socks5://") || 
                 lowerVal.startsWith("http://") || 
                 lowerVal.startsWith("hysteria2://") || 
+                lowerVal.startsWith("hy2://") || 
                 lowerVal.startsWith("hysteria://")) {
                 
                 const parsed = parseProxyLink(val);
@@ -123,12 +129,17 @@ export function setupRoutingListeners() {
                         document.getElementById("ob-alpn").value = parsed.alpn || "";
                         document.getElementById("ob-flow").value = parsed.flow || "";
                         document.getElementById("ob-encryption").value = parsed.encryption || "";
+                        document.getElementById("ob-pinned-sha256").value = parsed.pinSHA256 || "";
                     } else if (parsed.protocol === "hysteria") {
                         document.getElementById("ob-password").value = parsed.password || "";
                         document.getElementById("ob-sni").value = parsed.sni || "";
                         document.getElementById("ob-alpn").value = parsed.alpn || "";
                         document.getElementById("ob-up-mbps").value = parsed.up || "";
                         document.getElementById("ob-down-mbps").value = parsed.down || "";
+                        document.getElementById("ob-allow-insecure").checked = parsed.insecure === true;
+                        document.getElementById("ob-hysteria-obfs").value = parsed.obfs || "";
+                        document.getElementById("ob-hysteria-obfs-password").value = parsed.obfsPassword || "";
+                        document.getElementById("ob-pinned-sha256").value = parsed.pinSHA256 || "";
                     } else if (parsed.protocol === "shadowsocks") {
                         document.getElementById("ob-password").value = parsed.password || "";
                         document.getElementById("ob-ss-method").value = parsed.method || "aes-256-gcm";
@@ -201,10 +212,20 @@ export function setupRoutingListeners() {
                     if (security === "tls") {
                         const alpnInput = document.getElementById("ob-alpn").value.trim();
                         const alpn = alpnInput ? alpnInput.split(",").map(s => s.trim()).filter(Boolean) : [];
+                        const allowInsecure = document.getElementById("ob-allow-insecure").checked;
                         streamSettings.tlsSettings = {
                             "serverName": sni,
-                            "allowInsecure": false
+                            "allowInsecure": allowInsecure
                         };
+                        const pinnedShaInput = document.getElementById("ob-pinned-sha256").value.trim();
+                        if (pinnedShaInput) {
+                            const pins = pinnedShaInput.split(/[,~]+/)
+                                .map(s => s.replace(/:/g, "").trim().toLowerCase())
+                                .filter(Boolean);
+                            if (pins.length > 0) {
+                                streamSettings.tlsSettings.pinnedPeerCertSha256 = pins.join("~");
+                            }
+                        }
                         if (alpn.length > 0) {
                             streamSettings.tlsSettings.alpn = alpn;
                         }
@@ -225,6 +246,7 @@ export function setupRoutingListeners() {
                     const sni = document.getElementById("ob-sni").value.trim();
                     const alpnInput = document.getElementById("ob-alpn").value.trim() || "h3";
                     const alpn = alpnInput.split(",").map(s => s.trim()).filter(Boolean);
+                    const allowInsecure = document.getElementById("ob-allow-insecure").checked;
                     
                     const upMbps = parseInt(document.getElementById("ob-up-mbps").value);
                     const downMbps = parseInt(document.getElementById("ob-down-mbps").value);
@@ -233,10 +255,36 @@ export function setupRoutingListeners() {
                     if (!isNaN(upMbps) && upMbps > 0) hysteriaSettings.up = `${upMbps} mbps`;
                     if (!isNaN(downMbps) && downMbps > 0) hysteriaSettings.down = `${downMbps} mbps`;
                     
+                    const obfsType = document.getElementById("ob-hysteria-obfs").value;
+                    if (obfsType) {
+                        hysteriaSettings.obfs = obfsType;
+                        hysteriaSettings.obfs_type = obfsType;
+                        const obfsPwd = document.getElementById("ob-hysteria-obfs-password").value.trim();
+                        if (obfsPwd) {
+                            hysteriaSettings.obfsPassword = obfsPwd;
+                            hysteriaSettings.obfs_password = obfsPwd;
+                        }
+                    }
+                    
+                    const pinnedShaInput = document.getElementById("ob-pinned-sha256").value.trim();
+                    let tlsSettings = {
+                        "serverName": sni,
+                        "alpn": alpn,
+                        "allowInsecure": allowInsecure
+                    };
+                    if (pinnedShaInput) {
+                        const pins = pinnedShaInput.split(/[,~]+/)
+                            .map(s => s.replace(/:/g, "").trim().toLowerCase())
+                            .filter(Boolean);
+                        if (pins.length > 0) {
+                            tlsSettings.pinnedPeerCertSha256 = pins.join("~");
+                        }
+                    }
+                    
                     streamSettings = {
                         "network": "hysteria",
                         "security": "tls",
-                        "tlsSettings": { "serverName": sni, "alpn": alpn },
+                        "tlsSettings": tlsSettings,
                         "hysteriaSettings": hysteriaSettings
                     };
                 } else if (protocol === "socks" || protocol === "http") {
@@ -296,7 +344,39 @@ export function setupRoutingListeners() {
             let settings = {};
             let streamSettings = {};
             
-            if (protocol === "socks" || protocol === "http" || protocol === "shadowsocks" || protocol === "vless" || protocol === "hysteria") {
+            if (protocol === "wireguard") {
+                const privateKey = document.getElementById("ob-wg-private-key").value.trim();
+                const addressesInput = document.getElementById("ob-wg-addresses").value.trim();
+                const addressList = addressesInput ? addressesInput.split(",").map(s => s.trim()).filter(Boolean) : [];
+                
+                const reservedInput = document.getElementById("ob-wg-reserved").value.trim();
+                let reserved = [];
+                if (reservedInput) {
+                    reserved = reservedInput.split(",").map(s => parseInt(s.trim())).filter(x => !isNaN(x));
+                }
+                
+                const peerPublicKey = document.getElementById("ob-wg-peer-public-key").value.trim();
+                const peerEndpoint = document.getElementById("ob-wg-endpoint").value.trim();
+                
+                const mtuInput = document.getElementById("ob-wg-mtu").value.trim();
+                const mtu = mtuInput ? parseInt(mtuInput) : null;
+                
+                settings = {
+                    "secretKey": privateKey,
+                    "address": addressList,
+                    "peers": [{
+                        "publicKey": peerPublicKey,
+                        "endpoint": peerEndpoint
+                    }]
+                };
+                
+                if (reserved.length > 0) {
+                    settings.reserved = reserved;
+                }
+                if (mtu) {
+                    settings.mtu = mtu;
+                }
+            } else if (protocol === "socks" || protocol === "http" || protocol === "shadowsocks" || protocol === "vless" || protocol === "hysteria") {
                 const address = document.getElementById("ob-address").value.trim();
                 const port = parseInt(document.getElementById("ob-port").value);
                 const password = document.getElementById("ob-password").value.trim();
@@ -341,10 +421,20 @@ export function setupRoutingListeners() {
                     if (security === "tls") {
                         const alpnInput = document.getElementById("ob-alpn").value.trim();
                         const alpn = alpnInput ? alpnInput.split(",").map(s => s.trim()).filter(Boolean) : [];
+                        const allowInsecure = document.getElementById("ob-allow-insecure").checked;
                         streamSettings.tlsSettings = {
                             "serverName": sni,
-                            "allowInsecure": false
+                            "allowInsecure": allowInsecure
                         };
+                        const pinnedShaInput = document.getElementById("ob-pinned-sha256").value.trim();
+                        if (pinnedShaInput) {
+                            const pins = pinnedShaInput.split(/[,~]+/)
+                                .map(s => s.trim())
+                                .filter(Boolean);
+                            if (pins.length > 0) {
+                                streamSettings.tlsSettings.pinnedPeerCertSha256 = pins.join("~");
+                            }
+                        }
                         if (alpn.length > 0) {
                             streamSettings.tlsSettings.alpn = alpn;
                         }
@@ -369,6 +459,7 @@ export function setupRoutingListeners() {
                     const sni = document.getElementById("ob-sni").value.trim();
                     const alpnInput = document.getElementById("ob-alpn").value.trim() || "h3";
                     const alpn = alpnInput.split(",").map(s => s.trim()).filter(Boolean);
+                    const allowInsecure = document.getElementById("ob-allow-insecure").checked;
                     
                     const upMbps = parseInt(document.getElementById("ob-up-mbps").value);
                     const downMbps = parseInt(document.getElementById("ob-down-mbps").value);
@@ -384,13 +475,36 @@ export function setupRoutingListeners() {
                         hysteriaSettings.down = `${downMbps} mbps`;
                     }
                     
+                    const obfsType = document.getElementById("ob-hysteria-obfs").value;
+                    if (obfsType) {
+                        hysteriaSettings.obfs = obfsType;
+                        hysteriaSettings.obfs_type = obfsType;
+                        const obfsPwd = document.getElementById("ob-hysteria-obfs-password").value.trim();
+                        if (obfsPwd) {
+                            hysteriaSettings.obfsPassword = obfsPwd;
+                            hysteriaSettings.obfs_password = obfsPwd;
+                        }
+                    }
+                    
+                    const pinnedShaInput = document.getElementById("ob-pinned-sha256").value.trim();
+                    let tlsSettings = {
+                        "serverName": sni,
+                        "alpn": alpn,
+                        "allowInsecure": allowInsecure
+                    };
+                    if (pinnedShaInput) {
+                        const pins = pinnedShaInput.split(/[,~]+/)
+                            .map(s => s.trim())
+                            .filter(Boolean);
+                        if (pins.length > 0) {
+                            tlsSettings.pinnedPeerCertSha256 = pins.join("~");
+                        }
+                    }
+                    
                     streamSettings = {
                         "network": "hysteria",
                         "security": "tls",
-                        "tlsSettings": {
-                            "serverName": sni,
-                            "alpn": alpn
-                        },
+                        "tlsSettings": tlsSettings,
                         "hysteriaSettings": hysteriaSettings
                     };
                 } else {

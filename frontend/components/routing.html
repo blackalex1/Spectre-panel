@@ -25,6 +25,81 @@
         </div>
     </div>
 
+    <!-- Quick Security Rules Section -->
+    <div class="routing-section glass-card" style="margin-bottom: 25px;" id="quick-security-rules-card">
+        <h3 data-i18n="routing_quick_rules_title" style="margin-top: 0; margin-bottom: 15px; font-size: 1.3rem;">
+            <i class="fa-solid fa-shield-halved" style="margin-right: 8px; color: var(--accent-color);"></i>
+            Быстрые правила безопасности
+        </h3>
+        <p class="card-desc" style="font-size: 13px; color: var(--text-secondary); margin-bottom: 20px;">
+            Включение этих правил автоматически заблокирует соответствующие категории трафика (реклама, торренты, страны) для всех пользователей.
+        </p>
+        <div class="quick-rules-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 20px;">
+            <!-- Block Torrent -->
+            <div style="display: flex; align-items: center; justify-content: space-between; background: var(--bg-input); border: 1px solid var(--border-color); border-radius: 12px; padding: 15px 20px;">
+                <div style="display: flex; flex-direction: column; gap: 4px;">
+                    <span style="font-weight: 600; font-size: 14px;">Блокировать BitTorrent</span>
+                    <span style="font-size: 11px; color: var(--text-secondary);">Торрент-трафик и трекеры</span>
+                </div>
+                <span class="switch-toggle">
+                    <input type="checkbox" id="quick-block-bittorrent">
+                    <span class="switch-slider"></span>
+                </span>
+            </div>
+            
+            <!-- Block Ads -->
+            <div style="display: flex; align-items: center; justify-content: space-between; background: var(--bg-input); border: 1px solid var(--border-color); border-radius: 12px; padding: 15px 20px;">
+                <div style="display: flex; flex-direction: column; gap: 4px;">
+                    <span style="font-weight: 600; font-size: 14px;">Блокировать рекламу</span>
+                    <span style="font-size: 11px; color: var(--text-secondary);">AdBlock geosite категории</span>
+                </div>
+                <span class="switch-toggle">
+                    <input type="checkbox" id="quick-block-ads">
+                    <span class="switch-slider"></span>
+                </span>
+            </div>
+
+            <!-- Block China -->
+            <div style="display: flex; align-items: center; justify-content: space-between; background: var(--bg-input); border: 1px solid var(--border-color); border-radius: 12px; padding: 15px 20px;">
+                <div style="display: flex; flex-direction: column; gap: 4px;">
+                    <span style="font-weight: 600; font-size: 14px;">Блокировать Китай (CN)</span>
+                    <span style="font-size: 11px; color: var(--text-secondary);">Все IP и сайты Китая</span>
+                </div>
+                <span class="switch-toggle">
+                    <input type="checkbox" id="quick-block-cn">
+                    <span class="switch-slider"></span>
+                </span>
+            </div>
+
+            <!-- Block Russia -->
+            <div style="display: flex; align-items: center; justify-content: space-between; background: var(--bg-input); border: 1px solid var(--border-color); border-radius: 12px; padding: 15px 20px;">
+                <div style="display: flex; flex-direction: column; gap: 4px;">
+                    <span style="font-weight: 600; font-size: 14px;">Блокировать Россию (RU)</span>
+                    <span style="font-size: 11px; color: var(--text-secondary);">Все IP и сайты России</span>
+                </div>
+                <span class="switch-toggle">
+                    <input type="checkbox" id="quick-block-ru">
+                    <span class="switch-slider"></span>
+                </span>
+            </div>
+
+            <!-- Block US -->
+            <div style="display: flex; align-items: center; justify-content: space-between; background: var(--bg-input); border: 1px solid var(--border-color); border-radius: 12px; padding: 15px 20px;">
+                <div style="display: flex; flex-direction: column; gap: 4px;">
+                    <span style="font-weight: 600; font-size: 14px;">Блокировать США (US)</span>
+                    <span style="font-size: 11px; color: var(--text-secondary);">Все IP и сайты США</span>
+                </div>
+                <span class="switch-toggle">
+                    <input type="checkbox" id="quick-block-us">
+                    <span class="switch-slider"></span>
+                </span>
+            </div>
+        </div>
+        <div style="margin-top: 20px; display: flex; justify-content: flex-end;">
+            <button id="btn-save-quick-rules" class="btn primary-btn" style="padding: 8px 16px;"><i class="fa-solid fa-floppy-disk" style="margin-right: 5px;"></i>Сохранить правила</button>
+        </div>
+    </div>
+
     <!-- Блок Правил маршрутизации (Routing Rules) -->
     <div class="routing-section glass-card">
         <div class="section-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
@@ -82,6 +157,7 @@
                         <option value="http">http (HTTP прокси)</option>
                         <option value="vless">VLESS</option>
                         <option value="hysteria">Hysteria 2</option>
+                        <option value="wireguard">WireGuard / Cloudflare WARP</option>
                     </select>
                 </div>
                 <div class="input-group">
@@ -174,6 +250,23 @@
                     <input type="text" id="ob-alpn" placeholder="h2,http/1.1">
                 </div>
 
+                <!-- Allow Insecure TLS -->
+                <div class="input-group checkbox-group" id="ob-insecure-group" style="margin-top: 10px; display: none; margin-bottom: 5px;">
+                    <label style="display: inline-flex; align-items: center; gap: 10px; cursor: pointer;">
+                        <span class="switch-toggle">
+                            <input type="checkbox" id="ob-allow-insecure">
+                            <span class="switch-slider"></span>
+                        </span>
+                        <span>Разрешить небезопасный TLS (allowInsecure)</span>
+                    </label>
+                </div>
+
+                <!-- Pinned Peer Cert SHA256 -->
+                <div class="input-group" id="ob-pinned-sha256-group" style="margin-top: 10px; display: none;">
+                    <label for="ob-pinned-sha256" data-i18n="routing_modal_pinned_sha256">Pinned Peer Cert SHA-256 (Хэш сертификата)</label>
+                    <input type="text" id="ob-pinned-sha256" data-i18n-placeholder="routing_modal_pinned_sha256_placeholder" placeholder="Например: 55:C2:68:EC... или через запятую">
+                </div>
+
                 <!-- Flow для VLESS -->
                 <div class="input-group" id="ob-flow-group" style="margin-top: 10px;">
                     <label for="ob-flow">Flow</label>
@@ -192,7 +285,7 @@
 
             <!-- Группа полей скорости Hysteria 2 -->
             <div id="ob-hysteria-fields" style="display: none; border: 1px solid var(--border-color); border-radius: 8px; padding: 12px; margin-bottom: 15px;">
-                <h4 style="margin-top: 0; margin-bottom: 10px; font-size: 14px; color: var(--text-primary);">Настройки скорости Hysteria 2</h4>
+                <h4 style="margin-top: 0; margin-bottom: 10px; font-size: 14px; color: var(--text-primary);">Настройки Hysteria 2</h4>
                 <div class="input-row">
                     <div class="input-group">
                         <label for="ob-up-mbps">Скорость отдачи (Up Mbps)</label>
@@ -202,6 +295,55 @@
                         <label for="ob-down-mbps">Скорость загрузки (Down Mbps)</label>
                         <input type="number" id="ob-down-mbps" min="0" placeholder="100">
                     </div>
+                </div>
+                <div class="input-row" style="margin-top: 10px;">
+                    <div class="input-group">
+                        <label for="ob-hysteria-obfs">Обфускация (Obfs)</label>
+                        <select id="ob-hysteria-obfs" class="glass-select">
+                            <option value="">Без обфускации (None)</option>
+                            <option value="salamander">Salamander</option>
+                        </select>
+                    </div>
+                    <div class="input-group" id="ob-hysteria-obfs-password-group" style="display: none;">
+                        <label for="ob-hysteria-obfs-password">Пароль обфускации</label>
+                        <input type="text" id="ob-hysteria-obfs-password" placeholder="Пароль обфускации">
+                    </div>
+                </div>
+            </div>
+
+            <!-- Группа полей для WireGuard / Cloudflare WARP -->
+            <div id="ob-wireguard-fields" style="display: none; border: 1px solid var(--border-color); border-radius: 8px; padding: 12px; margin-bottom: 15px;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; border-bottom: 1px dashed var(--border-color); padding-bottom: 8px;">
+                    <h4 style="margin: 0; font-size: 14px; color: var(--text-primary);">Настройки WireGuard</h4>
+                    <button type="button" id="btn-generate-warp-profile" class="btn secondary-btn" style="padding: 4px 10px; font-size: 11px;"><i class="fa-solid fa-cloud-bolt" style="margin-right: 4px;"></i>Сгенерировать WARP</button>
+                </div>
+                <div class="input-group">
+                    <label for="ob-wg-private-key">Приватный ключ (Private Key)</label>
+                    <input type="text" id="ob-wg-private-key" placeholder="Client private key (Base64)">
+                </div>
+                <div class="input-row" style="margin-top: 10px;">
+                    <div class="input-group" style="flex: 2;">
+                        <label for="ob-wg-addresses">Адреса интерфейса (Interface Addresses)</label>
+                        <input type="text" id="ob-wg-addresses" placeholder="Например: 172.16.0.2/32, fd00::5/128">
+                    </div>
+                    <div class="input-group" style="flex: 1;">
+                        <label for="ob-wg-reserved">Reserved bytes</label>
+                        <input type="text" id="ob-wg-reserved" placeholder="Например: 0,0,0 (опционально)">
+                    </div>
+                </div>
+                <div class="input-row" style="margin-top: 10px;">
+                    <div class="input-group" style="flex: 2;">
+                        <label for="ob-wg-peer-public-key">Публичный ключ пира (Peer Public Key)</label>
+                        <input type="text" id="ob-wg-peer-public-key" placeholder="Peer public key (Base64)">
+                    </div>
+                    <div class="input-group" style="flex: 1;">
+                        <label for="ob-wg-endpoint">Эндпоинт пира (Endpoint)</label>
+                        <input type="text" id="ob-wg-endpoint" placeholder="engage.cloudflareclient.com:2408">
+                    </div>
+                </div>
+                <div class="input-group" style="margin-top: 10px;">
+                    <label for="ob-wg-mtu">MTU (опционально)</label>
+                    <input type="number" id="ob-wg-mtu" min="1" placeholder="1280">
                 </div>
             </div>
 

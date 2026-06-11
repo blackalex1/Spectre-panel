@@ -5,13 +5,13 @@ import { t } from "./i18n.js";
 import { loadHysteriaCoreInfo, loadHysteriaLogs, setupHysteriaListeners } from "./hysteria.js";
 import { loadOutbounds, loadRoutingRules, setupRoutingListeners } from "./routing.js";
 import { setupSslListeners } from "./modules/ssl.js";
-import { switchTab } from "./modules/router.js";
+import { switchTab, currentTab } from "./modules/router.js";
 import { setupSettingsListeners, loadSettings } from "./modules/settings-ui.js";
 import { setupInboundListeners, loadInbounds, toggleInbound, deleteInbound, openEditInboundModal } from "./inbound-modal.js";
 import { setupClientListeners, openClientsModal, setLoadInboundsCallback } from "./clients.js";
 
 import { loadXrayConfig, setupXrayConfigListeners } from "./modules/xray-config.js";
-import { loadCoreInfo, loadLogs, setupXrayCoreListeners } from "./modules/xray-core.js";
+import { loadCoreInfo, loadLogs, setupXrayCoreListeners, setupGeoListeners } from "./modules/xray-core.js";
 
 export async function initPanel() {
     // Expose functions to window scope for HTML inline events compatibility
@@ -25,6 +25,7 @@ export async function initPanel() {
 
     switchTab("dashboard", loadInbounds, loadCoreInfo, loadLogs);
     loadBbrStatus();
+    startGlobalStatusPolling();
 }
 
 function setupAuthorizedEventListeners() {
@@ -69,4 +70,48 @@ function setupAuthorizedEventListeners() {
     // Bind split xray sub-listeners
     setupXrayCoreListeners();
     setupXrayConfigListeners();
+    setupGeoListeners();
+}
+
+function startGlobalStatusPolling() {
+    setInterval(async () => {
+        if (currentTab === "dashboard") return;
+        
+        try {
+            const [xrayRes, hysteriaRes] = await Promise.all([
+                apiFetch("/api/xray/status"),
+                apiFetch("/api/hysteria/status")
+            ]);
+            
+            if (xrayRes) {
+                const badge = document.getElementById("xray-status-badge");
+                const statusText = badge ? badge.querySelector(".status-text") : null;
+                if (badge && statusText) {
+                    if (xrayRes.running) {
+                        badge.className = "status-badge running";
+                        statusText.innerText = t("xray_status_active", "Xray: Активен");
+                    } else {
+                        badge.className = "status-badge stopped";
+                        statusText.innerText = t("xray_status_stopped", "Xray: Остановлен");
+                    }
+                }
+            }
+            
+            if (hysteriaRes) {
+                const hBadge = document.getElementById("hysteria-status-badge");
+                const hStatusText = hBadge ? hBadge.querySelector(".status-text") : null;
+                if (hBadge && hStatusText) {
+                    if (hysteriaRes.running) {
+                        hBadge.className = "status-badge running";
+                        hStatusText.innerText = t("hysteria_status_active", "Hysteria: Активен");
+                    } else {
+                        hBadge.className = "status-badge stopped";
+                        hStatusText.innerText = t("hysteria_status_stopped", "Hysteria: Остановлен");
+                    }
+                }
+            }
+        } catch (e) {
+            console.error("Global status poll failed", e);
+        }
+    }, 5000);
 }

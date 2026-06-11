@@ -37,58 +37,21 @@ def generate_default_self_signed_cert():
         logging.warning(f"Could not generate default self-signed certificate: {e}")
 
 def request_ssl_cert(domain: str, email: str) -> tuple[bool, str]:
-    """Выпускает SSL сертификат Let's Encrypt с помощью Certbot в автономном (standalone) режиме"""
-    logging.info(f"[SSL] Issuing Let's Encrypt certificate for domain {domain}...")
-    
-    # 1. Проверяем наличие certbot
-    certbot_bin = shutil.which("certbot")
-    if not certbot_bin:
-        return False, "Certbot не установлен в системе. Пожалуйста, установите его (например: apt install certbot)."
-        
-    # 2. Вызываем certbot в standalone режиме (требует свободный порт 80)
-    cmd = [
-        certbot_bin, "certonly",
-        "--standalone",
-        "--non-interactive",
-        "--agree-tos",
-    ]
-    if email:
-        cmd.extend(["-m", email])
-    else:
-        cmd.append("--register-unsafely-without-email")
-        
-    cmd.extend([
-        "-d", domain,
-        "--preferred-challenges", "http",
-        "--keep-until-expiring"
-    ])
-    
+    """Выпускает SSL сертификат Let's Encrypt с помощью встроенного ACME HTTP-01 клиента"""
+    logging.info(f"[SSL] Issuing Let's Encrypt certificate for domain {domain} via built-in ACME client...")
+    from backend.acme_client import run_acme_flow
     try:
-        # Увеличиваем таймаут, так как проверка Let's Encrypt может занимать время
-        result = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, timeout=60)  # nosec B603
-        if result.returncode != 0:
-            return False, f"Ошибка Certbot: {result.stderr or result.stdout}"
+        # Выпускаем через Let's Encrypt Production
+        success, msg, cert_pem, key_pem = run_acme_flow(domain, email, use_staging=False)
+        if not success:
+            return False, f"Ошибка выпуска сертификата: {msg}"
             
-        # 3. Ищем пути к выпущенным файлам
-        live_dir = Path(f"/etc/letsencrypt/live/{domain}")
-        fullchain = live_dir / "fullchain.pem"
-        privkey = live_dir / "privkey.pem"
-        
-        # Альтернативный путь на Windows
-        if os.name == "nt":
-            program_data = os.getenv("ProgramData", r"C:\Certbot")
-            live_dir = Path(program_data) / "live" / domain
-            fullchain = live_dir / "fullchain.pem"
-            privkey = live_dir / "privkey.pem"
+        # Записываем файлы сертификатов
+        with open(SSL_CERT_PATH, "w", encoding="utf-8") as f:
+            f.write(cert_pem)
+        with open(SSL_KEY_PATH, "w", encoding="utf-8") as f:
+            f.write(key_pem)
             
-        if not fullchain.exists() or not privkey.exists():
-            return False, "Сертификаты были успешно выпущены, но файлы не найдены по ожидаемому пути."
-            
-        # 4. Копируем файлы в директорию конфигурации панели
-        shutil.copy(fullchain, SSL_CERT_PATH)
-        shutil.copy(privkey, SSL_KEY_PATH)
-        
-        # Настройка прав
         try:
             os.chmod(SSL_CERT_PATH, 0o644)
             os.chmod(SSL_KEY_PATH, 0o600)
@@ -97,7 +60,5 @@ def request_ssl_cert(domain: str, email: str) -> tuple[bool, str]:
             
         logging.info(f"[SSL] Certificate for {domain} successfully saved to {SSL_CERT_PATH}")
         return True, "Сертификат успешно выпущен и установлен."
-    except subprocess.TimeoutExpired:
-        return False, "Превышено время ожидания Certbot (60 сек). Убедитесь, что порт 80 открыт наружу и не занят другими процессами."
     except Exception as e:
         return False, f"Исключение при выпуске сертификата: {e}"

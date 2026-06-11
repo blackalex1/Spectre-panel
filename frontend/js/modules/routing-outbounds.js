@@ -167,6 +167,17 @@ export async function openOutboundModal(id = null) {
             document.getElementById("ob-security").value = "none";
             document.getElementById("ob-up-mbps").value = "";
             document.getElementById("ob-down-mbps").value = "";
+            document.getElementById("ob-allow-insecure").checked = false;
+            document.getElementById("ob-pinned-sha256").value = "";
+            document.getElementById("ob-hysteria-obfs").value = "";
+            document.getElementById("ob-hysteria-obfs-password").value = "";
+            
+            document.getElementById("ob-wg-private-key").value = "";
+            document.getElementById("ob-wg-addresses").value = "";
+            document.getElementById("ob-wg-reserved").value = "";
+            document.getElementById("ob-wg-peer-public-key").value = "";
+            document.getElementById("ob-wg-endpoint").value = "";
+            document.getElementById("ob-wg-mtu").value = "";
             
             if (ob.protocol === "socks" || ob.protocol === "http" || ob.protocol === "shadowsocks") {
                 const server = settingsObj.servers ? settingsObj.servers[0] : null;
@@ -203,6 +214,14 @@ export async function openOutboundModal(id = null) {
                     const ts = streamSettingsObj.tlsSettings || {};
                     document.getElementById("ob-sni").value = ts.serverName || "";
                     document.getElementById("ob-alpn").value = (ts.alpn || []).join(", ");
+                    document.getElementById("ob-allow-insecure").checked = ts.allowInsecure === true;
+                    let pins = ts.pinnedPeerCertSha256 || "";
+                    if (typeof pins === "string") {
+                        pins = pins.replace(/~/g, ", ");
+                    } else if (Array.isArray(pins)) {
+                        pins = pins.join(", ");
+                    }
+                    document.getElementById("ob-pinned-sha256").value = pins;
                 } else if (security === "reality") {
                     const rs = streamSettingsObj.realitySettings || {};
                     document.getElementById("ob-sni").value = rs.serverName || "";
@@ -217,6 +236,14 @@ export async function openOutboundModal(id = null) {
                 const ts = streamSettingsObj.tlsSettings || {};
                 document.getElementById("ob-sni").value = ts.serverName || "";
                 document.getElementById("ob-alpn").value = (ts.alpn || []).join(", ");
+                document.getElementById("ob-allow-insecure").checked = ts.allowInsecure === true;
+                let pins = ts.pinnedPeerCertSha256 || "";
+                if (typeof pins === "string") {
+                    pins = pins.replace(/~/g, ", ");
+                } else if (Array.isArray(pins)) {
+                    pins = pins.join(", ");
+                }
+                document.getElementById("ob-pinned-sha256").value = pins;
                 
                 const hs = streamSettingsObj.hysteriaSettings || {};
                 password = hs.auth || "";
@@ -225,6 +252,23 @@ export async function openOutboundModal(id = null) {
                 const downRaw = hs.down || "";
                 document.getElementById("ob-up-mbps").value = upRaw ? parseInt(upRaw) : "";
                 document.getElementById("ob-down-mbps").value = downRaw ? parseInt(downRaw) : "";
+                
+                // Populate obfs settings
+                const obfsVal = hs.obfs || hs.obfs_type || "";
+                const obfsPwd = hs.obfsPassword || hs.obfs_password || "";
+                document.getElementById("ob-hysteria-obfs").value = obfsVal;
+                document.getElementById("ob-hysteria-obfs-password").value = obfsPwd;
+            } else if (ob.protocol === "wireguard") {
+                document.getElementById("ob-wg-private-key").value = settingsObj.secretKey || "";
+                document.getElementById("ob-wg-addresses").value = Array.isArray(settingsObj.address) ? settingsObj.address.join(", ") : (settingsObj.address || "");
+                document.getElementById("ob-wg-reserved").value = Array.isArray(settingsObj.reserved) ? settingsObj.reserved.join(",") : "";
+                
+                const peer = settingsObj.peers ? settingsObj.peers[0] : null;
+                if (peer) {
+                    document.getElementById("ob-wg-peer-public-key").value = peer.publicKey || "";
+                    document.getElementById("ob-wg-endpoint").value = peer.endpoint || "";
+                }
+                document.getElementById("ob-wg-mtu").value = settingsObj.mtu || "";
             }
             
             document.getElementById("ob-address").value = address;
@@ -238,6 +282,37 @@ export async function openOutboundModal(id = null) {
         document.getElementById("ob-enable").checked = true;
     }
     
+    const btnWarp = document.getElementById("btn-generate-warp-profile");
+    if (btnWarp && !btnWarp.dataset.bound) {
+        btnWarp.dataset.bound = "true";
+        btnWarp.addEventListener("click", async () => {
+            btnWarp.disabled = true;
+            btnWarp.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin"></i> Регистрация...';
+            showToast("Регистрация аккаунта Cloudflare WARP...", "info");
+            
+            try {
+                const res = await apiFetch("/api/routing/outbounds/generate-warp", { method: "POST" });
+                if (res && res.success) {
+                    const data = res.obj;
+                    document.getElementById("ob-wg-private-key").value = data.private_key || "";
+                    document.getElementById("ob-wg-addresses").value = `${data.address_v4 || ""}, ${data.address_v6 || ""}`.replace(/,\s*$/, "");
+                    document.getElementById("ob-wg-reserved").value = (data.reserved || []).join(",");
+                    document.getElementById("ob-wg-peer-public-key").value = data.peer_public_key || "";
+                    document.getElementById("ob-wg-endpoint").value = data.endpoint || "";
+                    document.getElementById("ob-wg-mtu").value = "1280";
+                    showToast("Аккаунт Cloudflare WARP успешно сгенерирован!");
+                } else {
+                    showToast(res ? res.msg : "Не удалось сгенерировать WARP-профиль", "error");
+                }
+            } catch (err) {
+                showToast("Ошибка генерации WARP: " + err, "error");
+            } finally {
+                btnWarp.disabled = false;
+                btnWarp.innerHTML = '<i class="fa-solid fa-cloud-bolt" style="margin-right: 4px;"></i>Сгенерировать WARP';
+            }
+        });
+    }
+
     updateOutboundFormFields();
     document.getElementById("outbound-modal").classList.add("active");
 }
@@ -301,6 +376,11 @@ export function updateOutboundFormFields() {
     const encryptionGroup = document.getElementById("ob-encryption-group");
     
     const hysteriaFields = document.getElementById("ob-hysteria-fields");
+    const wireguardFields = document.getElementById("ob-wireguard-fields");
+    
+    if (wireguardFields) {
+        wireguardFields.style.display = (protocol === "wireguard") ? "block" : "none";
+    }
     
     if (encryptionGroup) {
         encryptionGroup.style.display = (protocol === "vless") ? "block" : "none";
@@ -340,6 +420,15 @@ export function updateOutboundFormFields() {
             flowGroup.style.display = "block";
             
             hysteriaFields.style.display = "none";
+            
+            const insecureGroup = document.getElementById("ob-insecure-group");
+            const pinnedGroup = document.getElementById("ob-pinned-sha256-group");
+            if (insecureGroup) {
+                insecureGroup.style.display = (security === "tls") ? "block" : "none";
+            }
+            if (pinnedGroup) {
+                pinnedGroup.style.display = (security === "tls") ? "block" : "none";
+            }
         } else if (protocol === "hysteria") {
             ssMethodGroup.style.display = "none";
             usernameField.style.display = "none";
@@ -351,6 +440,21 @@ export function updateOutboundFormFields() {
             flowGroup.style.display = "none";
             
             hysteriaFields.style.display = "block";
+            
+            const insecureGroup = document.getElementById("ob-insecure-group");
+            if (insecureGroup) {
+                insecureGroup.style.display = "block";
+            }
+            const pinnedGroup = document.getElementById("ob-pinned-sha256-group");
+            if (pinnedGroup) {
+                pinnedGroup.style.display = "block";
+            }
+
+            const obfsVal = document.getElementById("ob-hysteria-obfs").value;
+            const obfsPwdGroup = document.getElementById("ob-hysteria-obfs-password-group");
+            if (obfsPwdGroup) {
+                obfsPwdGroup.style.display = (obfsVal === "salamander") ? "block" : "none";
+            }
         } else {
             // SOCKS, HTTP
             ssMethodGroup.style.display = "none";
@@ -359,11 +463,20 @@ export function updateOutboundFormFields() {
             securityFields.style.display = "none";
             hysteriaFields.style.display = "none";
             if (usernameField) usernameField.style.display = "block";
+            
+            const insecureGroup = document.getElementById("ob-insecure-group");
+            if (insecureGroup) insecureGroup.style.display = "none";
+            const pinnedGroup = document.getElementById("ob-pinned-sha256-group");
+            if (pinnedGroup) pinnedGroup.style.display = "none";
         }
     } else {
         proxyFields.style.display = "none";
         securityFields.style.display = "none";
         hysteriaFields.style.display = "none";
+        const insecureGroup = document.getElementById("ob-insecure-group");
+        if (insecureGroup) insecureGroup.style.display = "none";
+        const pinnedGroup = document.getElementById("ob-pinned-sha256-group");
+        if (pinnedGroup) pinnedGroup.style.display = "none";
     }
 }
 
@@ -414,6 +527,7 @@ export function parseProxyLink(link) {
         const flow = params.get("flow") || "";
         const alpn = params.get("alpn") || "";
         const encryption = params.get("encryption") || "";
+        const pinSHA256 = params.get("pinSHA256") || params.get("pinnedPeerCertSha256") || "";
         
         return {
             protocol: "vless",
@@ -428,13 +542,14 @@ export function parseProxyLink(link) {
             fp,
             flow,
             alpn,
-            encryption
+            encryption,
+            pinSHA256
         };
     }
     
-    if (link.startsWith("hysteria2://") || link.startsWith("hysteria://")) {
-        const isHysteria2 = link.startsWith("hysteria2://");
-        const schemeLen = isHysteria2 ? 12 : 11;
+    if (link.startsWith("hysteria2://") || link.startsWith("hysteria://") || link.startsWith("hy2://")) {
+        const isHysteria2 = link.startsWith("hysteria2://") || link.startsWith("hy2://");
+        const schemeLen = link.startsWith("hysteria2://") ? 12 : (link.startsWith("hysteria://") ? 11 : 6);
         const withoutScheme = link.substring(schemeLen);
         const hashSplit = withoutScheme.split('#');
         const mainPart = hashSplit[0];
@@ -455,7 +570,7 @@ export function parseProxyLink(link) {
         
         const hpSplit = hostPort.split(':');
         const host = hpSplit[0];
-        const port = hpSplit[1] ? parseInt(hpSplit[1]) : "";
+        const port = hpSplit[1] ? parseInt(hpSplit[1]) : (isHysteria2 ? 443 : "");
         
         const params = new URLSearchParams(queryString);
         const sni = params.get("sni") || params.get("peer") || "";
@@ -466,16 +581,29 @@ export function parseProxyLink(link) {
         if (up) up = parseInt(up);
         if (down) down = parseInt(down);
         
+        // Insecure (allowInsecure)
+        const insecure = params.get("insecure") === "1" || params.get("insecure") === "true" || params.get("allowInsecure") === "1" || params.get("allowInsecure") === "true";
+        
+        // Obfuscation (obfs / obfs-password)
+        const obfs = params.get("obfs") || "";
+        const obfsPassword = params.get("obfs-password") || params.get("obfs_password") || params.get("obfsPassword") || "";
+        
+        const pinSHA256 = params.get("pinSHA256") || params.get("pinnedPeerCertSha256") || "";
+        
         return {
             protocol: "hysteria",
             remark,
             host,
             port,
-            password: auth,
+            password: decodeURIComponent(auth),
             sni,
             alpn,
             up,
-            down
+            down,
+            insecure,
+            obfs,
+            obfsPassword,
+            pinSHA256
         };
     }
     
@@ -673,6 +801,31 @@ export function validateOutboundForm() {
                 errors.push(t("validation_outbound_sni_required", "SNI / ServerName обязателен"));
                 isValid = false;
             }
+        }
+    } else if (protocol === "wireguard") {
+        const privKey = document.getElementById("ob-wg-private-key");
+        if (privKey && (!privKey.value || !privKey.value.trim())) {
+            privKey.classList.add("input-invalid");
+            errors.push("Приватный ключ WireGuard обязателен");
+            isValid = false;
+        }
+        const addresses = document.getElementById("ob-wg-addresses");
+        if (addresses && (!addresses.value || !addresses.value.trim())) {
+            addresses.classList.add("input-invalid");
+            errors.push("Адреса интерфейса WireGuard обязательны");
+            isValid = false;
+        }
+        const peerPub = document.getElementById("ob-wg-peer-public-key");
+        if (peerPub && (!peerPub.value || !peerPub.value.trim())) {
+            peerPub.classList.add("input-invalid");
+            errors.push("Публичный ключ пира WireGuard обязателен");
+            isValid = false;
+        }
+        const endpoint = document.getElementById("ob-wg-endpoint");
+        if (endpoint && (!endpoint.value || !endpoint.value.trim())) {
+            endpoint.classList.add("input-invalid");
+            errors.push("Эндпоинт пира WireGuard обязателен");
+            isValid = false;
         }
     }
     

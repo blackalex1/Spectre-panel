@@ -44,7 +44,12 @@ async def get_settings_api(request: Request):
         "backup_interval": get_setting("backup_interval", "daily"),
         "backup_rotation": int(get_setting("backup_rotation", "7")),
         "backup_telegram": get_setting("backup_telegram", "false") == "true",
-        "backup_encrypt": get_setting("backup_encrypt", "false") == "true"
+        "backup_encrypt": get_setting("backup_encrypt", "false") == "true",
+        "block_bittorrent": get_setting("block_bittorrent", "false") == "true",
+        "block_ads": get_setting("block_ads", "false") == "true",
+        "block_cn": get_setting("block_cn", "false") == "true",
+        "block_ru": get_setting("block_ru", "false") == "true",
+        "block_us": get_setting("block_us", "false") == "true"
     }
 
 @router.post("/api/settings/update")
@@ -174,6 +179,23 @@ async def update_settings_api(request: Request):
             set_setting("backup_telegram", "true" if data.get("backup_telegram") in (True, "true") else "false")
         if "backup_encrypt" in data:
             set_setting("backup_encrypt", "true" if data.get("backup_encrypt") in (True, "true") else "false")
+
+        # 6. Quick Block Rules
+        quick_block_changed = False
+        for key in ["block_bittorrent", "block_ads", "block_cn", "block_ru", "block_us"]:
+            if key in data:
+                old_val = get_setting(key, "false")
+                new_val = "true" if data.get(key) in (True, "true") else "false"
+                if old_val != new_val:
+                    set_setting(key, new_val)
+                    quick_block_changed = True
+                    
+        if quick_block_changed:
+            from backend.xray import write_xray_config, restart_xray
+            from backend.hysteria import restart_hysteria
+            write_xray_config()
+            restart_xray()
+            restart_hysteria()
 
         # Log action
         from backend.audit import log_action, get_actor_username

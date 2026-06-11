@@ -100,7 +100,8 @@ def sign_payload(payload_dict: dict, private_key_hex: str) -> str:
     signature = private_key.sign(message_bytes)
     return signature.hex()
 
-async def send_report_to_master(action: str, client_email: str, details: str = "") -> bool:
+async def send_report_to_master(action: str, client_email: str, 
+                                 tunnel_email: str = "", details: str = "") -> bool:
     """Sends a cryptographically signed report to the Master Server."""
     config = load_node_config()
     if not config:
@@ -113,6 +114,7 @@ async def send_report_to_master(action: str, client_email: str, details: str = "
         "incident_id": incident_id,
         "action": action,
         "client_email": client_email,
+        "tunnel_email": tunnel_email,
         "details": details
     }
     
