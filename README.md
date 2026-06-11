@@ -1,6 +1,5 @@
 <div align="center">
 
-[![Telegram](https://img.shields.io/badge/Telegram-Join%20Chat-26A5E4?logo=telegram&logoColor=white)](https://t.me/spectre_panel)
 [![License](https://img.shields.io/badge/License-MIT-blue.svg?logo=open-source-initiative&logoColor=white)](LICENSE)
 [![Latest Release](https://img.shields.io/badge/Release-Latest-brightgreen?logo=github)](https://github.com/blackalex1/Spectre-panel/releases)
 [![Language](https://img.shields.io/badge/Language-English-009688?logo=google-translate&logoColor=white)](README.en.md)
