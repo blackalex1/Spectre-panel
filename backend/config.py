@@ -35,16 +35,16 @@ PANEL_SECRET_PATH={secret_path}
 API_TOKEN={api_token}
 
 # Настройки СУБД PostgreSQL (Параметры безопасности)
-POSTGRES_DB=vpn_panel
+POSTGRES_DB=spectre_db
 POSTGRES_USER=postgres
 POSTGRES_PASSWORD={db_admin_password}
 
-DB_APP_USER=vpn_app
+DB_APP_USER=spectre_app
 DB_APP_PASSWORD={db_app_password}
 
 # Строки подключения к БД (Администратор DDL / Приложение DML)
-DATABASE_ADMIN_URL=postgresql://postgres:{db_admin_password}@127.0.0.1:5432/vpn_panel
-DATABASE_URL=postgresql://vpn_app:{db_app_password}@127.0.0.1:5432/vpn_panel
+DATABASE_ADMIN_URL=postgresql://postgres:{db_admin_password}@127.0.0.1:5432/spectre_db
+DATABASE_URL=postgresql://spectre_app:{db_app_password}@127.0.0.1:5432/spectre_db
 """
         with open(ENV_FILE, "w", encoding="utf-8") as f:
             f.write(env_content)

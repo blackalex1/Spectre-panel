@@ -1,5 +1,5 @@
 [Unit]
-Description=VPN Panel Host Agent
+Description=Spectre Host Agent
 After=network.target
 
 [Service]
@@ -7,9 +7,9 @@ Type=simple
 User=root
 # Adjust WorkingDirectory and ExecStart to the actual path where you clone or copy
 # the panel repository on your host machine (Linux).
-# For example, if you place files in /opt/vpn_panel/host:
-WorkingDirectory=/opt/vpn_panel/host
-ExecStart=/usr/bin/python3 /opt/vpn_panel/host/host_agent.py
+# For example, if you place files in /opt/spectre/host:
+WorkingDirectory=/opt/spectre/host
+ExecStart=/usr/bin/python3 /opt/spectre/host/host_agent.py
 Restart=always
 RestartSec=5
 

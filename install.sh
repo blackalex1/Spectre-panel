@@ -10,28 +10,28 @@ fi
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 echo "[+] Project directory detected: $SCRIPT_DIR"
 
-# 1. Update vpn-host-agent.service configuration dynamically
-SERVICE_TEMPLATE="$SCRIPT_DIR/host/vpn-host-agent.service"
-SERVICE_DEST="/etc/systemd/system/vpn-host-agent.service"
+# 1. Update spectre-agent.service configuration dynamically
+SERVICE_TEMPLATE="$SCRIPT_DIR/host/spectre-agent.service"
+SERVICE_DEST="/etc/systemd/system/spectre-agent.service"
 
 echo "[+] Configuring systemd service at $SERVICE_DEST..."
 
-# Create service file using sed to replace the default /opt/vpn_panel/host paths with SCRIPT_DIR
-sed "s|/opt/vpn_panel|$SCRIPT_DIR|g" "$SERVICE_TEMPLATE" > "$SERVICE_DEST"
+# Create service file using sed to replace the default /opt/spectre/host paths with SCRIPT_DIR
+sed "s|/opt/spectre|$SCRIPT_DIR|g" "$SERVICE_TEMPLATE" > "$SERVICE_DEST"
 
 # 2. Reload systemd and start Host Agent
 echo "[+] Reloading systemd..."
 systemctl daemon-reload
-echo "[+] Enabling vpn-host-agent service..."
-systemctl enable vpn-host-agent
-echo "[+] Starting vpn-host-agent service..."
-systemctl restart vpn-host-agent
+echo "[+] Enabling spectre-agent service..."
+systemctl enable spectre-agent
+echo "[+] Starting spectre-agent service..."
+systemctl restart spectre-agent
 
 # Verify Host Agent
-if systemctl is-active --quiet vpn-host-agent; then
-    echo "[+] vpn-host-agent service started successfully!"
+if systemctl is-active --quiet spectre-agent; then
+    echo "[+] spectre-agent service started successfully!"
 else
-    echo "[!] Failed to start vpn-host-agent service. Check logs: journalctl -u vpn-host-agent"
+    echo "[!] Failed to start spectre-agent service. Check logs: journalctl -u spectre-agent"
 fi
 
 # 3. Interactive Configuration for config/.env
@@ -100,16 +100,16 @@ ADMIN_PASSWORD=$ADMIN_PASS
 API_TOKEN=$RAND_API_TOKEN
 
 # Настройки СУБД PostgreSQL (Параметры безопасности)
-POSTGRES_DB=vpn_panel
+POSTGRES_DB=spectre_db
 POSTGRES_USER=postgres
 POSTGRES_PASSWORD=$DB_ADMIN_PASS
 
-DB_APP_USER=vpn_app
+DB_APP_USER=spectre_app
 DB_APP_PASSWORD=$DB_APP_PASS
 
 # Строки подключения к БД (Администратор DDL / Приложение DML)
-DATABASE_ADMIN_URL=postgresql://postgres:$DB_ADMIN_PASS@127.0.0.1:5432/vpn_panel
-DATABASE_URL=postgresql://vpn_app:$DB_APP_PASS@127.0.0.1:5432/vpn_panel
+DATABASE_ADMIN_URL=postgresql://postgres:$DB_ADMIN_PASS@127.0.0.1:5432/spectre_db
+DATABASE_URL=postgresql://spectre_app:$DB_APP_PASS@127.0.0.1:5432/spectre_db
 EOF
     chmod 600 "$ENV_FILE"
 
@@ -145,7 +145,7 @@ docker compose up -d
 if [ -n "$TG_TOKEN" ] || [ -n "$TG_IDS" ]; then
     echo "[+] Saving Telegram settings to the database..."
     for i in {1..10}; do
-        if docker compose exec -T vpn-panel python -c "from backend.database import set_setting; set_setting('telegram_bot_token', '$TG_TOKEN'); set_setting('telegram_admin_ids', '$TG_IDS')" &>/dev/null; then
+        if docker compose exec -T spectre-panel python -c "from backend.database import set_setting; set_setting('telegram_bot_token', '$TG_TOKEN'); set_setting('telegram_admin_ids', '$TG_IDS')" &>/dev/null; then
             echo "[+] Telegram settings successfully saved to database."
             break
         fi
@@ -163,7 +163,7 @@ FINAL_ADMIN_PASS=$(grep -E "^ADMIN_PASSWORD=" "$ENV_FILE" | cut -d'=' -f2 | tr -
 # Query backup password from database (wait up to 30s for database readiness if needed)
 FINAL_BACKUP_PASS=""
 for i in {1..15}; do
-    FINAL_BACKUP_PASS=$(docker compose exec -T vpn-panel python -c "from backend.database import get_setting; print(get_setting('backup_password', ''))" 2>/dev/null | tr -d '\r\n ')
+    FINAL_BACKUP_PASS=$(docker compose exec -T spectre-panel python -c "from backend.database import get_setting; print(get_setting('backup_password', ''))" 2>/dev/null | tr -d '\r\n ')
     if [ -n "$FINAL_BACKUP_PASS" ]; then
         break
     fi
@@ -190,5 +190,5 @@ fi
 echo "===================================================="
 echo "⚠️  Please copy and save these credentials securely!"
 echo "   Use 'docker compose logs -f' to view logs."
-echo "   Use 'systemctl status vpn-host-agent' for agent status."
+echo "   Use 'systemctl status spectre-agent' for agent status."
 echo "===================================================="

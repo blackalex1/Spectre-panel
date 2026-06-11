@@ -6,7 +6,7 @@ import logging
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - [HostClient] - %(levelname)s - %(message)s")
 
-SOCKET_PATH = "/var/run/vpn_panel/agent.sock"
+SOCKET_PATH = "/var/run/spectre/agent.sock"
 
 class HostClient:
     def __init__(self, socket_path: str = SOCKET_PATH):
