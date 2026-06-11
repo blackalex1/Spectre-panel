@@ -229,6 +229,41 @@ export function setupSettingsListeners() {
         });
     }
 
+    const telegram2faEnableInput = document.getElementById("setting-telegram-2fa-enable");
+    if (telegram2faEnableInput) {
+        telegram2faEnableInput.addEventListener("change", async (e) => {
+            const isChecked = e.target.checked;
+            telegram2faEnableInput.disabled = true;
+            
+            if (isChecked) {
+                const telegramTokenInput = document.getElementById("setting-telegram-token");
+                const telegramAdminIdsInput = document.getElementById("setting-telegram-admin-ids");
+                const hasToken = telegramTokenInput && telegramTokenInput.value.trim() && telegramTokenInput.value.trim() !== "••••••••";
+                const hasAdminIds = telegramAdminIdsInput && telegramAdminIdsInput.value.trim();
+                
+                if (!hasToken || !hasAdminIds) {
+                    showToast(t("telegram_2fa_config_warning", "Внимание: Убедитесь, что настроили токен бота и ID администраторов в блоке интеграции ниже!"), "info");
+                }
+            }
+
+            const res = await apiFetch("/api/settings/update", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    telegram_2fa_enabled: isChecked
+                })
+            });
+            telegram2faEnableInput.disabled = false;
+            
+            if (res && res.success) {
+                showToast(t("settings_saved_toast", "Настройки успешно сохранены!"));
+            } else {
+                showToast(res ? res.msg : t("settings_save_error", "Не удалось сохранить настройки"), "error");
+                e.target.checked = !isChecked;
+            }
+        });
+    }
+
     // Card 1: Access Credentials Save
     const btnSaveAccess = document.getElementById("btn-save-access");
     if (btnSaveAccess) {

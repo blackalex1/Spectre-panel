@@ -133,6 +133,14 @@
                         <button type="button" id="btn-2fa-setup-trigger" class="btn primary-btn w-100" style="padding: 10px; font-weight: 600;"><i class="fa-solid fa-shield-halved"></i> <span data-i18n="settings_2fa_btn_setup">Настроить 2FA</span></button>
                         <button type="button" id="btn-2fa-disable-trigger" class="btn danger-btn w-100" style="display: none; padding: 10px; font-weight: 600; border: 1px solid rgba(255, 71, 87, 0.3);"><i class="fa-solid fa-lock-open"></i> <span data-i18n="settings_2fa_btn_disable">Отключить 2FA</span></button>
                     </div>
+
+                    <!-- Telegram 2FA Toggle -->
+                    <div style="margin-top: 20px; padding: 15px 20px; background: var(--bg-input); border: 1px solid var(--border-color); border-radius: 12px;">
+                        <label class="checkbox-container" style="display: flex; align-items: center; gap: 10px; cursor: pointer; color: var(--text-secondary); font-size: 14px; font-weight: normal; text-transform: none; margin-bottom: 0;">
+                            <input type="checkbox" id="setting-telegram-2fa-enable">
+                            <span data-i18n="settings_telegram_2fa_enable">Использовать подтверждение входа через Telegram (2FA)</span>
+                        </label>
+                    </div>
                 </div>
             </div>
 
@@ -187,11 +195,6 @@
                 <p class="card-desc" data-i18n="settings_telegram_desc">Настройки Telegram-бота для оповещений администратора о блокировках и интеграции Mini App.</p>
                 <div class="settings-form-content" style="margin-top: auto;">
                     <div style="display: flex; flex-direction: column; gap: 12px; background: var(--bg-input); border: 1px solid var(--border-color); border-radius: 12px; padding: 15px 20px; margin-bottom: 20px;">
-                        <label class="checkbox-container" style="display: flex; align-items: center; gap: 10px; cursor: pointer; color: var(--text-secondary); font-size: 14px; font-weight: normal; text-transform: none; margin-bottom: 0;">
-                            <input type="checkbox" id="setting-telegram-2fa-enable">
-                            <span data-i18n="settings_telegram_2fa_enable">Использовать подтверждение входа через Telegram (2FA)</span>
-                        </label>
-                        <hr style="border: 0; border-top: 1px solid var(--border-color); margin: 4px 0;">
                         <label class="checkbox-container" style="display: flex; align-items: center; gap: 10px; cursor: pointer; color: var(--text-secondary); font-size: 14px; font-weight: normal; text-transform: none; margin-bottom: 0;">
                             <input type="checkbox" id="setting-telegram-bot-enable">
                             <span data-i18n="settings_telegram_bot_enable">Запускать встроенного Telegram-бота (polling)</span>
