@@ -1,7 +1,6 @@
 import { getCsrfToken, setCsrfToken, apiFetch } from "./api.js";
 import { showToast, loadComponent } from "./ui.js";
 import { initI18n, t } from "./i18n.js";
-import { initPanel } from "./panel-main.js";
 
 const tg = window.Telegram ? window.Telegram.WebApp : null;
 if (tg) {
@@ -106,7 +105,8 @@ async function startPanel() {
             loadPanelStylesheets()
         ]);
         
-        // Statically imported initPanel call
+        // Dynamically import admin logic only after successful authorization
+        const { initPanel } = await import("./panel-main.js");
         await initPanel();
     } catch (err) {
         console.error("Error starting panel:", err);
