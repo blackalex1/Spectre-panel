@@ -1,6 +1,7 @@
 import { getCsrfToken, setCsrfToken, apiFetch } from "./api.js";
 import { showToast, loadComponent } from "./ui.js";
 import { initI18n, t } from "./i18n.js";
+import { initPanel } from "./panel-main.js";
 
 const tg = window.Telegram ? window.Telegram.WebApp : null;
 if (tg) {
@@ -16,6 +17,9 @@ if (tg) {
         await initApp();
     } catch (e) {
         console.error("Critical app initialization error:", e);
+        if (window.onerror) {
+            window.onerror(e.message || String(e), "app.js", 0, 0, e);
+        }
     }
 })();
 
@@ -102,8 +106,7 @@ async function startPanel() {
             loadPanelStylesheets()
         ]);
         
-        // Динамический импорт всей административной логики
-        const { initPanel } = await import("./panel-main.js");
+        // Statically imported initPanel call
         await initPanel();
     } catch (err) {
         console.error("Error starting panel:", err);

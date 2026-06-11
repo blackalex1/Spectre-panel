@@ -353,10 +353,8 @@ export async function deleteOutbound(id) {
     if (res && res.success) {
         showToast(t("routing_outbound_deleted", "Исходящее подключение успешно удалено"));
         loadOutbounds();
-        // Since loadRoutingRules is defined in routing.js and imported, it is called externally.
-        // We will trigger a refresh via custom event or direct call if we expose rules loading.
-        const { loadRoutingRules } = await import("../routing.js");
-        loadRoutingRules();
+        // Trigger routing rules reload in routing.js via event to avoid circular dependencies and dynamic import
+        window.dispatchEvent(new CustomEvent("routing-rules-updated"));
     } else {
         showToast(res ? res.msg : "Error", "error");
     }

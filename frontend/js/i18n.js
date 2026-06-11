@@ -1,7 +1,23 @@
 import { apiFetch } from "./api.js";
-import { showToast } from "./ui.js";
 
-export let currentLang = localStorage.getItem("panel_lang") || "ru";
+function safeGetLang() {
+    try {
+        return localStorage.getItem("panel_lang") || "ru";
+    } catch (e) {
+        console.warn("Failed to get language from localStorage:", e);
+        return "ru";
+    }
+}
+
+function safeSetLang(langCode) {
+    try {
+        localStorage.setItem("panel_lang", langCode);
+    } catch (e) {
+        console.warn("Failed to save language to localStorage:", e);
+    }
+}
+
+export let currentLang = safeGetLang();
 export let translations = {};
 
 /**
@@ -56,12 +72,16 @@ function renderLanguageSelector(languages) {
  */
 export async function changeLanguage(langCode) {
     currentLang = langCode;
-    localStorage.setItem("panel_lang", langCode);
+    safeSetLang(langCode);
     
     // Загружаем перевод и переводим страницу
     const success = await loadLanguage(langCode);
     if (success) {
-        showToast(currentLang === "ru" ? "Язык изменен на Русский" : "Language changed to English");
+        window.dispatchEvent(new CustomEvent("show-toast", {
+            detail: {
+                text: currentLang === "ru" ? "Язык изменен на Русский" : "Language changed to English"
+            }
+        }));
         
         // Также синхронизируем выбор языка с настройками профиля на бэкенде
         try {

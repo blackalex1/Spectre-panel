@@ -1,4 +1,11 @@
 // Shared UI Utility functions
+import { translatePage } from "./i18n.js";
+
+window.addEventListener("show-toast", (e) => {
+    if (e.detail && e.detail.text) {
+        showToast(e.detail.text, e.detail.type || "success");
+    }
+});
 
 export function showToast(text, type = "success") {
     const container = document.getElementById("toast-container");
@@ -50,7 +57,6 @@ export async function loadComponent(id, filePath, targetSelector) {
             target.insertAdjacentHTML('beforeend', html);
             loadedComponents.add(id);
             try {
-                const { translatePage } = await import("./i18n.js");
                 translatePage();
             } catch (e) {}
             return true;
