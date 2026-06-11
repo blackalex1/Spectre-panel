@@ -207,6 +207,12 @@ async def system_status(request: Request):
     except Exception:
         stats = {}
         
+    try:
+        from backend.routes.clients.actions import _online_emails
+        online_clients = len(_online_emails)
+    except Exception:
+        online_clients = 0
+        
     with db_session() as session:
         total_inbounds = session.query(Inbound).count()
         total_clients = session.query(ClientStats).count()
@@ -220,7 +226,8 @@ async def system_status(request: Request):
             "total_inbounds": total_inbounds,
             "total_clients": total_clients,
             "active_clients": active_clients,
-            "blocked_clients": blocked_clients
+            "blocked_clients": blocked_clients,
+            "online_clients": online_clients
         }
     }
 
