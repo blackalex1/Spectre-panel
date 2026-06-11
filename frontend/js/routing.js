@@ -24,6 +24,10 @@ import "./modules/drag-drop.js";
 // Re-export outbounds and rules for outside use
 export { loadOutbounds, loadRoutingRules };
 
+window.addEventListener("routing-rules-updated", () => {
+    loadRoutingRules();
+});
+
 // Global functions exposed to window scope for HTML onclick bindings
 window.openOutboundModal = openOutboundModal;
 window.toggleOutbound = toggleOutbound;

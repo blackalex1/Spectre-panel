@@ -28,6 +28,41 @@
             errDiv.innerText = 'JS Error: ' + message + '\nFile: ' + source + ':' + lineno + ':' + colno;
             console.error('Diag Error:', message, source, lineno, colno, error);
         };
+        window.addEventListener('error', function(event) {
+            // Skip already handled window.onerror events if they carry message
+            if (event.message) return;
+            var target = event.target || event.srcElement;
+            var isElement = target instanceof HTMLElement;
+            var message = 'Resource loading error';
+            var source = '';
+            if (isElement) {
+                source = target.src || target.href || '';
+                message = 'Failed to load resource: ' + (target.tagName || '');
+            } else {
+                message = event.message || 'Unknown error';
+                source = event.filename || '';
+            }
+            var errDiv = document.getElementById('diag-err-div');
+            if (!errDiv) {
+                errDiv = document.createElement('div');
+                errDiv.id = 'diag-err-div';
+                errDiv.style.position = 'fixed';
+                errDiv.style.top = '0';
+                errDiv.style.left = '0';
+                errDiv.style.width = '100%';
+                errDiv.style.background = '#dc2626';
+                errDiv.style.color = '#ffffff';
+                errDiv.style.zIndex = '99999';
+                errDiv.style.padding = '12px';
+                errDiv.style.fontSize = '13px';
+                errDiv.style.fontWeight = '600';
+                errDiv.style.fontFamily = 'monospace';
+                errDiv.style.wordBreak = 'break-all';
+                errDiv.style.boxShadow = '0 4px 6px -1px rgba(0,0,0,0.5)';
+                document.documentElement.appendChild(errDiv);
+            }
+            errDiv.innerText = 'JS/Resource Error: ' + message + '\nSource: ' + source;
+        }, true);
         window.onunhandledrejection = function(event) {
             var errDiv = document.getElementById('diag-rej-div');
             if (!errDiv) {
@@ -191,6 +226,6 @@
     <div id="toast-container" class="toast-container"></div>
 
     <!-- Custom App JS -->
-    <script type="module" src="js/app.js?v=3"></script>
+    <script type="module" src="js/app.js?v=4"></script>
 </body>
 </html>

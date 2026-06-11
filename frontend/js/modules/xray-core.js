@@ -187,7 +187,7 @@ export async function loadGeoInfo() {
     const geoipBadge = document.getElementById("geo-geoip-badge");
     const geoipMeta  = document.getElementById("geo-geoip-meta");
     if (geoipBadge && geoipMeta) {
-        if (info["geoip.dat"]?.exists) {
+        if (info["geoip.dat"] && info["geoip.dat"].exists) {
             geoipBadge.textContent = "✓ Установлен";
             geoipBadge.className = "tag-badge tag-badge-direct";
             geoipMeta.textContent = `${info["geoip.dat"].size_kb} КБ · Обновлён: ${info["geoip.dat"].updated_at}`;
@@ -202,7 +202,7 @@ export async function loadGeoInfo() {
     const geositeBadge = document.getElementById("geo-geosite-badge");
     const geositeMeta  = document.getElementById("geo-geosite-meta");
     if (geositeBadge && geositeMeta) {
-        if (info["geosite.dat"]?.exists) {
+        if (info["geosite.dat"] && info["geosite.dat"].exists) {
             geositeBadge.textContent = "✓ Установлен";
             geositeBadge.className = "tag-badge tag-badge-direct";
             geositeMeta.textContent = `${info["geosite.dat"].size_kb} КБ · Обновлён: ${info["geosite.dat"].updated_at}`;
@@ -242,8 +242,10 @@ export function setupGeoListeners() {
     const saveBtn = document.getElementById("geo-save-btn");
     if (saveBtn) {
         saveBtn.addEventListener("click", async () => {
-            const geoipUrl   = (document.getElementById("geo-geoip-url")?.value || "").trim();
-            const geositeUrl = (document.getElementById("geo-geosite-url")?.value || "").trim();
+            const geoipUrlEl = document.getElementById("geo-geoip-url");
+            const geositeUrlEl = document.getElementById("geo-geosite-url");
+            const geoipUrl   = (geoipUrlEl ? geoipUrlEl.value : "").trim();
+            const geositeUrl = (geositeUrlEl ? geositeUrlEl.value : "").trim();
 
             // Базовая валидация
             for (const [label, url] of [["geoip_url", geoipUrl], ["geosite_url", geositeUrl]]) {
@@ -261,8 +263,10 @@ export function setupGeoListeners() {
 
             if (res && res.success) {
                 // Сохраняем как data-saved для последующей загрузки
-                document.getElementById("geo-geoip-url")?.setAttribute("data-saved", geoipUrl);
-                document.getElementById("geo-geosite-url")?.setAttribute("data-saved", geositeUrl);
+                const geoipUrlInput = document.getElementById("geo-geoip-url");
+                const geositeUrlInput = document.getElementById("geo-geosite-url");
+                if (geoipUrlInput) geoipUrlInput.setAttribute("data-saved", geoipUrl);
+                if (geositeUrlInput) geositeUrlInput.setAttribute("data-saved", geositeUrl);
                 showToast(t("geo_saved", "URL источников geo-файлов сохранены"));
                 await loadGeoInfo();
             } else {
@@ -338,7 +342,7 @@ export function setupGeoListeners() {
                 }
             } else {
                 if (statusSpan) {
-                    statusSpan.textContent = `✗ ${res?.msg || "Ошибка"}`;
+                    statusSpan.textContent = `✗ ${(res && res.msg) || "Ошибка"}`;
                     statusSpan.style.color = "var(--accent-rose, #ff4757)";
                     statusSpan.style.display = "inline";
                 }
@@ -359,7 +363,7 @@ function _applyGeoInfoToUI(info) {
         const meta  = document.getElementById(metaId);
         if (!badge || !meta) continue;
         const f = info[key];
-        if (f?.exists) {
+        if (f && f.exists) {
             badge.textContent = "✓ Установлен";
             badge.className = "tag-badge tag-badge-direct";
             meta.textContent = `${f.size_kb} КБ · Обновлён: ${f.updated_at}`;
