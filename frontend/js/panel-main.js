@@ -26,6 +26,17 @@ export async function initPanel() {
     switchTab("dashboard", loadInbounds, loadCoreInfo, loadLogs);
     loadBbrStatus();
     startGlobalStatusPolling();
+
+    // Загружаем имя администратора для отображения в сайдбаре
+    try {
+        const res = await apiFetch("/api/settings");
+        if (res && res.admin_username) {
+            const navUser = document.getElementById("nav-username");
+            if (navUser) navUser.innerText = res.admin_username;
+        }
+    } catch (e) {
+        console.error("Failed to load admin username", e);
+    }
 }
 
 function setupAuthorizedEventListeners() {
