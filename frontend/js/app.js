@@ -91,18 +91,25 @@ async function loadPanelStylesheets() {
 }
 
 async function startPanel() {
-    await Promise.all([
-        loadAuthorizedComponents(),
-        loadPanelStylesheets()
-    ]);
-    
-    // Динамический импорт всей административной логики
-    const { initPanel } = await import("./panel-main.js");
-    await initPanel();
-    
-    document.getElementById("loading-overlay").classList.remove("active");
-    document.getElementById("login-overlay").classList.remove("active");
-    document.getElementById("app-container").classList.add("active");
+    try {
+        await Promise.all([
+            loadAuthorizedComponents(),
+            loadPanelStylesheets()
+        ]);
+        
+        // Динамический импорт всей административной логики
+        const { initPanel } = await import("./panel-main.js");
+        await initPanel();
+    } catch (err) {
+        console.error("Error starting panel:", err);
+    } finally {
+        const loadingOverlay = document.getElementById("loading-overlay");
+        const loginOverlay = document.getElementById("login-overlay");
+        const appContainer = document.getElementById("app-container");
+        if (loadingOverlay) loadingOverlay.classList.remove("active");
+        if (loginOverlay) loginOverlay.classList.remove("active");
+        if (appContainer) appContainer.classList.add("active");
+    }
 }
 
 let tg2faPollInterval = null;
