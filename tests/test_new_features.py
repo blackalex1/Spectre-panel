@@ -496,4 +496,43 @@ def test_rename_client_and_uuid():
         session2.commit()
 
 
+def test_xray_log_parsing_alert(monkeypatch):
+    """Test that process_xray_log_line parses different log formats correctly."""
+    from backend.client_alerts import process_xray_log_line, active_xray_sessions
+    
+    # Mock log_action to verify connection registration
+    logged_actions = []
+    def mock_log_action(username, action, target, details):
+        logged_actions.append({
+            "username": username,
+            "action": action,
+            "target": target,
+            "details": details
+        })
+    monkeypatch.setattr("backend.client_alerts.log_action", mock_log_action)
+    
+    # Mock database traffic lookup
+    monkeypatch.setattr("backend.client_alerts.get_xray_user_traffic", lambda email: (100, 200))
+    
+    # Reset session state
+    active_xray_sessions.clear()
+    
+    # 1. Test new log line format (IPv4)
+    line_new = "2026/06/13 14:55:36.505111 from 192.168.1.50:40020 accepted tcp:mozilla.cloudflare-dns.com:443 [inbound-2 >> direct] email: phone"
+    process_xray_log_line(line_new)
+    assert len(logged_actions) == 1
+    assert logged_actions[0]["action"] == "xray_connect"
+    assert logged_actions[0]["target"] == "192.168.1.50"
+    assert "phone" in logged_actions[0]["details"]
+    
+    # 2. Test new log line format (IPv6)
+    logged_actions.clear()
+    line_new_ipv6 = "2026/06/13 14:55:38.571331 from [2001:db8::1]:40084 accepted tcp:[2001:67c:4e8:f004::a]:443 [inbound-2 >> direct] email: phone2"
+    process_xray_log_line(line_new_ipv6)
+    assert len(logged_actions) == 1
+    assert logged_actions[0]["action"] == "xray_connect"
+    assert logged_actions[0]["target"] == "2001:db8::1"
+    assert "phone2" in logged_actions[0]["details"]
+
+
 

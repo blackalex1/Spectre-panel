@@ -58,10 +58,12 @@ def process_xray_log_line(line: str):
             return
         email = email_part[1].strip()
         
-        match = re.search(r"accepted connection from\s+([^:\s]+)", line)
+        match = re.search(r"from\s+\[([^\]]+)\]", line)
+        if not match:
+            match = re.search(r"from\s+([^:\s]+)", line)
         if not match:
             return
-        client_ip = match.group(1).replace("[", "").replace("]", "")
+        client_ip = match.group(1)
         
         key = (email, client_ip)
         now = time.time()
