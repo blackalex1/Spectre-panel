@@ -18,6 +18,7 @@ async def async_send_telegram_alert(username: str, action: str, target: str, det
         return
 
     text = ""
+    reply_markup = None
     if action in ("login_success", "login_telegram_success"):
         geoip = await get_geoip_info(target)
         emoji = "🟢" if action == "login_success" else "🔵"
@@ -29,10 +30,18 @@ async def async_send_telegram_alert(username: str, action: str, target: str, det
             f"🗺️ Гео: <b>{geoip}</b>\n"
             f"🔑 Метод: <i>{auth_type}</i>"
         )
+        reply_markup = {
+            "inline_keyboard": [
+                [
+                    {"text": "❌ Сбросить сессию", "callback_data": f"panel_term_sess:{username}:{target}"},
+                    {"text": "🔑 Сбросить пароль", "callback_data": f"panel_reset_pwd:{username}"}
+                ]
+            ]
+        }
     elif action == "login_rate_limited":
         text = (
             f"⚠️ <b>Внимание: Обнаружен Brute-force!</b>\n\n"
-            f"🔴 IP <code>{target}</code> временно заблокирован из-за превышения лимита попыток входа.\n"
+            f"🔴 IP <code>{target}</code> временно заблокирован из-за превынения лимита попыток входа.\n"
             f"ℹ️ Детали: <i>{details}</i>"
         )
         
@@ -48,6 +57,8 @@ async def async_send_telegram_alert(username: str, action: str, target: str, det
                     "text": text,
                     "parse_mode": "HTML"
                 }
+                if reply_markup:
+                    payload["reply_markup"] = reply_markup
                 await client.post(url, json=payload)
             except Exception as e:
                 logging.error(f"[Telegram Alert] Не удалось отправить сообщение администратору {admin_id}: {e}")
