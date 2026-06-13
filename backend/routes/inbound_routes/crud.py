@@ -65,8 +65,6 @@ async def list_inbounds_api(request: Request):
                 "limitIp": c["limit_ip"],
                 "totalGB": int(c["total"] / (1024**3)) if c["total"] > 0 else 0,
                 "expiryTime": c["expiry_time"],
-                "tgId": "",
-                "subId": "",
                 "flow": flow
             })
         

@@ -137,7 +137,7 @@ async def client_by_connection(
     return {"success": False, "msg": "Client not found in logs"}
 
 @router.get("/api/security/search-client")
-async def search_client(request: Request, key: str = Query(...)):
+async def search_client(request: Request, key: str = Query("")):
     if not check_auth(request):
         return decoy_response()
         
@@ -149,9 +149,12 @@ async def search_client(request: Request, key: str = Query(...)):
     base_url = f"{proto}://{host_header}"
     
     with db_session() as session:
-        clients = session.query(ClientStats).filter(
-            (ClientStats.email == key) | (ClientStats.client_uuid_or_pwd == key)
-        ).all()
+        if not key or not key.strip():
+            clients = session.query(ClientStats).all()
+        else:
+            clients = session.query(ClientStats).filter(
+                (ClientStats.email == key) | (ClientStats.client_uuid_or_pwd == key)
+            ).all()
         
         for c in clients:
             ib = session.query(Inbound).filter_by(id=c.inbound_id).first()
@@ -181,7 +184,7 @@ async def search_client(request: Request, key: str = Query(...)):
                     "links": links
                 })
                 
-    if found_clients:
+    if found_clients or not key or not key.strip():
         return {"success": True, "clients": found_clients}
     return {"success": False, "msg": "Client not found"}
 
