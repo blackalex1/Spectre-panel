@@ -109,14 +109,25 @@ def validate_inbound_port_collision(
     if settings.PANEL_PORT in new_hop_ports:
         return f"Hop-порт {settings.PANEL_PORT} занят веб-панелью управления"
 
-    # 5. OS Socket Bind Check (only if port is new or changed)
-    is_new_port = True
+    # 5. OS Socket Bind Check
+    # We collect all ports currently used by this inbound (main, hop, and socks ports)
+    # so we don't flag them as "busy" during OS bind check (since they will be released on restart).
+    current_ports = set()
     if exclude_inbound_id:
         existing_ib = next((ib for ib in all_ibs if ib["id"] == exclude_inbound_id), None)
-        if existing_ib and existing_ib["port"] == port:
-            is_new_port = False
-            
-    if is_new_port:
+        if existing_ib:
+            current_ports.add(existing_ib["port"])
+            try:
+                ib_stream = json.loads(existing_ib["stream_settings"] or "{}")
+                ib_hop_str = ib_stream.get("hysteria", {}).get("hop", "")
+                current_ports.update(parse_hop_ports(ib_hop_str))
+                if ib_stream.get("hysteria", {}).get("routingViaXray"):
+                    current_ports.add(20000 + existing_ib["id"])
+            except Exception:
+                pass
+
+    # Validate the main port
+    if port not in current_ports:
         is_udp_only = (protocol == "hysteria2")
         if not is_udp_only:
             try:
@@ -132,14 +143,16 @@ def validate_inbound_port_collision(
         except OSError:
             return f"Порт {port} (UDP) уже занят другим процессом в ОС"
 
-        # Check hop ports in OS
-        for hp in new_hop_ports:
-            try:
-                with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as s:
-                    s.settimeout(0.5)
-                    s.bind(("0.0.0.0", hp))
-            except OSError:
-                return f"Hop-порт {hp} (UDP) уже занят другим процессом в ОС"
+    # Validate the hop ports
+    for hp in new_hop_ports:
+        if hp in current_ports:
+            continue
+        try:
+            with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as s:
+                s.settimeout(0.5)
+                s.bind(("0.0.0.0", hp))
+        except OSError:
+            return f"Hop-порт {hp} (UDP) уже занят другим процессом в ОС"
 
     return None
 
