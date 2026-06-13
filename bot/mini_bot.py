@@ -596,6 +596,79 @@ if dp:
             logging.error(f"Error blocking ip tg 2fa: {e}")
             await callback.answer(f"❌ Ошибка соединения: {e}", show_alert=True)
 
+    @dp.callback_query(F.data.startswith("panel_term_sess:"))
+    async def cb_panel_term_sess(callback: CallbackQuery):
+        user_id = callback.from_user.id
+        lang = callback.from_user.language_code or "ru"
+        if not is_admin(user_id):
+            await callback.answer(t("access_denied_general", lang, "bot"), show_alert=True)
+            return
+
+        parts = callback.data.split(":", 2)
+        if len(parts) < 3:
+            await callback.answer("Ошибка формата данных", show_alert=True)
+            return
+        username = parts[1]
+        ip = parts[2]
+
+        try:
+            from backend.database import get_all_sessions_db, delete_session_db
+            from backend.auth_utils import ACTIVE_SESSIONS, CSRF_TOKENS
+            from backend.audit import log_action
+            
+            sessions = get_all_sessions_db()
+            terminated = 0
+            for s in sessions:
+                if s["username"] == username and (s["ip_address"] == ip or ip == "unknown" or not ip):
+                    delete_session_db(s["session_id"])
+                    ACTIVE_SESSIONS.discard(s["session_id"])
+                    CSRF_TOKENS.pop(s["session_id"], None)
+                    terminated += 1
+            
+            if terminated > 0:
+                log_action("bot", "terminate_session", target=username, details=f"Terminated {terminated} sessions for IP {ip}")
+                await callback.message.edit_text(callback.message.html_text + f"\n\n❌ <b>Сессии пользователя {username} с IP {ip} успешно сброшены ({terminated} сесс.).</b>", parse_mode="HTML")
+                await callback.answer("Сессии успешно сброшены", show_alert=False)
+            else:
+                await callback.answer("Активные сессии не найдены", show_alert=True)
+        except Exception as e:
+            logging.error(f"Error terminating session via bot: {e}")
+            await callback.answer(f"Ошибка: {e}", show_alert=True)
+
+    @dp.callback_query(F.data.startswith("panel_reset_pwd:"))
+    async def cb_panel_reset_pwd(callback: CallbackQuery):
+        user_id = callback.from_user.id
+        lang = callback.from_user.language_code or "ru"
+        if not is_admin(user_id):
+            await callback.answer(t("access_denied_general", lang, "bot"), show_alert=True)
+            return
+
+        parts = callback.data.split(":", 1)
+        if len(parts) < 2:
+            await callback.answer("Ошибка формата данных", show_alert=True)
+            return
+        username = parts[1]
+
+        try:
+            import secrets
+            import string
+            from backend.database.crud.auth import update_admin_password
+            from backend.audit import log_action
+            
+            alphabet = string.ascii_letters + string.digits + "!@#$%&*+?="
+            new_pwd = "".join(secrets.choice(alphabet) for _ in range(16))
+            
+            success = update_admin_password(username, new_pwd)
+            if success:
+                log_action("bot", "change_password", target=username, details="Admin password reset via telegram bot callback")
+                await callback.message.edit_text(callback.message.html_text + f"\n\n🔑 <b>Пароль пользователя {username} успешно изменен!</b>\nНовый пароль: <code>{new_pwd}</code>", parse_mode="HTML")
+                await callback.answer("Пароль успешно изменен", show_alert=False)
+            else:
+                await callback.answer("Пользователь не найден", show_alert=True)
+        except Exception as e:
+            logging.error(f"Error resetting password via bot: {e}")
+            await callback.answer(f"Ошибка: {e}", show_alert=True)
+
 
 async def main():
     if not bot:
