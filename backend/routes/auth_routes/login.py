@@ -200,10 +200,11 @@ async def login_api(request: Request, response: Response):
                         except Exception as e:
                             logging.error(f"Failed to write 2fa.log: {e}")
                         
+                        bot_enabled = get_setting("telegram_bot_enabled", "true") == "true"
                         bot_token = get_setting("telegram_bot_token", "")
                         tg_admin_ids = get_setting("telegram_admin_ids", "")
                         
-                        if bot_token and tg_admin_ids:
+                        if bot_enabled and bot_token and tg_admin_ids:
                             from aiogram import Bot
                             from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
                             
