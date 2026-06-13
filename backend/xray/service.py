@@ -253,5 +253,10 @@ def tail_xray_logs():
                     time.sleep(0.5)
                     continue
                 print(f"[Xray] {line.strip()}", flush=True)
+                try:
+                    from backend.client_alerts import process_xray_log_line
+                    process_xray_log_line(line)
+                except Exception as ex:
+                    logging.error(f"Error processing Xray log line: {ex}")
     except Exception as e:
         logging.error(f"Error tailing Xray logs: {e}")
