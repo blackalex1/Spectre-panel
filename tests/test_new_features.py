@@ -441,4 +441,59 @@ def test_auto_trim_emails():
         session2.commit()
 
 
+def test_rename_client_and_uuid():
+    """Test that update_client_db successfully updates both the email and the UUID/password."""
+    from backend.database.crud.clients import update_client_db
+    from backend.models import Inbound, ClientStats
+    import json
+    
+    with db_session() as session:
+        ib = Inbound(
+            remark="Rename test inbound",
+            port=31998,
+            protocol="vless",
+            settings=json.dumps({"clients": [{"email": "old_name", "id": "old-uuid"}]}),
+            stream_settings="{}",
+            sniffing="{}",
+            enable=1
+        )
+        session.add(ib)
+        session.flush()
+        
+        cl = ClientStats(
+            inbound_id=ib.id,
+            email="old_name",
+            client_uuid_or_pwd="old-uuid",
+            enable=1
+        )
+        session.add(cl)
+        session.commit()
+        
+        ib_id = ib.id
+        cl_id = cl.id
+        
+    # Perform update changing both name and UUID
+    success = update_client_db(
+        inbound_id=ib_id,
+        old_email="old_name",
+        new_email="new_name",
+        client_uuid_or_pwd="new-uuid",
+        enable=1
+    )
+    assert success is True
+    
+    # Verify in a fresh session
+    with db_session() as session2:
+        db_ib = session2.query(Inbound).filter_by(id=ib_id).first()
+        db_cl = session2.query(ClientStats).filter_by(id=cl_id).first()
+        
+        assert db_cl.email == "new_name"
+        assert db_cl.client_uuid_or_pwd == "new-uuid"
+        
+        # Clean up
+        session2.delete(db_cl)
+        session2.delete(db_ib)
+        session2.commit()
+
+
 

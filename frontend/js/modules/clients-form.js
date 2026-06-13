@@ -11,10 +11,9 @@ import {
 
 export function openEditClientModal(inboundId, clientData) {
     setEditModeEmail(clientData.email);
-    
     document.getElementById("client-ib-id").value = inboundId;
     document.getElementById("c-email").value = clientData.email;
-    document.getElementById("c-email").disabled = true; // Email is key, don't allow edit
+    document.getElementById("c-email").disabled = false;
     
     document.getElementById("c-uuid").value = clientData.id || clientData.password || clientData.client_uuid_or_pwd || "";
     document.getElementById("c-limit-gb").value = clientData.totalGB || 0;
