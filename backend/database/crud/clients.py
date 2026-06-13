@@ -57,12 +57,28 @@ def add_client_db(inbound_id: int, email: str, client_uuid_or_pwd: str, total_gb
         session.add(c)
         return True
 
-def update_client_db(inbound_id: int, email: str, total_gb: int = 0, expiry_time: int = 0, limit_ip: int = 0, enable: int = 1, block_reason: str = None):
+def update_client_db(inbound_id: int, old_email: str = None, new_email: str = None, total_gb: int = 0, expiry_time: int = 0, limit_ip: int = 0, enable: int = 1, block_reason: str = None, email: str = None, client_uuid_or_pwd: str = None):
+    if old_email is None:
+        old_email = email or ""
+    if new_email is None:
+        new_email = email or ""
+        
+    old_email = old_email.strip()
+    new_email = new_email.strip()
+    
     with backend.database.db_session() as session:
-        c = session.query(ClientStats).filter_by(inbound_id=inbound_id, email=email).first()
+        # Look up by either email or UUID/password to be fully robust
+        c = session.query(ClientStats).filter(
+            (ClientStats.inbound_id == inbound_id) & 
+            ((ClientStats.client_uuid_or_pwd == old_email) | (ClientStats.email == old_email))
+        ).first()
         if not c:
             return False
             
+        old_email_real = c.email
+        c.email = new_email
+        if client_uuid_or_pwd is not None:
+            c.client_uuid_or_pwd = client_uuid_or_pwd.strip()
         c.total = total_gb * 1024 * 1024 * 1024
         c.expiry_time = expiry_time
         c.limit_ip = limit_ip
@@ -76,6 +92,13 @@ def update_client_db(inbound_id: int, email: str, total_gb: int = 0, expiry_time
                 c.block_reason = block_reason
             elif not c.block_reason:
                 c.block_reason = "Заблокирован администратором"
+                
+        try:
+            from backend.models import ClientTrafficDaily
+            session.query(ClientTrafficDaily).filter_by(email=old_email_real).update({"email": new_email})
+        except Exception:
+            pass
+            
         return True
 
 def block_client_db(inbound_id: int, email: str, reason: str):

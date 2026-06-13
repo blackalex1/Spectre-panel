@@ -114,6 +114,26 @@ async def update_client_api(request: Request, client_id: str, payload: Optional[
         email = client.get("email")
         if email:
             email = email.strip()
+            
+        # Находим существующего клиента для сверки его реального текущего email
+        from backend.database.crud.clients import get_client_by_id_or_pwd
+        existing_client = get_client_by_id_or_pwd(ib_id, client_id)
+        if not existing_client:
+            return {"success": False, "msg": "Клиент не найден"}
+            
+        real_old_email = existing_client["email"]
+        
+        # Проверяем уникальность нового email, только если он изменился
+        if email != real_old_email:
+            from backend.database.crud.clients import get_client_by_email
+            existing_with_new_email = get_client_by_email(ib_id, email)
+            if existing_with_new_email:
+                return {"success": False, "msg": "Клиент с таким email уже существует"}
+                
+        c_id = client.get("id") or client.get("password")
+        if c_id:
+            c_id = c_id.strip()
+            
         total_gb = client.get("totalGB", 0)
         expiry_time = client.get("expiryTime", 0)
         limit_ip = client.get("limitIp", 0)
@@ -123,17 +143,19 @@ async def update_client_api(request: Request, client_id: str, payload: Optional[
         security = client.get("security", "auto")
         
         # Обновляем в client_stats
-        success = update_client_db(ib_id, email, total_gb, expiry_time, limit_ip, enable)
+        success = update_client_db(ib_id, client_id, email, total_gb, expiry_time, limit_ip, enable, client_uuid_or_pwd=c_id)
         if success:
             from backend.audit import log_action, get_actor_username
             actor = get_actor_username(request)
-            log_action(actor, "update_client", target=email, details=f"inbound_id:{ib_id}, total_gb:{total_gb}, limit_ip:{limit_ip}, enable:{enable}")
+            log_action(actor, "update_client", target=email, details=f"inbound_id:{ib_id}, old_email:{client_id}, new_email:{email}, total_gb:{total_gb}, limit_ip:{limit_ip}, enable:{enable}")
             # Сброс IP кэша в планировщике, если клиент активирован (снята блокировка)
             if enable == 1:
                 try:
                     from backend.scheduler import ACTIVE_IP_CACHE
                     if email in ACTIVE_IP_CACHE:
                         ACTIVE_IP_CACHE[email] = {}
+                    if client_id in ACTIVE_IP_CACHE:
+                        ACTIVE_IP_CACHE[client_id] = {}
                 except Exception as e:
                     logging.error(f"Failed to reset active IP cache: {e}")
             else:
@@ -143,13 +165,17 @@ async def update_client_api(request: Request, client_id: str, payload: Optional[
                     if inbound["protocol"] == "hysteria2":
                         try:
                             from backend.hysteria import kick_client_hysteria_api
-                            kick_client_hysteria_api(ib_id, email)
+                            kick_client_hysteria_api(ib_id, client_id)
+                            if email != client_id:
+                                kick_client_hysteria_api(ib_id, email)
                         except Exception as e:
                             logging.error(f"Failed to kick Hysteria2 client: {e}")
                     else:
                         try:
                             from backend.xray import remove_client_api
-                            remove_client_api(ib_id, email)
+                            remove_client_api(ib_id, client_id)
+                            if email != client_id:
+                                remove_client_api(ib_id, email)
                         except Exception as e:
                             logging.error(f"Failed to remove Xray client via API: {e}")
 
@@ -159,7 +185,12 @@ async def update_client_api(request: Request, client_id: str, payload: Optional[
             ib_clients = ib_settings.get("clients", [])
             
             for c in ib_clients:
-                if c.get("email") == email:
+                if c.get("email") == client_id or c.get("id") == client_id:
+                    c["email"] = email
+                    if "id" in c:
+                        c["id"] = c_id
+                    if "password" in c:
+                        c["password"] = c_id
                     c["enable"] = bool(enable)
                     c["limitIp"] = limit_ip
                     c["totalGB"] = total_gb
