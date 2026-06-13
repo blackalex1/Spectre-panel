@@ -62,6 +62,13 @@ async def poll_xray_stats_loop():
             from backend.routes.clients import update_online_emails
             await asyncio.to_thread(update_online_emails)
             
+            # Update active Telegram cards traffic on the panel
+            try:
+                from backend.telegram_alerts import update_panel_active_cards_traffic
+                await update_panel_active_cards_traffic()
+            except Exception as e:
+                logging.error(f"Error updating active panel cards: {e}")
+                
             # Проверка лимитов клиентов (лимит трафика, срок действия, лимит IP)
             from backend.scheduler import enforce_client_limits_and_rules
             await asyncio.to_thread(enforce_client_limits_and_rules)

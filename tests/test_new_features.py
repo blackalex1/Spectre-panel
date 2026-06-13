@@ -266,3 +266,127 @@ def test_port_scan_detection_logic(monkeypatch, tmp_path):
         ib_settings = json.loads(ib.settings)
         assert ib_settings["clients"][0]["enable"] is False
 
+
+def test_client_alerts_logging(monkeypatch):
+    """Test client connection and disconnection log parsing and inactivity timeouts."""
+    from backend.client_alerts import (
+        process_xray_log_line,
+        process_hysteria_log_line,
+        check_xray_inactivity_timeouts,
+        active_xray_sessions
+    )
+    from backend.models import AuditLog
+    from backend.database import db_session
+    import json
+    import time
+
+    # Clear state and database
+    active_xray_sessions.clear()
+    with db_session() as session:
+        session.query(AuditLog).delete()
+        session.commit()
+
+    # 1. Test Xray log line parsing (connection)
+    xray_log_line = "2026/06/13 03:00:00 [Info] accepted connection from 188.134.67.205:54321 email: test_user@example.com"
+    process_xray_log_line(xray_log_line)
+
+    with db_session() as session:
+        logs = session.query(AuditLog).all()
+        assert len(logs) == 1
+        assert logs[0].action == "xray_connect"
+        assert logs[0].target == "188.134.67.205"
+        details = json.loads(logs[0].details)
+        assert details["username"] == "test_user@example.com"
+
+    # Call again with same connection, should NOT produce duplicate event
+    process_xray_log_line(xray_log_line)
+    with db_session() as session:
+        logs = session.query(AuditLog).all()
+        assert len(logs) == 1
+
+    # 2. Test Xray inactivity timeout
+    key = ("test_user@example.com", "188.134.67.205")
+    assert key in active_xray_sessions
+    # Force last seen time to be 4 minutes ago
+    active_xray_sessions[key]["last_seen_at"] = time.time() - 240
+    # Force started_at
+    active_xray_sessions[key]["started_at"] = time.time() - 300
+
+    check_xray_inactivity_timeouts()
+
+    assert key not in active_xray_sessions
+    with db_session() as session:
+        logs = session.query(AuditLog).order_by(AuditLog.id.asc()).all()
+        assert len(logs) == 2
+        assert logs[1].action == "xray_disconnect"
+        assert logs[1].target == "188.134.67.205"
+        details = json.loads(logs[1].details)
+        assert details["username"] == "test_user@example.com"
+        assert "duration" in details
+
+    # 3. Test Hysteria 2 connection log parsing
+    hysteria_connect_line = '2026-06-13T03:00:00.000Z INFO client connected {"id": "test_hysteria_user", "addr": "188.134.67.205:1234"}'
+    process_hysteria_log_line(hysteria_connect_line)
+
+    with db_session() as session:
+        logs = session.query(AuditLog).order_by(AuditLog.id.asc()).all()
+        assert len(logs) == 3
+        assert logs[2].action == "hysteria_connect"
+        assert logs[2].target == "188.134.67.205"
+        details = json.loads(logs[2].details)
+        assert details["username"] == "test_hysteria_user"
+
+    # 4. Test Hysteria 2 disconnection log parsing
+    hysteria_disconnect_line = '2026-06-13T03:05:00.000Z INFO client disconnected {"id": "test_hysteria_user", "addr": "188.134.67.205:1234"}'
+    process_hysteria_log_line(hysteria_disconnect_line)
+
+    with db_session() as session:
+        logs = session.query(AuditLog).order_by(AuditLog.id.asc()).all()
+        assert len(logs) == 4
+        assert logs[3].action == "hysteria_disconnect"
+        assert logs[3].target == "188.134.67.205"
+        details = json.loads(logs[3].details)
+        assert details["username"] == "test_hysteria_user"
+
+
+def test_new_ip_security_alerts():
+    """Test new IP detection logic using simulated audit logs."""
+    from backend.telegram_alerts import check_new_ip_and_get_history
+
+    # Mock logs (descending order by timestamp)
+    mock_logs = [
+        {"timestamp": 100, "username": "system", "action": "xray_connect", "target": "192.168.1.1", "details": '{"username": "svatex", "tx": 100, "rx": 100}'},
+        {"timestamp": 90, "username": "system", "action": "xray_disconnect", "target": "192.168.1.2", "details": '{"username": "svatex", "duration": "50 сек"}'},
+        {"timestamp": 50, "username": "system", "action": "xray_connect", "target": "192.168.1.2", "details": '{"username": "svatex"}'},
+        {"timestamp": 40, "username": "system", "action": "xray_connect", "target": "10.0.0.1", "details": '{"username": "other_user"}'},
+    ]
+
+    # Current connection from 192.168.1.1 at t=100.
+    # The previous connection for svatex was from 192.168.1.2 at t=50.
+    # So 192.168.1.1 is indeed a new IP!
+    is_new_ip, history = check_new_ip_and_get_history(
+        username="svatex",
+        current_ip="192.168.1.1",
+        current_timestamp=100,
+        logs=mock_logs
+    )
+
+    assert is_new_ip is True
+    assert len(history) == 1
+    assert history[0]["ip"] == "192.168.1.2"
+    assert history[0]["duration"] == "50 сек"
+
+    # Current connection from 192.168.1.2 at t=100.
+    # The previous connection was also from 192.168.1.2.
+    # So 192.168.1.2 is NOT a new IP!
+    is_new_ip, history = check_new_ip_and_get_history(
+        username="svatex",
+        current_ip="192.168.1.2",
+        current_timestamp=100,
+        logs=mock_logs
+    )
+    assert is_new_ip is False
+    assert len(history) == 1
+
+
+

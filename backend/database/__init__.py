@@ -18,8 +18,8 @@ from backend.database.connection import (
     Session,
     db_session,
     get_db_connection,
-    init_db,
 )
+from backend.database.seeding import init_db
 
 from backend.database.crud.auth import (
     hash_password,
