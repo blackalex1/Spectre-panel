@@ -208,3 +208,125 @@ def test_vless_encryption_config():
     finally:
         delete_inbound(ib_id)
 
+
+def test_xray_routing_geoip_scenarios():
+    """Test Xray routing rules with GeoIP, protocol blocking, and catch-all ranges."""
+    from backend.database import add_routing_rule, delete_routing_rule
+    
+    # 1. Create a blocked rule for BitTorrent
+    rule1_id = add_routing_rule(
+        remark="Block BitTorrent",
+        outbound_tag="blocked",
+        inbound_tags=[],
+        users=[],
+        domains=[],
+        ips=[],
+        protocols=["bittorrent"],
+        enable=1
+    )
+    
+    # 2. Create a rule for geoip:ru to direct
+    rule2_id = add_routing_rule(
+        remark="RU Direct",
+        outbound_tag="direct",
+        inbound_tags=[],
+        users=[],
+        domains=[],
+        ips=["geoip:ru"],
+        protocols=[],
+        enable=1
+    )
+    
+    # 3. Create a rule for geoip:us to warp
+    rule3_id = add_routing_rule(
+        remark="US Warp",
+        outbound_tag="warp",
+        inbound_tags=[],
+        users=[],
+        domains=[],
+        ips=["geoip:us"],
+        protocols=[],
+        enable=1
+    )
+    
+    # 4. Create a catch-all rule (0.0.0.0/0, ::/0) to warp
+    rule4_id = add_routing_rule(
+        remark="Catch All to Warp",
+        outbound_tag="warp",
+        inbound_tags=[],
+        users=[],
+        domains=[],
+        ips=["0.0.0.0/0", "::/0"],
+        protocols=[],
+        enable=1
+    )
+    
+    try:
+        xray_config = generate_xray_config_json()
+        routing_rules = xray_config["routing"]["rules"]
+        
+        # Check rule 1: bittorrent
+        rule_bt = next((r for r in routing_rules if "bittorrent" in r.get("protocol", [])), None)
+        assert rule_bt is not None
+        assert rule_bt["outboundTag"] == "blocked"
+        
+        # Check rule 2: geoip:ru
+        rule_ru = next((r for r in routing_rules if "geoip:ru" in r.get("ip", [])), None)
+        assert rule_ru is not None
+        assert rule_ru["outboundTag"] == "direct"
+        
+        # Check rule 3: geoip:us
+        rule_us = next((r for r in routing_rules if "geoip:us" in r.get("ip", [])), None)
+        assert rule_us is not None
+        assert rule_us["outboundTag"] == "warp"
+        
+        # Check rule 4: catch-all
+        rule_ca = next((r for r in routing_rules if "0.0.0.0/0" in r.get("ip", [])), None)
+        assert rule_ca is not None
+        assert rule_ca["outboundTag"] == "warp"
+        assert "::/0" in rule_ca["ip"]
+        
+    finally:
+        # Cleanup rules
+        delete_routing_rule(rule1_id)
+        delete_routing_rule(rule2_id)
+        delete_routing_rule(rule3_id)
+        delete_routing_rule(rule4_id)
+
+
+def test_xray_socks_inbound_for_hysteria():
+    """Test that Xray config generator creates SOCKS5 inbounds when Hysteria 2 routing is enabled."""
+    hysteria_stream_settings = {
+        "hysteria": {
+            "routingViaXray": True,
+            "socksUsername": "socks_user_xyz",
+            "socksPassword": "socks_password_xyz"
+        }
+    }
+    
+    ib_id = add_inbound(
+        remark="Hysteria with Xray Routing",
+        port=60030,
+        protocol="hysteria2",
+        settings_dict={},
+        stream_settings_dict=hysteria_stream_settings
+    )
+    
+    try:
+        xray_config = generate_xray_config_json()
+        
+        # Check that Xray created a SOCKS inbound on port (20000 + ib_id)
+        socks_port = 20000 + ib_id
+        socks_inbound = next((ib for ib in xray_config["inbounds"] if ib["port"] == socks_port), None)
+        
+        assert socks_inbound is not None
+        assert socks_inbound["protocol"] == "socks"
+        assert socks_inbound["listen"] == "127.0.0.1"
+        assert socks_inbound["settings"]["accounts"][0]["user"] == "socks_user_xyz"
+        assert socks_inbound["settings"]["accounts"][0]["pass"] == "socks_password_xyz"
+        assert socks_inbound["settings"]["udp"] is True
+    finally:
+        delete_inbound(ib_id)
+
+
+

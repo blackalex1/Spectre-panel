@@ -291,6 +291,14 @@ export function setupGeneralListeners() {
         });
     }
 
+    // Card 3: Decoy Site Preview
+    const btnPreviewDecoy = document.getElementById("btn-preview-decoy");
+    if (btnPreviewDecoy) {
+        btnPreviewDecoy.addEventListener("click", () => {
+            window.open(window.location.origin + "/", "_blank");
+        });
+    }
+
     // Card 4: SSL Settings Save
     const btnSaveSsl = document.getElementById("btn-save-ssl");
     if (btnSaveSsl) {

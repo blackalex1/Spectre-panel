@@ -75,6 +75,20 @@ def test_advanced_hysteria_configs():
     # Verify port hopping listen
     assert config["listen"] == ":60020"
 
+    # Verify routingViaXray config
+    stream_settings_routing = {
+        "hysteria": {
+            "routingViaXray": True,
+            "socksUsername": "test_user",
+            "socksPassword": "test_password"
+        }
+    }
+    config_routing = generate_hysteria_config(1, 60020, clients, stream_settings_routing)
+    assert config_routing["outbounds"][0]["type"] == "socks5"
+    assert config_routing["outbounds"][0]["socks5"]["addr"] == "127.0.0.1:20001"
+    assert config_routing["outbounds"][0]["socks5"]["username"] == "test_user"
+    assert config_routing["outbounds"][0]["socks5"]["password"] == "test_password"
+
 
 def test_hysteria_endpoints(client):
     """Test Hysteria 2 API endpoints for status, actions, logs, version, and update."""

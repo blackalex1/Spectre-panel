@@ -141,6 +141,7 @@
     "settings_ssl_btn_generate": "Выпустить сертификат",
     "settings_btn_save": "Сохранить настройки",
     "settings_btn_save_short": "Сохранить",
+    "settings_btn_preview": "Предпросмотр",
     "settings_backups_title": "Резервное копирование (Backups)",
     "settings_backups_desc": "Настройка автоматического создания бэкапов базы данных и управление файлами резервных копий.",
     "settings_backup_enable": "Хранить бэкапы локально",

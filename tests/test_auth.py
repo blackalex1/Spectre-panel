@@ -7,6 +7,15 @@ import pytest
 import httpx
 from backend.database import set_setting
 
+@pytest.fixture(autouse=True)
+def reset_decoy_settings():
+    yield
+    try:
+        set_setting("decoy_type", "none")
+        set_setting("decoy_value", "company_landing")
+    except Exception:
+        pass
+
 # Helper function to generate signed Telegram initData
 def make_telegram_init_data(user_id: int, username: str, bot_token: str, expired: bool = False) -> str:
     auth_date = int(time.time()) - (90000 if expired else 0)  # > 24h ago
@@ -53,6 +62,13 @@ def test_fastapi_decoy_protection(client):
     response = client.get("/openapi.json")
     assert response.status_code == 404
     assert "404 Not Found" in response.text
+
+    # Access POST-only route with GET (Method Not Allowed) -> decoy Nginx 404
+    response = client.get("/login")
+    assert response.status_code == 404
+    assert "404 Not Found" in response.text
+    assert "nginx" in response.text
+
 
 
 def test_fastapi_bearer_auth(client):

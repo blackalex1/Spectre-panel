@@ -22,6 +22,7 @@ services:
       - ./config:/app/config
       - ./bin:/app/bin
       - ./backups:/app/backups
+      - ./frontend/decoy:/app/frontend/decoy
       - /var/run/spectre:/var/run/spectre
     environment:
       - PYTHONUNBUFFERED=1
