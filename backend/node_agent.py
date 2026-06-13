@@ -9,7 +9,7 @@ from typing import Optional, Tuple
 from cryptography.hazmat.primitives.asymmetric import ed25519
 
 # Set the config file to be in the folder where the app/bot runs (working directory)
-CONFIG_FILE_PATH = Path("node_config.json")
+CONFIG_FILE_PATH = Path("config/node_config.json")
 
 def load_node_config() -> Optional[dict]:
     """Loads the node configuration if registered."""
@@ -24,6 +24,7 @@ def load_node_config() -> Optional[dict]:
 def save_node_config(config: dict):
     """Saves the node configuration locally."""
     try:
+        CONFIG_FILE_PATH.parent.mkdir(parents=True, exist_ok=True)
         with open(CONFIG_FILE_PATH, "w", encoding="utf-8") as f:
             json.dump(config, f, indent=4)
         # Protect config file permissions
