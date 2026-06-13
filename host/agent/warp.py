@@ -129,9 +129,9 @@ def register_warp(license_key: str = None) -> tuple[bool, str]:
 
     # 1. Register a new account if needed
     try:
-        p = subprocess.run(["warp-cli", "registration", "new"], capture_output=True, text=True, timeout=15)
+        p = subprocess.run(["warp-cli", "--accept-tos", "registration", "new"], capture_output=True, text=True, timeout=15)
         if p.returncode != 0:
-            p = subprocess.run(["warp-cli", "register"], capture_output=True, text=True, timeout=15)
+            p = subprocess.run(["warp-cli", "--accept-tos", "register"], capture_output=True, text=True, timeout=15)
         
         # If still failed, check if output contains "already registered"
         if p.returncode != 0 and "already" not in p.stdout.lower() and "already" not in p.stderr.lower():
