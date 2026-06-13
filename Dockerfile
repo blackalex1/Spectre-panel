@@ -38,6 +38,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     curl \
     git \
     iputils-ping \
+    iptables \
+    nftables \
     && rm -rf /var/lib/apt/lists/*
 
 # Set working directory
