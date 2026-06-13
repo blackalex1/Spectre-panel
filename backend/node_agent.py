@@ -79,20 +79,20 @@ async def register_with_master(master_url: str, join_code: str) -> bool:
             logging.error(f"[Node Agent] Registration failed with status {response.status_code}")
             return False
                 
-            data = response.json()
-            
-            # Save configuration
-            config = {
-                "node_id": data["node_id"],
-                "node_api_token": data["node_api_token"],
-                "master_public_key": data["master_public_key"],
-                "master_url": master_url,
-                "private_key": priv_hex,
-                "public_key": pub_hex
-            }
-            save_node_config(config)
-            logging.info(f"[Node Agent] Successfully registered! Saved Node ID: {data['node_id']}")
-            return True
+        data = response.json()
+        
+        # Save configuration
+        config = {
+            "node_id": data["node_id"],
+            "node_api_token": data["node_api_token"],
+            "master_url": master_url,
+            "master_public_key": data["master_public_key"],
+            "private_key": priv_hex,
+            "public_key": pub_hex
+        }
+        save_node_config(config)
+        logging.info(f"[Node Agent] Successfully registered! Saved Node ID: {data['node_id']}")
+        return True
     except Exception as e:
         logging.error(f"[Node Agent] Exception during registration: {e}")
         return False
