@@ -60,7 +60,7 @@ def process_xray_log_line(line: str):
         
         match = re.search(r"from\s+\[([^\]]+)\]", line)
         if not match:
-            match = re.search(r"from\s+([^:\s]+)", line)
+            match = re.search(r"from\s+(?:tcp:|udp:)?([^:\s]+)", line)
         if not match:
             return
         client_ip = match.group(1)
