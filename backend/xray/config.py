@@ -184,7 +184,7 @@ def generate_xray_config_json() -> dict:
                     "email": c["email"]
                 })
             xray_settings = {
-                "method": db_settings.get("method", "aes-256-gcm"),
+                "method": db_settings.get("method") or "aes-256-gcm",
                 "clients": clients_list,
                 "network": "tcp,udp"
             }
