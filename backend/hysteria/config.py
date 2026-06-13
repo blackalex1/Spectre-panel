@@ -30,17 +30,30 @@ def generate_hysteria_config(inbound_id: int, port: int, clients: list, stream_s
             "key": key_path
         }
     else:
-        from backend.ssl_utils import SSL_CERT_PATH, SSL_KEY_PATH
-        if SSL_CERT_PATH.exists() and SSL_KEY_PATH.exists():
+        if cert_mode == "self" and sni:
+            from backend.ssl_utils import generate_custom_self_signed_cert
+            from backend.config import CONFIG_DIR
+            custom_cert = CONFIG_DIR / f"hysteria_{inbound_id}.crt"
+            custom_key = CONFIG_DIR / f"hysteria_{inbound_id}.key"
+            
+            generate_custom_self_signed_cert(custom_cert, custom_key, sni)
+            
             tls_config = {
-                "cert": str(SSL_CERT_PATH),
-                "key": str(SSL_KEY_PATH)
+                "cert": str(custom_cert),
+                "key": str(custom_key)
             }
         else:
-            tls_config = {
-                "cert": str(backend.hysteria.HYSTERIA_CERT_PATH),
-                "key": str(backend.hysteria.HYSTERIA_KEY_PATH)
-            }
+            from backend.ssl_utils import SSL_CERT_PATH, SSL_KEY_PATH
+            if SSL_CERT_PATH.exists() and SSL_KEY_PATH.exists():
+                tls_config = {
+                    "cert": str(SSL_CERT_PATH),
+                    "key": str(SSL_KEY_PATH)
+                }
+            else:
+                tls_config = {
+                    "cert": str(backend.hysteria.HYSTERIA_CERT_PATH),
+                    "key": str(backend.hysteria.HYSTERIA_KEY_PATH)
+                }
     if sni:
         tls_config["sni"] = sni
 
