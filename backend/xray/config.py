@@ -175,19 +175,26 @@ def generate_xray_config_json() -> dict:
             }
             
         elif protocol == "shadowsocks":
+            method = db_settings.get("method") or "aes-256-gcm"
+            is_legacy = not method.startswith("2022-blake3")
             clients_list = []
             for c in db_clients:
                 if not c["enable"]:
                     continue
-                clients_list.append({
+                client_item = {
                     "password": c["client_uuid_or_pwd"],
                     "email": c["email"]
-                })
+                }
+                if is_legacy:
+                    client_item["method"] = method
+                clients_list.append(client_item)
             xray_settings = {
-                "method": db_settings.get("method") or "aes-256-gcm",
+                "method": method,
                 "clients": clients_list,
                 "network": "tcp,udp"
             }
+            if not is_legacy and clients_list:
+                xray_settings["password"] = clients_list[0]["password"]
             
         xray_inbound = {
             "port": port,
