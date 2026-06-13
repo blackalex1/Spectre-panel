@@ -123,7 +123,7 @@ def check_new_ip_and_get_history(username, current_ip, current_timestamp, logs):
     return is_new_ip, conns
 
 async def handle_client_event(action: str, client_ip: str, details_str: str):
-    if get_setting("telegram_client_events_enabled", "true") != "true":
+    if get_setting("telegram_bot_enabled", "true") != "true" or get_setting("telegram_client_events_enabled", "true") != "true":
         return
         
     bot_token = get_setting("telegram_bot_token", "")
@@ -276,7 +276,7 @@ async def handle_client_event(action: str, client_ip: str, details_str: str):
             await send_to_all(msg_text)
 
 async def update_panel_active_cards_traffic():
-    if get_setting("telegram_client_events_enabled", "true") != "true":
+    if get_setting("telegram_bot_enabled", "true") != "true" or get_setting("telegram_client_events_enabled", "true") != "true":
         return
         
     bot_token = get_setting("telegram_bot_token", "")
