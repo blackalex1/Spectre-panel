@@ -330,7 +330,16 @@ def generate_xray_config_json() -> dict:
         if r["ips"]:
             rule_dict["ip"] = r["ips"]
         if r["protocols"]:
-            rule_dict["protocol"] = r["protocols"]
+            protocols_list = r["protocols"]
+            # Если пользователь указал транспортные протоколы (tcp, udp) вместо прикладных,
+            # мы автоматически переносим их в поле network для корректной маршрутизации в Xray
+            networks = [p.lower() for p in protocols_list if p.lower() in ("tcp", "udp")]
+            app_protocols = [p for p in protocols_list if p.lower() not in ("tcp", "udp")]
+            
+            if networks:
+                rule_dict["network"] = ",".join(networks)
+            if app_protocols:
+                rule_dict["protocol"] = app_protocols
             
         if len(rule_dict) > 2:
             rules.append(rule_dict)
