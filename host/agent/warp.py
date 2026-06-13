@@ -179,13 +179,21 @@ def connect_warp() -> tuple[bool, str]:
         return False, "WARP is not installed."
 
     try:
-        # Double check mode is proxy before connecting
-        subprocess.run(["warp-cli", "mode", "proxy"], capture_output=True, timeout=5)
-        subprocess.run(["warp-cli", "set-mode", "proxy"], capture_output=True, timeout=5)
-        subprocess.run(["warp-cli", "settings", "set", "proxy.port", "40000"], capture_output=True, timeout=5)
-        subprocess.run(["warp-cli", "set-proxy-port", "40000"], capture_output=True, timeout=5)
+        # Ensure registration exists on connect
+        reg_id, _ = load_reg_credentials()
+        if not reg_id:
+            logging.info("[WarpAgent] No registration found. Attempting auto-registration first...")
+            success, reg_msg = register_warp()
+            if not success:
+                return False, f"WARP not registered and registration failed: {reg_msg}"
 
-        p = subprocess.run(["warp-cli", "connect"], capture_output=True, text=True, timeout=10)
+        # Double check mode is proxy before connecting
+        subprocess.run(["warp-cli", "--accept-tos", "mode", "proxy"], capture_output=True, timeout=5)
+        subprocess.run(["warp-cli", "--accept-tos", "set-mode", "proxy"], capture_output=True, timeout=5)
+        subprocess.run(["warp-cli", "--accept-tos", "settings", "set", "proxy.port", "40000"], capture_output=True, timeout=5)
+        subprocess.run(["warp-cli", "--accept-tos", "set-proxy-port", "40000"], capture_output=True, timeout=5)
+
+        p = subprocess.run(["warp-cli", "--accept-tos", "connect"], capture_output=True, text=True, timeout=10)
         if p.returncode == 0:
             return True, "WARP connected successfully."
         else:
