@@ -661,7 +661,7 @@ if dp:
             success = update_admin_password(username, new_pwd)
             if success:
                 log_action("bot", "change_password", target=username, details="Admin password reset via telegram bot callback")
-                await callback.message.edit_text(callback.message.html_text + f"\n\n🔑 <b>Пароль пользователя {username} успешно изменен!</b>\nНовый пароль: <code>{new_pwd}</code>", parse_mode="HTML")
+                await callback.message.edit_text(callback.message.html_text + f"\n\n🔑 <b>Пароль пользователя {username} успешно изменен!</b>\nНовый пароль: <tg-spoiler><code>{new_pwd}</code></tg-spoiler>", parse_mode="HTML")
                 await callback.answer("Пароль успешно изменен", show_alert=False)
             else:
                 await callback.answer("Пользователь не найден", show_alert=True)
