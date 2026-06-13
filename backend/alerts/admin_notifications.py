@@ -6,6 +6,8 @@ from backend.alerts.geoip import get_geoip_info
 
 async def async_send_telegram_alert(username: str, action: str, target: str, details: str):
     """Formats and sends a Telegram alert to admins."""
+    if get_setting("telegram_bot_enabled", "true") != "true":
+        return
     bot_token = get_setting("telegram_bot_token", "")
     admin_ids_str = get_setting("telegram_admin_ids", "")
     if not bot_token or not admin_ids_str:
@@ -67,6 +69,8 @@ def trigger_telegram_alert(username: str, action: str, target: str = None, detai
 
 async def _send_alert_to_all_admins(text: str):
     """Sends a generic HTML message to all administrators."""
+    if get_setting("telegram_bot_enabled", "true") != "true":
+        return
     bot_token = get_setting("telegram_bot_token", "")
     admin_ids_str = get_setting("telegram_admin_ids", "")
     if not bot_token or not admin_ids_str:
