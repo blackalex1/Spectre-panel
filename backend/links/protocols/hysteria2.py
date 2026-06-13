@@ -21,14 +21,24 @@ def build_hysteria2_link(inbound: dict, client: dict, host: str, port: int, disp
     if cert_mode == 'custom':
         cert_path = hysteria_opts.get('certPath', '')
     else:
-        from backend.ssl_utils import SSL_CERT_PATH
-        if SSL_CERT_PATH.exists():
-            cert_path = str(SSL_CERT_PATH)
+        if cert_mode == 'self' and sni:
+            from backend.config import CONFIG_DIR
+            from backend.ssl_utils import generate_custom_self_signed_cert
+            custom_cert = CONFIG_DIR / f"hysteria_{inbound.get('id')}.crt"
+            custom_key = CONFIG_DIR / f"hysteria_{inbound.get('id')}.key"
+            
+            # Ensure cert is generated to get the correct pinSHA256 fingerprint
+            generate_custom_self_signed_cert(custom_cert, custom_key, sni)
+            cert_path = str(custom_cert)
         else:
-            from backend.config import BIN_DIR
-            p = BIN_DIR / "hysteria.crt"
-            if p.exists():
-                cert_path = str(p)
+            from backend.ssl_utils import SSL_CERT_PATH
+            if SSL_CERT_PATH.exists():
+                cert_path = str(SSL_CERT_PATH)
+            else:
+                from backend.config import BIN_DIR
+                p = BIN_DIR / "hysteria.crt"
+                if p.exists():
+                    cert_path = str(p)
             
     has_pin = False
     if cert_path:
