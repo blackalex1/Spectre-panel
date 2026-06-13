@@ -141,6 +141,7 @@
     "settings_ssl_btn_generate": "Issue Certificate",
     "settings_btn_save": "Save Settings",
     "settings_btn_save_short": "Save",
+    "settings_btn_preview": "Preview",
     "settings_backups_title": "Database Backups",
     "settings_backups_desc": "Configure automatic database backups and manage backup files.",
     "settings_backup_enable": "Store backups locally",

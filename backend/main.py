@@ -4,14 +4,16 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
-from fastapi.responses import HTMLResponse
+from fastapi.responses import HTMLResponse, JSONResponse
+from starlette.exceptions import HTTPException as StarletteHTTPException
+
 
 from backend.config import settings, BASE_DIR
 from backend.database import init_db
 from backend.xray import start_xray, stop_xray, query_traffic_stats
 from backend.hysteria import start_hysteria, stop_hysteria, query_hysteria_traffic
 from backend.api import router
-from backend.auth_utils import decoy_response, handle_decoy_route
+from backend.auth_utils import decoy_response, handle_decoy_route, DecoyException
 
 # Настройка логирования
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
@@ -133,6 +135,23 @@ app = FastAPI(
     openapi_url=None,
     lifespan=lifespan
 )
+
+@app.exception_handler(StarletteHTTPException)
+async def custom_http_exception_handler(request: Request, exc: StarletteHTTPException):
+    if exc.status_code in (404, 405):
+        path = request.url.path.lstrip("/")
+        return await handle_decoy_route(request, path)
+    return JSONResponse(
+        status_code=exc.status_code,
+        content={"detail": exc.detail}
+    )
+
+@app.exception_handler(DecoyException)
+async def decoy_exception_handler(request: Request, exc: DecoyException):
+    path = request.url.path.lstrip("/")
+    return await handle_decoy_route(request, path)
+
+
 
 # Настройка CORS
 # В продакшене фронтенд раздается на том же хосте/порту, что и API, поэтому CORS не требуется.

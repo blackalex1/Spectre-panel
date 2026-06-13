@@ -8,7 +8,7 @@ import datetime
 from urllib.parse import parse_qsl
 from typing import Optional
 from fastapi import Request, Response
-from fastapi.responses import HTMLResponse, RedirectResponse
+from fastapi.responses import HTMLResponse, RedirectResponse, FileResponse
 from fastapi.templating import Jinja2Templates
 import httpx
 
@@ -18,7 +18,11 @@ from backend.database import get_setting
 ACTIVE_SESSIONS = set()
 CSRF_TOKENS = {}
 
-def decoy_response():
+class DecoyException(Exception):
+    """Исключение для динамического перехвата маскировки"""
+    pass
+
+def decoy_response_html():
     """Возвращает стандартную заглушку Nginx 404"""
     html_content = """<html>
 <head><title>404 Not Found</title></head>
@@ -28,6 +32,11 @@ def decoy_response():
 </body>
 </html>"""
     return HTMLResponse(content=html_content, status_code=404)
+
+def decoy_response():
+    """Возбуждает исключение для динамической маскировки"""
+    raise DecoyException()
+
 
 def check_auth(request: Request) -> bool:
     """Проверяет авторизацию: либо по Bearer Token, либо по Cookie сессии"""
@@ -147,41 +156,72 @@ def get_templates():
             templates = Jinja2Templates(directory=str(decoy_dir))
     return templates
 
-def render_static_decoy(request: Request) -> HTMLResponse:
-    tpls = get_templates()
-    if tpls:
+def render_static_decoy(request: Request, path: str = "") -> Response:
+    decoy_dir = BASE_DIR / "frontend" / "decoy"
+    if not decoy_dir.exists():
+        return decoy_response_html()
+        
+    path = path.strip("/")
+    if not path:
+        decoy_value = get_setting("decoy_value", "company_landing")
+        template_name = decoy_value if decoy_value.endswith(".html") else f"{decoy_value}.html"
+        file_path = decoy_dir / template_name
+        if not file_path.exists():
+            file_path = decoy_dir / "index.html"
+    else:
+        file_path = decoy_dir / path
+        
+    if file_path.exists() and file_path.is_dir():
+        file_path = file_path / "index.html"
+        
+    if not file_path.exists() and path:
+        html_file = decoy_dir / f"{path}.html"
+        if html_file.exists() and html_file.is_file():
+            file_path = html_file
+
+    # Защита от Path Traversal: файл должен находиться строго внутри decoy_dir
+    if file_path.exists():
         try:
-            server_host = request.headers.get("host", "localhost")
-            # Генерация стабильной псевдо-статистики
-            h = sum(ord(c) for c in server_host)
-            served_count = 120 + (h % 380)
-            
-            domain = server_host.split(":")[0]
-            contact_email = f"info@{domain}" if "." in domain else "info@nimbus.solutions"
-            current_year = datetime.datetime.now().year
-            
-            return tpls.TemplateResponse(
-                request,
-                "company_landing.html",
-                {
-                    "contact_email": contact_email,
-                    "served_count": served_count,
-                    "current_year": current_year,
-                    "server_host": server_host
-                }
-            )
-        except Exception as e:
-            logging.error(f"Static decoy rendering error: {e}")
-            
-    # Резервный HTML 404
-    html_content = """<html>
-<head><title>404 Not Found</title></head>
-<body>
-<center><h1>404 Not Found</h1></center>
-<hr><center>nginx</center>
-</body>
-</html>"""
-    return HTMLResponse(content=html_content, status_code=404)
+            file_path.resolve().relative_to(decoy_dir.resolve())
+        except (ValueError, RuntimeError):
+            return decoy_response_html()
+
+    if file_path.exists() and file_path.is_file():
+        # Поддержка динамических полей Jinja2 для стандартной заглушки и index.html
+        if file_path.name in ("company_landing.html", "index.html"):
+            tpls = get_templates()
+            if tpls:
+                try:
+                    server_host = request.headers.get("host", "localhost")
+                    h = sum(ord(c) for c in server_host)
+                    served_count = 120 + (h % 380)
+                    domain = server_host.split(":")[0]
+                    contact_email = f"info@{domain}" if "." in domain else "info@nimbus.solutions"
+                    current_year = datetime.datetime.now().year
+                    
+                    # Проверяем, действительно ли файл лежит непосредственно в decoy_dir
+                    # во избежание Path Traversal при передаче имени в TemplateResponse
+                    rel_name = file_path.relative_to(decoy_dir)
+                    return tpls.TemplateResponse(
+                        request,
+                        str(rel_name).replace("\\", "/"),
+                        {
+                            "contact_email": contact_email,
+                            "served_count": served_count,
+                            "current_year": current_year,
+                            "server_host": server_host
+                        }
+                    )
+                except Exception as e:
+                    logging.error(f"Error rendering static decoy template: {e}")
+                    
+        return FileResponse(str(file_path))
+        
+    custom_404 = decoy_dir / "404.html"
+    if custom_404.exists() and custom_404.is_file():
+        return FileResponse(str(custom_404), status_code=404)
+        
+    return decoy_response_html()
 
 async def proxy_decoy_request(request: Request, path: str) -> Response:
     decoy_value = get_setting("decoy_value", "company_landing")
@@ -217,7 +257,7 @@ async def proxy_decoy_request(request: Request, path: str) -> Response:
             )
     except Exception as e:
         logging.error(f"Proxy decoy error for path '{path}': {e}")
-        return render_static_decoy(request)
+        return render_static_decoy(request, path)
 
 async def handle_decoy_route(request: Request, path: str = "") -> Response:
     """Определяет тип маскировки и отдает соответствующий ответ"""
@@ -229,9 +269,9 @@ async def handle_decoy_route(request: Request, path: str = "") -> Response:
         decoy_value = get_setting("decoy_value", "company_landing")
         if decoy_value.startswith("http"):
             return RedirectResponse(url=decoy_value, status_code=302)
-        return render_static_decoy(request)
+        return render_static_decoy(request, path)
     elif decoy_type == "static":
-        return render_static_decoy(request)
+        return render_static_decoy(request, path)
     else:
-        return decoy_response()
+        return decoy_response_html()
 
