@@ -202,17 +202,10 @@ def init_db():
         if session.query(RoutingRule).count() == 0:
             # Читаем старые настройки для миграции
             block_torrent_val = session.query(SystemSetting).filter_by(key="block_torrent").first()
-            block_ads_val = session.query(SystemSetting).filter_by(key="block_advertisers").first()
-            route_warp_val = session.query(SystemSetting).filter_by(key="route_chatgpt_warp").first()
-            
             bt_enable = 1 if (block_torrent_val and block_torrent_val.value == "true") else 0
-            ba_enable = 1 if (block_ads_val and block_ads_val.value == "true") else 0
-            rw_enable = 1 if (route_warp_val and route_warp_val.value == "true") else 0
             
             session.add(RoutingRule(remark="API Traffic", outbound_tag="api", inbound_tags='["api"]', enable=1, sort_order=1))
             session.add(RoutingRule(remark="Block BitTorrent", outbound_tag="blocked", protocols='["bittorrent"]', enable=bt_enable, sort_order=2))
-            session.add(RoutingRule(remark="Block Ads (AdBlock)", outbound_tag="blocked", domains='["geosite:category-ads-all"]', enable=ba_enable, sort_order=3))
-            session.add(RoutingRule(remark="Route ChatGPT via WARP", outbound_tag="warp", domains='["domain:openai.com", "domain:chatgpt.com", "domain:oaistatic.com", "domain:oaiusercontent.com"]', enable=rw_enable, sort_order=4))
             logging.info("Default routing rules seeded and migrated.")
 
         # 5. Семена входящих подключений (Inbounds) по умолчанию
@@ -298,3 +291,13 @@ def init_db():
             session.commit()
     except Exception as e:
         logging.error(f"[Auto-Trim] Failed to run client email auto-trim: {e}")
+
+    # 8. Auto-migration: remove "Block Ads (AdBlock)" and "Route ChatGPT via WARP" default routing rules if present
+    try:
+        with db_session() as session:
+            deleted_count = session.query(RoutingRule).filter(RoutingRule.remark.in_(["Block Ads (AdBlock)", "Route ChatGPT via WARP"])).delete(synchronize_session=False)
+            if deleted_count > 0:
+                session.commit()
+                logging.info(f"[Auto-Migration] Successfully removed {deleted_count} deprecated default routing rules.")
+    except Exception as e:
+        logging.error(f"[Auto-Migration] Failed to remove deprecated default routing rules: {e}")
