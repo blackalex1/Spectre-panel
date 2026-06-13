@@ -13,6 +13,7 @@ router = APIRouter()
 class JoinCodeResponse(BaseModel):
     code: str
     expires_at: int
+    master_url: Optional[str] = None
 
 class NodeOut(BaseModel):
     id: str
@@ -31,6 +32,17 @@ async def generate_join_code(request: Request):
     created_at = int(time.time())
     expires_at = created_at + 3600  # Valid for 1 hour
     
+    from backend.database import get_setting
+    ssl_domain = get_setting("ssl_domain", "").strip()
+    master_url = None
+    if ssl_domain:
+        port = settings.PANEL_PORT
+        secret = settings.PANEL_SECRET_PATH
+        if port == 443:
+            master_url = f"https://{ssl_domain}/{secret}"
+        else:
+            master_url = f"https://{ssl_domain}:{port}/{secret}"
+            
     try:
         with db_session() as session:
             join_code_entry = NodeJoinCode(
@@ -39,7 +51,7 @@ async def generate_join_code(request: Request):
                 created_at=created_at
             )
             session.add(join_code_entry)
-        return JoinCodeResponse(code=code, expires_at=expires_at)
+        return JoinCodeResponse(code=code, expires_at=expires_at, master_url=master_url)
     except Exception as e:
         logging.error(f"[Nodes API] Failed to generate join code: {e}")
         raise HTTPException(status_code=500, detail="Internal server error")
