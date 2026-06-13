@@ -102,6 +102,38 @@ def start_hysteria():
     inbounds = get_all_inbounds()
     hysteria_inbounds = [ib for ib in inbounds if ib["protocol"] == "hysteria2" and ib["enable"]]
     
+    # Автоматическая очистка файлов конфигураций и сертификатов для удаленных инбаундов Hysteria 2
+    import os
+    from backend.config import CONFIG_DIR
+    all_hysteria_ids = {ib["id"] for ib in inbounds if ib["protocol"] == "hysteria2"}
+    
+    # Очищаем файлы в CONFIG_DIR (.crt, .key, .sni)
+    if CONFIG_DIR.exists():
+        for filename in os.listdir(CONFIG_DIR):
+            if filename.startswith("hysteria_"):
+                try:
+                    parts = filename.split("_", 1)[1].split(".", 1)
+                    ib_id = int(parts[0])
+                    if ib_id not in all_hysteria_ids:
+                        file_path = CONFIG_DIR / filename
+                        os.remove(file_path)
+                        logging.info(f"Cleaned up deleted Hysteria inbound file: {file_path}")
+                except (ValueError, IndexError, Exception):
+                    pass
+                    
+    # Очищаем файлы в BIN_DIR (.json конфигурация)
+    if backend.hysteria.BIN_DIR.exists():
+        for filename in os.listdir(backend.hysteria.BIN_DIR):
+            if filename.startswith("hysteria_") and filename.endswith(".json"):
+                try:
+                    ib_id = int(filename.split("_", 1)[1].split(".", 1)[0])
+                    if ib_id not in all_hysteria_ids:
+                        file_path = backend.hysteria.BIN_DIR / filename
+                        os.remove(file_path)
+                        logging.info(f"Cleaned up deleted Hysteria config file: {file_path}")
+                except (ValueError, IndexError, Exception):
+                    pass
+    
     if not hysteria_inbounds:
         logging.info("No active Hysteria 2 inbounds found.")
         return True
