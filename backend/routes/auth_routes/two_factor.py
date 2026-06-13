@@ -214,6 +214,11 @@ async def tg_2fa_action(payload: Tg2faActionBody):
             
             client_ip = data.get("client_ip")
             if client_ip and client_ip != "unknown":
+                from backend.routes.auth_routes.login import is_ip_whitelisted_sync
+                if is_ip_whitelisted_sync(client_ip) or client_ip in ("127.0.0.1", "::1", "localhost"):
+                    session.commit()
+                    return {"success": True, "msg": "IP в белом списке, блокировка пропущена"}
+                    
                 banned_ips = get_setting("banned_login_ips", "")
                 banned_list = [ip.strip() for ip in banned_ips.split(",") if ip.strip()]
                 if client_ip not in banned_list:
