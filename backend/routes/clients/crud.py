@@ -38,7 +38,11 @@ async def add_client_api(request: Request, payload: Optional[ClientSettings] = N
             
         client = clients[0] # Контроллер шлет по одному клиенту
         email = client.get("email")
+        if email:
+            email = email.strip()
         c_id = client.get("id") or client.get("password") # UUID для vmess/vless, пароль для trojan/ss
+        if c_id:
+            c_id = c_id.strip()
         total_gb = client.get("totalGB", 0)
         expiry_time = client.get("expiryTime", 0)
         limit_ip = client.get("limitIp", 0)
@@ -90,6 +94,7 @@ async def add_client_api(request: Request, payload: Optional[ClientSettings] = N
 
 @router.post("/panel/api/inbounds/updateClient/{client_id}")
 async def update_client_api(request: Request, client_id: str, payload: Optional[ClientSettings] = None, id: Optional[int] = Form(None), settings: Optional[str] = Form(None)):
+    client_id = client_id.strip()
     if not backend.routes.clients.check_auth(request):
         return backend.routes.clients.decoy_response()
         
@@ -107,6 +112,8 @@ async def update_client_api(request: Request, client_id: str, payload: Optional[
             
         client = clients[0]
         email = client.get("email")
+        if email:
+            email = email.strip()
         total_gb = client.get("totalGB", 0)
         expiry_time = client.get("expiryTime", 0)
         limit_ip = client.get("limitIp", 0)
@@ -178,6 +185,7 @@ async def update_client_api(request: Request, client_id: str, payload: Optional[
 
 @router.post("/panel/api/inbounds/{inbound_id}/delClient/{client_id}")
 async def delete_client_api(request: Request, inbound_id: int, client_id: str):
+    client_id = client_id.strip()
     if not backend.routes.clients.check_auth(request):
         return backend.routes.clients.decoy_response()
         
@@ -185,7 +193,7 @@ async def delete_client_api(request: Request, inbound_id: int, client_id: str):
     if not client:
         return {"success": False, "msg": "Клиент не найден"}
         
-    email = client["email"]
+    email = client["email"].strip()
     
     # Удаляем из client_stats
     success = delete_client_db(inbound_id, email)
@@ -214,6 +222,7 @@ async def delete_client_api(request: Request, inbound_id: int, client_id: str):
 
 @router.get("/panel/api/inbounds/getClientLinks/{inbound_id}/{email}")
 async def get_client_links_api(request: Request, inbound_id: int, email: str):
+    email = email.strip()
     if not backend.routes.clients.check_auth(request):
         return backend.routes.clients.decoy_response()
         

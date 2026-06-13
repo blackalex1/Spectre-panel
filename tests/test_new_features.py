@@ -389,4 +389,56 @@ def test_new_ip_security_alerts():
     assert len(history) == 1
 
 
+def test_auto_trim_emails():
+    """Test that startup database trim migration automatically strips client emails."""
+    from backend.database.seeding import init_db
+    from backend.models import Inbound, ClientStats
+    import json
+    
+    with db_session() as session:
+        # Create an inbound with a trailing space in settings JSON
+        ib = Inbound(
+            remark="Trim test inbound",
+            port=31999,
+            protocol="vless",
+            settings=json.dumps({"clients": [{"email": "bad_email ", "id": "uuid-1234"}]}),
+            stream_settings="{}",
+            sniffing="{}",
+            enable=1
+        )
+        session.add(ib)
+        session.flush()
+        
+        # Create a client stat with leading space
+        cl = ClientStats(
+            inbound_id=ib.id,
+            email=" bad_email",
+            client_uuid_or_pwd="uuid-1234",
+            enable=1
+        )
+        session.add(cl)
+        session.commit()
+        
+        ib_id = ib.id
+        cl_id = cl.id
+        
+    # Run init_db to invoke auto-trim migration
+    init_db()
+    
+    # Query again from the DB in a fresh session to verify
+    with db_session() as session2:
+        db_ib = session2.query(Inbound).filter_by(id=ib_id).first()
+        db_cl = session2.query(ClientStats).filter_by(id=cl_id).first()
+        
+        # Verify
+        assert db_cl.email == "bad_email"
+        settings_dict = json.loads(db_ib.settings)
+        assert settings_dict["clients"][0]["email"] == "bad_email"
+        
+        # Clean up
+        session2.delete(db_cl)
+        session2.delete(db_ib)
+        session2.commit()
+
+
 
