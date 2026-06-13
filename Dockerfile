@@ -51,6 +51,7 @@ COPY backend/ /app/backend/
 COPY frontend/ /app/frontend/
 COPY bot/ /app/bot/
 COPY locales/ /app/locales/
+COPY register_node.py /app/
 
 # Set volume mount points
 VOLUME [ "/app/config", "/app/bin" ]
