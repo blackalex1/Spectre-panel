@@ -264,3 +264,37 @@ def init_db():
         logging.info(f"Loaded {len(active_db_sessions)} active sessions from database.")
     except Exception as e:
         logging.error(f"Failed to load active sessions from database: {e}")
+
+    # 7. Auto-migration: trim leading/trailing whitespace from client emails in database and inbounds settings JSON
+    try:
+        with db_session() as session:
+            # First, check and update client_stats
+            clients_to_fix = session.query(ClientStats).all()
+            for c in clients_to_fix:
+                if c.email and (c.email.startswith(" ") or c.email.endswith(" ")):
+                    old_email = c.email
+                    c.email = c.email.strip()
+                    logging.info(f"[Auto-Trim] Trimmed whitespace from client_stats email: '{old_email}' -> '{c.email}'")
+            
+            # Second, check and update inbounds settings JSON
+            inbounds_to_fix = session.query(Inbound).all()
+            for ib in inbounds_to_fix:
+                if ib.settings:
+                    try:
+                        settings_dict = json.loads(ib.settings)
+                        clients_list = settings_dict.get("clients", [])
+                        changed = False
+                        for c_settings in clients_list:
+                            email_settings = c_settings.get("email")
+                            if email_settings and (email_settings.startswith(" ") or email_settings.endswith(" ")):
+                                old_val = email_settings
+                                c_settings["email"] = email_settings.strip()
+                                changed = True
+                                logging.info(f"[Auto-Trim] Trimmed whitespace from inbound {ib.id} settings client email: '{old_val}' -> '{c_settings['email']}'")
+                        if changed:
+                            ib.settings = json.dumps(settings_dict)
+                    except Exception as ex:
+                        logging.error(f"[Auto-Trim] Failed to parse/trim inbound {ib.id} settings JSON: {ex}")
+            session.commit()
+    except Exception as e:
+        logging.error(f"[Auto-Trim] Failed to run client email auto-trim: {e}")
