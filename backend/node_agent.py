@@ -46,6 +46,13 @@ async def register_with_master(master_url: str, join_code: str) -> bool:
     Registers this node with the Master Server using a temporary Join Code.
     Generates keys locally and uploads the Public Key.
     """
+    from urllib.parse import urlparse, urlunparse
+    try:
+        parsed = urlparse(master_url)
+        master_url = urlunparse((parsed.scheme, parsed.netloc, "", "", "", ""))
+    except Exception as parse_err:
+        logging.warning(f"[Node Agent] Failed to parse master URL: {parse_err}")
+
     logging.info(f"[Node Agent] Registering with Master at {master_url}...")
     
     # Generate keys
