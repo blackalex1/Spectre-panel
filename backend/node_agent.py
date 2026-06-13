@@ -59,7 +59,7 @@ async def register_with_master(master_url: str, join_code: str) -> bool:
     register_endpoint = f"{master_url.rstrip('/')}/api/nodes/register"
     
     try:
-        async with httpx.AsyncClient(timeout=15.0) as client:
+        async with httpx.AsyncClient(timeout=15.0, verify=False) as client:
             response = await client.post(register_endpoint, json=payload)
             if response.status_code != 200:
                 logging.error(f"[Node Agent] Registration failed with status {response.status_code}")
@@ -129,7 +129,7 @@ async def send_report_to_master(action: str, client_email: str,
     }
     
     try:
-        async with httpx.AsyncClient(timeout=10.0) as client:
+        async with httpx.AsyncClient(timeout=10.0, verify=False) as client:
             response = await client.post(report_endpoint, json=payload, headers=headers)
             if response.status_code == 200:
                 logging.info(f"[Node Agent] Report sent successfully for incident {incident_id}")
