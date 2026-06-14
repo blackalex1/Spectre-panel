@@ -1,22 +1,4 @@
 <section id="tab-dashboard" class="tab-content active">
-    <!-- Сетка карточек метрик -->
-    <div class="metrics-grid" style="grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));">
-        <div class="glass-card metric-card">
-            <div class="card-icon green"><i class="fa-solid fa-arrow-up"></i></div>
-            <div class="metric-data">
-                <h3 data-i18n="dashboard_net_up">Исходящий трафик</h3>
-                <p class="metric-value" id="net-up-value">0 GB</p>
-            </div>
-        </div>
-        <div class="glass-card metric-card">
-            <div class="card-icon orange"><i class="fa-solid fa-arrow-down"></i></div>
-            <div class="metric-data">
-                <h3 data-i18n="dashboard_net_down">Входящий трафик</h3>
-                <p class="metric-value" id="net-down-value">0 GB</p>
-            </div>
-        </div>
-    </div>
-
     <!-- Блок графиков и логов системы -->
     <div class="charts-container">
         <div class="glass-card chart-card">
@@ -52,6 +34,14 @@
                 <div class="info-item">
                     <span class="label" data-i18n="dashboard_uptime">Аптайм сервера</span>
                     <span class="value" id="sys-uptime">0ч 0м</span>
+                </div>
+                <div class="info-item">
+                    <span class="label" data-i18n="dashboard_net_up">Исходящий трафик</span>
+                    <span class="value" id="net-up-value">0 GB</span>
+                </div>
+                <div class="info-item">
+                    <span class="label" data-i18n="dashboard_net_down">Входящий трафик</span>
+                    <span class="value" id="net-down-value">0 GB</span>
                 </div>
                 <div class="info-item">
                     <span class="label" data-i18n="dashboard_xray_state">Статус Xray</span>
