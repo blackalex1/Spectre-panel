@@ -7,7 +7,7 @@ config/.env
 *.pub
 secret/
 secrets/
-backups/
+/backups/
 
 # === IDEs and Editors ===
 .idea/
