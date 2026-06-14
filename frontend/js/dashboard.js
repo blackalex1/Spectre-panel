@@ -204,7 +204,7 @@ export async function loadGlobalTrafficChart() {
     
     if (window.Chart) {
         globalTrafficChartInstance = new window.Chart(ctx, {
-            type: 'line',
+            type: 'bar',
             data: {
                 labels: labels,
                 datasets: [
@@ -215,20 +215,16 @@ export async function loadGlobalTrafficChart() {
                         backgroundColor: (context) => {
                             const chart = context.chart;
                             const {ctx, chartArea} = chart;
-                            if (!chartArea) return null;
+                            if (!chartArea) return 'rgba(16, 185, 129, 0.2)';
                             const gradient = ctx.createLinearGradient(0, chartArea.top, 0, chartArea.bottom);
                             gradient.addColorStop(0, 'rgba(16, 185, 129, 0.3)');
-                            gradient.addColorStop(1, 'rgba(16, 185, 129, 0.0)');
+                            gradient.addColorStop(1, 'rgba(16, 185, 129, 0.02)');
                             return gradient;
                         },
-                        tension: 0.4,
-                        borderWidth: 3,
-                        fill: true,
-                        pointRadius: 0,
-                        pointHoverRadius: 6,
-                        pointBackgroundColor: '#10b981',
-                        pointBorderColor: '#ffffff',
-                        pointBorderWidth: 2,
+                        borderWidth: 1.5,
+                        borderRadius: 4,
+                        barPercentage: 0.75,
+                        categoryPercentage: 0.75
                     },
                     {
                         label: `${t("traffic_download", "Скачивание")} (GB)`,
@@ -237,20 +233,16 @@ export async function loadGlobalTrafficChart() {
                         backgroundColor: (context) => {
                             const chart = context.chart;
                             const {ctx, chartArea} = chart;
-                            if (!chartArea) return null;
+                            if (!chartArea) return 'rgba(244, 63, 94, 0.2)';
                             const gradient = ctx.createLinearGradient(0, chartArea.top, 0, chartArea.bottom);
                             gradient.addColorStop(0, 'rgba(244, 63, 94, 0.3)');
-                            gradient.addColorStop(1, 'rgba(244, 63, 94, 0.0)');
+                            gradient.addColorStop(1, 'rgba(244, 63, 94, 0.02)');
                             return gradient;
                         },
-                        tension: 0.4,
-                        borderWidth: 3,
-                        fill: true,
-                        pointRadius: 0,
-                        pointHoverRadius: 6,
-                        pointBackgroundColor: '#f43f5e',
-                        pointBorderColor: '#ffffff',
-                        pointBorderWidth: 2,
+                        borderWidth: 1.5,
+                        borderRadius: 4,
+                        barPercentage: 0.75,
+                        categoryPercentage: 0.75
                     }
                 ]
             },
@@ -278,11 +270,11 @@ export async function loadGlobalTrafficChart() {
                 scales: {
                     x: {
                         grid: {
-                            color: 'rgba(255, 255, 255, 0.03)'
+                            display: false
                         },
                         ticks: {
                             color: 'rgba(255, 255, 255, 0.5)',
-                            font: { family: 'Outfit', size: 11 }
+                            font: { family: 'Outfit', size: 10 }
                         }
                     },
                     y: {
@@ -293,7 +285,7 @@ export async function loadGlobalTrafficChart() {
                         },
                         ticks: {
                             color: 'rgba(255, 255, 255, 0.5)',
-                            font: { family: 'Outfit', size: 11 }
+                            font: { family: 'Outfit', size: 10 }
                         }
                     }
                 }
