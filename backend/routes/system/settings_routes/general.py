@@ -46,6 +46,7 @@ async def get_settings_api(request: Request):
         "backup_rotation": int(get_setting("backup_rotation", "7")),
         "backup_telegram": get_setting("backup_telegram", "false") == "true",
         "backup_encrypt": get_setting("backup_encrypt", "false") == "true",
+        "backup_password_set": bool(get_setting("backup_password", "")),
         "block_bittorrent": get_setting("block_bittorrent", "false") == "true",
         "block_ads": get_setting("block_ads", "false") == "true",
         "block_cn": get_setting("block_cn", "false") == "true",
@@ -194,7 +195,17 @@ async def update_settings_api(request: Request):
         if "backup_telegram" in data:
             set_setting("backup_telegram", "true" if data.get("backup_telegram") in (True, "true") else "false")
         if "backup_encrypt" in data:
-            set_setting("backup_encrypt", "true" if data.get("backup_encrypt") in (True, "true") else "false")
+            new_encrypt = "true" if data.get("backup_encrypt") in (True, "true") else "false"
+            old_encrypt = get_setting("backup_encrypt", "false")
+            if old_encrypt == "true" and new_encrypt == "false":
+                stored_password = get_setting("backup_password", "")
+                if stored_password:
+                    verify_password = data.get("verify_password", "").strip()
+                    lang = get_setting("language", "ru")
+                    from backend.i18n import t
+                    if not verify_password or verify_password != stored_password:
+                        return {"success": False, "msg": t("backup_current_password_incorrect", lang)}
+            set_setting("backup_encrypt", new_encrypt)
  
         # 6. Quick Block Rules
         quick_block_changed = False

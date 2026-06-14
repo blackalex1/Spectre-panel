@@ -131,6 +131,10 @@ export async function loadSettings() {
         if (backupEnableInput) {
             backupEnableInput.checked = setObj.backup_enable !== undefined ? setObj.backup_enable : false;
         }
+        const backupRotationGroup = document.getElementById("setting-backup-rotation-group");
+        if (backupRotationGroup) {
+            backupRotationGroup.style.display = setObj.backup_enable ? "" : "none";
+        }
         const backupTelegramInput = document.getElementById("setting-backup-telegram");
         if (backupTelegramInput) {
             backupTelegramInput.checked = setObj.backup_telegram !== undefined ? setObj.backup_telegram : false;
@@ -147,6 +151,7 @@ export async function loadSettings() {
         const backupEncryptInput = document.getElementById("setting-backup-encrypt");
         if (backupEncryptInput) {
             backupEncryptInput.checked = setObj.backup_encrypt !== undefined ? setObj.backup_encrypt : false;
+            backupEncryptInput.dataset.initial = backupEncryptInput.checked;
         }
         const currPwd = document.getElementById("setting-backup-current-password");
         if (currPwd) currPwd.value = "";
@@ -158,6 +163,7 @@ export async function loadSettings() {
         if (backupPasswordGroup) {
             backupPasswordGroup.style.display = setObj.backup_encrypt ? "block" : "none";
         }
+        window.backupPasswordSet = setObj.backup_password_set || false;
         
         updateDecoyUI(decoyType);
         await loadWarpStatus();
