@@ -25,7 +25,7 @@ export async function loadXrayConfig() {
     if (config.log) {
         html += `<div style="margin-bottom: 25px;">
             <h4 style="margin-top: 0; margin-bottom: 12px; font-size: 15px; font-weight: 600; color: var(--accent-orange); display: flex; align-items: center; gap: 8px; width: 100%;">
-                <i class="fa-solid fa-file-invoice"></i> <span data-i18n="config_log_title">Системные настройки и логирование</span>
+                <i class="fa-solid fa-file-invoice"></i> <span data-i18n="config_log_title">System Settings & Logging</span>
                 <button class="btn secondary-btn edit-json-btn" data-type="xray-log" style="margin-left: auto; padding: 4px 8px; font-size: 11px; display: inline-flex; align-items: center; gap: 4px; height: auto;"><i class="fa-regular fa-pen-to-square"></i> JSON</button>
             </h4>
             <div class="glass-card" style="padding: 15px; border-radius: 10px; background: rgba(255,255,255,0.015);">
@@ -95,7 +95,7 @@ export async function loadXrayConfig() {
                 });
                 clientsRows += `</tbody></table></div>`;
             } else if (ib.protocol === "dokodemo-door") {
-                clientsRows = `<div style="font-size: 12px; color: var(--text-muted); margin-top: 8px; font-style: italic;" data-i18n="config_grpc_api">gRPC API управления</div>`;
+                clientsRows = `<div style="font-size: 12px; color: var(--text-muted); margin-top: 8px; font-style: italic;" data-i18n="config_grpc_api">Management gRPC API</div>`;
             } else if (ib.settings && ib.settings.accounts) {
                 // Socks accounts
                 const users = ib.settings.accounts.map(a => a.user || "unknown");
@@ -103,7 +103,7 @@ export async function loadXrayConfig() {
                      Socks5 Auth: ` + users.map(u => `<span class="badge active" style="margin: 2px; display: inline-block;">${u}</span>`).join(" ") + 
                 `</div>`;
             } else {
-                clientsRows = `<div style="font-size: 12px; color: var(--text-muted); margin-top: 8px; font-style: italic;" data-i18n="config_no_clients">Нет настроенных клиентов</div>`;
+                clientsRows = `<div style="font-size: 12px; color: var(--text-muted); margin-top: 8px; font-style: italic;" data-i18n="config_no_clients">No clients</div>`;
             }
             
             // Shadowsocks options

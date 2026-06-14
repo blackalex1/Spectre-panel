@@ -88,10 +88,10 @@ export function setupGeoListeners() {
             });
 
             if (res && res.success) {
-                showToast(t("geo_reset", "URL сброшены к дефолтным (Loyalsoldier)"));
+                showToast(t("geo_reset", "URLs reset to default (Loyalsoldier)"));
                 await loadGeoInfo();
             } else {
-                showToast(res ? res.msg : t("geo_err_reset", "Ошибка сброса URL"), "error");
+                showToast(res ? res.msg : t("geo_err_reset", "Failed to reset URLs"), "error");
             }
         });
     }
@@ -104,10 +104,10 @@ export function setupGeoListeners() {
         updateBtn.addEventListener("click", async () => {
             updateBtn.disabled = true;
             const origHtml = updateBtn.innerHTML;
-            updateBtn.innerHTML = `<i class="fa-solid fa-spinner fa-spin" style="margin-right:6px;"></i><span>${t("geo_updating", "Скачивание...")}</span>`;
+            updateBtn.innerHTML = `<i class="fa-solid fa-spinner fa-spin" style="margin-right:6px;"></i><span>${t("geo_updating", "Downloading...")}</span>`;
 
             if (statusSpan) {
-                statusSpan.textContent = t("geo_updating_status", "⏳ Скачивание файлов...");
+                statusSpan.textContent = t("geo_updating_status", "⏳ Downloading files...");
                 statusSpan.style.display = "inline";
                 statusSpan.style.color = "var(--text-secondary)";
             }
@@ -139,7 +139,7 @@ export function setupGeoListeners() {
                 }
             } else {
                 if (statusSpan) {
-                    statusSpan.textContent = `✗ ${(res && res.msg) || t("geo_err_generic", "Ошибка")}`;
+                    statusSpan.textContent = `✗ ${(res && res.msg) || t("geo_err_generic", "Error")}`;
                     statusSpan.style.color = "var(--accent-rose, #ff4757)";
                     statusSpan.style.display = "inline";
                 }
@@ -161,15 +161,15 @@ function _applyGeoInfoToUI(info) {
         if (!badge || !meta) continue;
         const f = info[key];
         if (f && f.exists) {
-            badge.textContent = t("geo_installed", "✓ Установлен");
+            badge.textContent = t("geo_installed", "✓ Installed");
             badge.className = "tag-badge tag-badge-direct";
-            meta.textContent = t("geo_meta_info", "{size} КБ · Обновлён: {date}")
+            meta.textContent = t("geo_meta_info", "{size} KB · Updated: {date}")
                 .replace("{size}", f.size_kb)
                 .replace("{date}", f.updated_at);
         } else {
-            badge.textContent = t("geo_missing", "✗ Отсутствует");
+            badge.textContent = t("geo_missing", "✗ Missing");
             badge.className = "tag-badge tag-badge-blocked";
-            meta.textContent = t("geo_not_found", "Файл не найден в папке bin/");
+            meta.textContent = t("geo_not_found", "File not found in bin/ directory");
         }
     }
 }
