@@ -473,7 +473,9 @@ def test_change_backup_password_api(client, monkeypatch):
     monkeypatch.setattr(backend.routes.system, "check_auth", lambda r: True)
     
     orig_pwd = get_setting("backup_password", "")
+    orig_encrypt = get_setting("backup_encrypt", "false")
     set_setting("backup_password", "initial-backup-pwd")
+    set_setting("backup_encrypt", "true")
     
     try:
         headers = {"Authorization": "Bearer test_bearer_token"}
@@ -512,5 +514,6 @@ def test_change_backup_password_api(client, monkeypatch):
         assert get_setting("backup_password") == "new-backup-pwd"
     finally:
         set_setting("backup_password", orig_pwd)
+        set_setting("backup_encrypt", orig_encrypt)
 
 

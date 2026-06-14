@@ -108,11 +108,14 @@ async def change_backup_password_api(request: Request):
             return {"success": False, "msg": t("backup_password_fields_required", lang)}
             
         stored_password = get_setting("backup_password", "")
+        # Only verify current password if backup encryption is currently active/enabled
+        encrypt_enabled = get_setting("backup_encrypt", "false") == "true"
         if stored_password:
-            if not current_password:
+            if current_password:
+                if current_password != stored_password:
+                    return {"success": False, "msg": t("backup_current_password_incorrect", lang)}
+            elif encrypt_enabled:
                 return {"success": False, "msg": t("backup_password_fields_required", lang)}
-            if current_password != stored_password:
-                return {"success": False, "msg": t("backup_current_password_incorrect", lang)}
             
         set_setting("backup_password", new_password)
         
