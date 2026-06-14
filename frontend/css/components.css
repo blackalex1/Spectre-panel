@@ -295,6 +295,14 @@
     background-color: rgba(255, 255, 255, 0.02) !important;
 }
 
+/* Ячейка с email/именем пользователя во избежание переполнения таблицы */
+.client-email-cell {
+    max-width: 200px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
 /* Статус пользователя */
 .badge {
     display: inline-block;

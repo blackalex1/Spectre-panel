@@ -512,7 +512,7 @@ function filterAndRenderClients() {
 
         const tr = document.createElement("tr");
         tr.innerHTML = `
-            <td><strong>${c.email}</strong></td>
+            <td class="client-email-cell" title="${c.email}"><strong>${c.email}</strong></td>
             <td>${statusHtml}</td>
             <td>
                 <a href="#" class="inbound-link" id="db-link-inbound-${c.inboundId}-${emailSafe}">
