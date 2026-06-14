@@ -395,7 +395,10 @@
                             
                             <div class="input-group" style="margin-bottom: 12px;">
                                 <label for="setting-backup-new-password" data-i18n="settings_backup_new_password">Новый пароль шифрования</label>
-                                <input type="password" id="setting-backup-new-password" placeholder="Введите новый пароль...">
+                                <div class="copy-input-group">
+                                    <input type="text" id="setting-backup-new-password" placeholder="Введите новый пароль...">
+                                    <button type="button" id="btn-change-backup-gen" class="btn secondary-btn" title="Сгенерировать"><i class="fa-solid fa-wand-magic-sparkles"></i></button>
+                                </div>
                             </div>
                             
                             <div class="input-group" style="margin-bottom: 15px;">

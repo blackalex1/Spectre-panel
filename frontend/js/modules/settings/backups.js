@@ -233,7 +233,9 @@ export function setupBackupsListeners() {
 
         if (btnGen && inputPwd) {
             btnGen.addEventListener("click", () => {
-                inputPwd.value = generateRandomPassword(16);
+                const generated = generateRandomPassword(16);
+                inputPwd.value = generated;
+                if (inputConfirm) inputConfirm.value = generated;
             });
         }
 
@@ -347,6 +349,18 @@ export function setupBackupsListeners() {
             } finally {
                 btnChangeBackupPassword.disabled = false;
             }
+        });
+    }
+
+    // Auto-generator button in Change Password section
+    const btnChangeGen = document.getElementById("btn-change-backup-gen");
+    const newPwdInput = document.getElementById("setting-backup-new-password");
+    const confirmPwdInput = document.getElementById("setting-backup-confirm-password");
+    if (btnChangeGen && newPwdInput) {
+        btnChangeGen.addEventListener("click", () => {
+            const generated = generateRandomPassword(16);
+            newPwdInput.value = generated;
+            if (confirmPwdInput) confirmPwdInput.value = generated;
         });
     }
 }
