@@ -652,7 +652,12 @@
     "backup_current_password_incorrect": "Incorrect current password for backup encryption",
     "backup_password_changed_success": "Backup encryption password successfully changed!",
     "backup_password_change_error": "Error changing password: {error}",
-    "backup_scheduler_telegram_caption": "📁 <b>[Automated Backup]</b>\nAn automated database backup has been created.\nFile: <code>{filename}</code>"
+    "backup_scheduler_telegram_caption": "📁 <b>[Automated Backup]</b>\nAn automated database backup has been created.\nFile: <code>{filename}</code>",
+    "dashboard_clients_title": "Client List",
+    "dashboard_clients_search_placeholder": "Search by email or connection...",
+    "dashboard_clients_th_inbound": "Connection",
+    "dashboard_clients_only_online": "Only Online",
+    "dashboard_clients_only_blocked": "Only Blocked"
   },
   "bot": {
     "access_denied": "⛔️ <b>Access Denied.</b> Your Telegram ID is not in the whitelist.",

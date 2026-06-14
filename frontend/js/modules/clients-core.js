@@ -158,11 +158,17 @@ export async function toggleClientActiveStatus(inboundId, clientData, enabled) {
     
     if (res && res.success) {
         showToast(enabled ? t("client_unblocked_toast", "Клиент успешно разблокирован!") : t("client_blocked_toast", "Клиент успешно заблокирован!"));
-        openClientsModal(inboundId);
+        const clientsModal = document.getElementById("clients-modal");
+        if (clientsModal && clientsModal.classList.contains("active")) {
+            openClientsModal(inboundId);
+        }
         if (loadInboundsCallbackGlobal) loadInboundsCallbackGlobal();
     } else {
         showToast(res ? res.msg : t("client_status_error_toast", "Не удалось изменить статус клиента"), "error");
-        openClientsModal(inboundId); // Reload to reset switch
+        const clientsModal = document.getElementById("clients-modal");
+        if (clientsModal && clientsModal.classList.contains("active")) {
+            openClientsModal(inboundId); // Reload to reset switch
+        }
     }
 }
 
@@ -172,7 +178,10 @@ export async function deleteClient(inboundId, clientId, loadInboundsCallback) {
     const res = await apiFetch(`/panel/api/inbounds/${inboundId}/delClient/${clientId}`, { method: "POST" });
     if (res && res.success) {
         showToast(t("client_deleted_toast", "Клиент успешно удален"));
-        openClientsModal(inboundId);
+        const clientsModal = document.getElementById("clients-modal");
+        if (clientsModal && clientsModal.classList.contains("active")) {
+            openClientsModal(inboundId);
+        }
         if (loadInboundsCallback) loadInboundsCallback();
     }
 }

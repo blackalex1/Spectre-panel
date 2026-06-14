@@ -85,6 +85,52 @@
                     </div>
                 </div>
             </div>
+    </div>
+    
+    <!-- Блок списка клиентов -->
+    <div class="glass-card client-list-card" style="margin-top: 30px; padding: 24px;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; flex-wrap: wrap; gap: 15px;">
+            <h3 style="margin: 0; border-left: 3.5px solid var(--primary); padding-left: 12px; font-size: 18px; font-weight: 700; color: var(--text-primary);" data-i18n="dashboard_clients_title">Список клиентов</h3>
+            <div style="display: flex; gap: 15px; align-items: center; flex-wrap: wrap;">
+                <!-- Фильтры статуса -->
+                <div style="display: flex; gap: 15px; align-items: center;">
+                    <label class="checkbox-container" style="display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--text-secondary); cursor: pointer; user-select: none;">
+                        <input type="checkbox" id="dashboard-filter-online" style="cursor: pointer; width: 15px; height: 15px; accent-color: var(--primary);">
+                        <span data-i18n="dashboard_clients_only_online">Только онлайн</span>
+                    </label>
+                    <label class="checkbox-container" style="display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--text-secondary); cursor: pointer; user-select: none;">
+                        <input type="checkbox" id="dashboard-filter-blocked" style="cursor: pointer; width: 15px; height: 15px; accent-color: var(--primary);">
+                        <span data-i18n="dashboard_clients_only_blocked">Только заблокированные</span>
+                    </label>
+                </div>
+                
+                <!-- Поиск и Обновление -->
+                <div style="display: flex; gap: 10px; align-items: center;">
+                    <div style="position: relative;">
+                        <i class="fa-solid fa-magnifying-glass" style="position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: var(--text-muted); font-size: 13px;"></i>
+                        <input type="text" id="dashboard-clients-search" placeholder="Поиск по email или подключению..." data-i18n-placeholder="dashboard_clients_search_placeholder" style="padding: 8px 12px 8px 35px; font-size: 13px; width: 250px; height: 36px; border-radius: 8px;">
+                    </div>
+                    <button id="dashboard-clients-refresh" class="btn secondary-btn" style="padding: 8px 12px; height: 36px; border-radius: 8px; font-size: 13px; width: 36px;" title="Обновить"><i class="fa-solid fa-rotate"></i></button>
+                </div>
+            </div>
         </div>
-    </div></
+        <div class="table-container" style="max-height: 500px; overflow-y: auto;">
+            <table class="glass-table">
+                <thead>
+                    <tr>
+                        <th data-i18n="clients_th_email">Email</th>
+                        <th data-i18n="clients_th_status">Статус</th>
+                        <th data-i18n="dashboard_clients_th_inbound">Подключение</th>
+                        <th data-i18n="clients_th_used">Использовано</th>
+                        <th data-i18n="clients_th_limit">Лимит</th>
+                        <th data-i18n="clients_th_expiry">Срок действия</th>
+                        <th data-i18n="clients_th_actions">Действия</th>
+                    </tr>
+                </thead>
+                <tbody id="dashboard-clients-table-body">
+                    <!-- Заполняется динамически -->
+                </tbody>
+            </table>
+        </div>
+    </div>
 </section>
