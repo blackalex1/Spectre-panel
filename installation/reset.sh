@@ -6,6 +6,10 @@ if [ "$EUID" -ne 0 ]; then
   exit 1
 fi
 
+# Navigate to project root directory
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+cd "$SCRIPT_DIR"
+
 echo "===================================================="
 echo "⚠️  WARNING: COMPLETE RESET OF SPECTRE PANEL"
 echo "===================================================="

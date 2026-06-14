@@ -5,6 +5,10 @@ export LANG=C.UTF-8
 export LC_ALL=C.UTF-8
 export PYTHONIOENCODING=utf-8
 
+# Navigate to project root directory
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+cd "$SCRIPT_DIR"
+
 echo "[+] Проверка виртуального окружения..."
 if [ ! -d ".venv" ]; then
     echo "[!] Создание виртуального окружения..."
