@@ -332,15 +332,15 @@ export async function loadGlobalTrafficChart() {
                     legend: {
                         labels: {
                             color: 'rgba(255, 255, 255, 0.7)',
-                            font: { family: 'Outfit', size: 12, weight: 600 }
+                            font: { family: "'Outfit', 'Inter', 'Segoe UI', sans-serif", size: 12, weight: 600 }
                         }
                     },
                     tooltip: {
-                        backgroundColor: 'rgba(15, 23, 42, 0.9)',
+                        backgroundColor: 'rgba(15, 23, 42, 0.95)',
                         borderColor: 'rgba(255, 255, 255, 0.08)',
                         borderWidth: 1,
-                        titleFont: { family: 'Outfit', size: 12, weight: 600 },
-                        bodyFont: { family: 'Outfit', size: 12 },
+                        titleFont: { family: "'Outfit', 'Inter', 'Segoe UI', sans-serif", size: 12, weight: 600 },
+                        bodyFont: { family: "'Outfit', 'Inter', 'Segoe UI', sans-serif", size: 12 },
                         padding: 12,
                         cornerRadius: 8,
                         displayColors: true
@@ -353,7 +353,7 @@ export async function loadGlobalTrafficChart() {
                         },
                         ticks: {
                             color: 'rgba(255, 255, 255, 0.5)',
-                            font: { family: 'Outfit', size: 10 }
+                            font: { family: "'Outfit', 'Inter', 'Segoe UI', sans-serif", size: 10 }
                         }
                     },
                     y: {
@@ -364,7 +364,7 @@ export async function loadGlobalTrafficChart() {
                         },
                         ticks: {
                             color: 'rgba(255, 255, 255, 0.5)',
-                            font: { family: 'Outfit', size: 10 }
+                            font: { family: "'Outfit', 'Inter', 'Segoe UI', sans-serif", size: 10 }
                         }
                     }
                 }
