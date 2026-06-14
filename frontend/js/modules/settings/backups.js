@@ -1,5 +1,5 @@
 import { apiFetch } from "../../api.js";
-import { showToast } from "../../ui.js";
+import { showToast, showConfirmDialog } from "../../ui.js";
 import { t } from "../../i18n.js";
 import { loadSettings } from "./core.js";
 
@@ -20,6 +20,29 @@ export function setupBackupsListeners() {
                 return;
             }
 
+            let verifyPassword = "";
+            const encryptInput = document.getElementById("setting-backup-encrypt");
+            const initialEncrypt = encryptInput ? encryptInput.dataset.initial === "true" : false;
+            
+            if (initialEncrypt && !encrypt && window.backupPasswordSet) {
+                const promptMsg = t("settings_backup_pwd_disable_prompt", "Для отключения шифрования бэкапов введите текущий пароль:");
+                const pwdInput = prompt(promptMsg);
+                if (pwdInput === null) {
+                    if (encryptInput) encryptInput.checked = true;
+                    const backupPasswordGroup = document.getElementById("setting-backup-password-group");
+                    if (backupPasswordGroup) backupPasswordGroup.style.display = "block";
+                    return;
+                }
+                if (!pwdInput.trim()) {
+                    showToast(t("settings_backup_pwd_disable_required", "Для отключения шифрования необходимо ввести пароль!"), "error");
+                    if (encryptInput) encryptInput.checked = true;
+                    const backupPasswordGroup = document.getElementById("setting-backup-password-group");
+                    if (backupPasswordGroup) backupPasswordGroup.style.display = "block";
+                    return;
+                }
+                verifyPassword = pwdInput.trim();
+            }
+
             btnSaveBackups.disabled = true;
             const res = await apiFetch("/api/settings/update", {
                 method: "POST",
@@ -29,7 +52,8 @@ export function setupBackupsListeners() {
                     backup_telegram: telegram,
                     backup_interval: interval,
                     backup_rotation: rotation,
-                    backup_encrypt: encrypt
+                    backup_encrypt: encrypt,
+                    verify_password: verifyPassword
                 })
             });
             btnSaveBackups.disabled = false;
@@ -41,6 +65,11 @@ export function setupBackupsListeners() {
                 loadSettings();
             } else {
                 showToast(res ? res.msg : t("settings_save_error", "Не удалось сохранить настройки"), "error");
+                if (initialEncrypt && !encrypt) {
+                    if (encryptInput) encryptInput.checked = true;
+                    const backupPasswordGroup = document.getElementById("setting-backup-password-group");
+                    if (backupPasswordGroup) backupPasswordGroup.style.display = "block";
+                }
             }
         });
     }
@@ -57,7 +86,8 @@ export function setupBackupsListeners() {
     const btnClearBackups = document.getElementById("btn-clear-backups");
     if (btnClearBackups) {
         btnClearBackups.addEventListener("click", async () => {
-            if (!confirm(t("confirm_clear_backups", "Вы уверены, что хотите безвозвратно удалить все локальные резервные копии с сервера?"))) {
+            const confirmed = await showConfirmDialog(t("confirm_clear_backups", "Вы уверены, что хотите безвозвратно удалить все локальные резервные копии с сервера?"));
+            if (!confirmed) {
                 return;
             }
             
@@ -89,7 +119,8 @@ export function setupBackupsListeners() {
             const file = e.target.files[0];
             if (!file) return;
 
-            if (!confirm("Вы уверены, что хотите восстановить базу данных? Это сотрет все текущие подключения и пользователей и перезапишет их данными из файла бэкапа!")) {
+            const confirmed = await showConfirmDialog(t("settings_backup_confirm_restore", "Вы уверены, что хотите восстановить базу данных? Это сотрет все текущие подключения и пользователей и перезапишет их данными из файла бэкапа!"));
+            if (!confirmed) {
                 fileInput.value = "";
                 return;
             }
@@ -142,15 +173,131 @@ export function setupBackupsListeners() {
         });
     }
 
+    // Helper for random password generation
+    function generateRandomPassword(length = 16) {
+        const chars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*()_+";
+        let pwd = "";
+        for (let i = 0; i < length; i++) {
+            pwd += chars.charAt(Math.floor(Math.random() * chars.length));
+        }
+        return pwd;
+    }
+
+    // Backup Enable input toggle rotation visibility
+    const backupEnableInput = document.getElementById("setting-backup-enable");
+    if (backupEnableInput) {
+        backupEnableInput.addEventListener("change", (e) => {
+            const rotationGroup = document.getElementById("setting-backup-rotation-group");
+            if (rotationGroup) {
+                rotationGroup.style.display = e.target.checked ? "" : "none";
+            }
+        });
+    }
+
     // Backup Encryption inputs visibility toggle
     const backupEncryptInput = document.getElementById("setting-backup-encrypt");
     if (backupEncryptInput) {
         backupEncryptInput.addEventListener("change", (e) => {
+            const checked = e.target.checked;
             const backupPasswordGroup = document.getElementById("setting-backup-password-group");
-            if (backupPasswordGroup) {
-                backupPasswordGroup.style.display = e.target.checked ? "block" : "none";
+            
+            if (checked) {
+                if (!window.backupPasswordSet) {
+                    const modal = document.getElementById("backup-pwd-setup-modal");
+                    if (modal) {
+                        document.getElementById("setup-backup-password").value = "";
+                        document.getElementById("setup-backup-confirm").value = "";
+                        modal.classList.add("active");
+                    }
+                    e.target.checked = false;
+                    if (backupPasswordGroup) backupPasswordGroup.style.display = "none";
+                } else {
+                    if (backupPasswordGroup) backupPasswordGroup.style.display = "block";
+                }
+            } else {
+                if (backupPasswordGroup) backupPasswordGroup.style.display = "none";
             }
         });
+    }
+
+    // Modal buttons for Backup Password Setup
+    const modalSetup = document.getElementById("backup-pwd-setup-modal");
+    if (modalSetup) {
+        const btnGen = document.getElementById("btn-setup-backup-gen");
+        const btnSave = document.getElementById("backup-pwd-setup-save");
+        const btnCancel = document.getElementById("backup-pwd-setup-cancel");
+        const btnClose = document.getElementById("backup-pwd-setup-close");
+        const inputPwd = document.getElementById("setup-backup-password");
+        const inputConfirm = document.getElementById("setup-backup-confirm");
+
+        if (btnGen && inputPwd) {
+            btnGen.addEventListener("click", () => {
+                inputPwd.value = generateRandomPassword(16);
+            });
+        }
+
+        const closeModal = () => {
+            modalSetup.classList.remove("active");
+            if (!window.backupPasswordSet) {
+                const checkbox = document.getElementById("setting-backup-encrypt");
+                if (checkbox) checkbox.checked = false;
+                const backupPasswordGroup = document.getElementById("setting-backup-password-group");
+                if (backupPasswordGroup) backupPasswordGroup.style.display = "none";
+            }
+        };
+
+        if (btnCancel) btnCancel.addEventListener("click", closeModal);
+        if (btnClose) btnClose.addEventListener("click", closeModal);
+
+        if (btnSave && inputPwd && inputConfirm) {
+            btnSave.addEventListener("click", async () => {
+                const password = inputPwd.value.trim();
+                const confirmPwd = inputConfirm.value.trim();
+
+                if (!password || !confirmPwd) {
+                    showToast(t("settings_backup_fields_required", "Заполните все поля для смены пароля!"), "error");
+                    return;
+                }
+                if (password !== confirmPwd) {
+                    showToast(t("settings_backup_passwords_mismatch", "Новые пароли не совпадают!"), "error");
+                    return;
+                }
+
+                btnSave.disabled = true;
+                try {
+                    const res = await apiFetch("/api/settings/backup/password", {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({
+                            current_password: "",
+                            new_password: password
+                        })
+                    });
+
+                    if (res && res.success) {
+                        showToast(res.msg || t("settings_backup_pwd_changed", "Пароль шифрования бэкапов успешно изменен!"));
+                        window.backupPasswordSet = true;
+                        modalSetup.classList.remove("active");
+                        
+                        const checkbox = document.getElementById("setting-backup-encrypt");
+                        if (checkbox) {
+                            checkbox.checked = true;
+                            const backupPasswordGroup = document.getElementById("setting-backup-password-group");
+                            if (backupPasswordGroup) backupPasswordGroup.style.display = "block";
+                            
+                            const btnSaveBackups = document.getElementById("btn-save-backups");
+                            if (btnSaveBackups) btnSaveBackups.click();
+                        }
+                    } else {
+                        showToast(res ? res.msg : "Не удалось сохранить пароль", "error");
+                    }
+                } catch (err) {
+                    showToast("Ошибка при сохранении пароля: " + err, "error");
+                } finally {
+                    btnSave.disabled = false;
+                }
+            });
+        }
     }
 
     // Change Backup Password
