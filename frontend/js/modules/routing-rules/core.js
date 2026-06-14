@@ -1,5 +1,5 @@
 import { apiFetch, getCsrfToken } from "../../api.js";
-import { showToast } from "../../ui.js";
+import { showToast, showConfirmDialog } from "../../ui.js";
 import { t } from "../../i18n.js";
 import { populateOutboundDropdowns } from "../routing-outbounds.js";
 
@@ -249,7 +249,8 @@ export async function toggleRoutingRule(id, checked) {
 }
 
 export async function deleteRoutingRule(id) {
-    if (!confirm(t("routing_confirm_delete_rule", "Вы уверены, что хотите удалить это правило маршрутизации?"))) return;
+    const confirmed = await showConfirmDialog(t("routing_confirm_delete_rule", "Вы уверены, что хотите удалить это правило маршрутизации?"));
+    if (!confirmed) return;
     
     const res = await apiFetch(`/api/routing/rules/delete/${id}`, { method: "POST" });
     if (res && res.success) {

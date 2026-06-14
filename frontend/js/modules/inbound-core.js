@@ -1,5 +1,5 @@
 import { apiFetch } from "../api.js";
-import { showToast, formatBytes } from "../ui.js";
+import { showToast, formatBytes, showConfirmDialog } from "../ui.js";
 import { t } from "../i18n.js";
 
 export async function loadInbounds() {
@@ -82,7 +82,8 @@ export async function toggleInbound(id, state) {
 }
 
 export async function deleteInbound(id) {
-    if (!confirm(t("confirm_delete_inbound", "Вы уверены, что хотите удалить это подключение? Все связанные клиенты будут также удалены."))) return;
+    const confirmed = await showConfirmDialog(t("confirm_delete_inbound", "Вы уверены, что хотите удалить это подключение? Все связанные клиенты будут также удалены."));
+    if (!confirmed) return;
     
     const res = await apiFetch(`/api/inbounds/delete/${id}`, { method: "POST" });
     if (res && res.success) {
