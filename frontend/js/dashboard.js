@@ -4,6 +4,7 @@ import { t } from "./i18n.js";
 
 let cpuCircularChart = null;
 let ramCircularChart = null;
+let swapCircularChart = null;
 let diskCircularChart = null;
 
 export async function loadStats() {
@@ -55,6 +56,15 @@ export async function loadStats() {
     const memTotal = obj.mem.total / (1024**3);
     if (ramVal) ramVal.innerText = `${memCurrent.toFixed(1)} / ${memTotal.toFixed(1)} GB`;
     
+    const swapVal = document.getElementById("swap-value");
+    let swapPercent = 0;
+    if (swapVal && obj.swap) {
+        const swapCurrent = obj.swap.current / (1024**3);
+        const swapTotal = obj.swap.total / (1024**3);
+        swapVal.innerText = `${swapCurrent.toFixed(1)} / ${swapTotal.toFixed(1)} GB`;
+        swapPercent = obj.swap.percent || 0;
+    }
+    
     const netUpVal = document.getElementById("net-up-value");
     if (netUpVal) netUpVal.innerText = formatBytes(obj.netIO.up);
     
@@ -84,7 +94,7 @@ export async function loadStats() {
     if (sysIpEl) sysIpEl.innerText = window.location.hostname;
     
     // Update chart
-    updateChart(obj.cpu, (memCurrent / memTotal) * 100, obj.disk ? obj.disk.percent : 0);
+    updateChart(obj.cpu, (memCurrent / memTotal) * 100, swapPercent, obj.disk ? obj.disk.percent : 0);
     await loadGlobalTrafficChart();
 }
 
@@ -109,11 +119,12 @@ export async function loadBbrStatus() {
     }
 }
 
-function updateChart(cpu, ram, disk) {
+function updateChart(cpu, ram, swap, disk) {
     const cpuCanvas = document.getElementById("cpuCircularChart");
     const ramCanvas = document.getElementById("ramCircularChart");
+    const swapCanvas = document.getElementById("swapCircularChart");
     const diskCanvas = document.getElementById("diskCircularChart");
-    if (!cpuCanvas || !ramCanvas || !diskCanvas) return;
+    if (!cpuCanvas || !ramCanvas || !swapCanvas || !diskCanvas) return;
     
     if (!cpuCircularChart && window.Chart) {
         const ctx = cpuCanvas.getContext("2d");
@@ -167,6 +178,32 @@ function updateChart(cpu, ram, disk) {
         });
     }
     
+    if (!swapCircularChart && window.Chart) {
+        const ctx = swapCanvas.getContext("2d");
+        swapCircularChart = new window.Chart(ctx, {
+            type: 'doughnut',
+            data: {
+                datasets: [{
+                    data: [swap, 100 - swap],
+                    backgroundColor: [
+                        '#f59e0b', // Неоновый оранжевый (Accent Orange)
+                        'rgba(255, 255, 255, 0.04)'
+                    ],
+                    borderWidth: 0,
+                    cutout: '82%'
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { display: false },
+                    tooltip: { enabled: false }
+                }
+            }
+        });
+    }
+    
     if (!diskCircularChart && window.Chart) {
         const ctx = diskCanvas.getContext("2d");
         diskCircularChart = new window.Chart(ctx, {
@@ -201,6 +238,10 @@ function updateChart(cpu, ram, disk) {
         ramCircularChart.data.datasets[0].data = [ram, 100 - ram];
         ramCircularChart.update();
     }
+    if (swapCircularChart) {
+        swapCircularChart.data.datasets[0].data = [swap, 100 - swap];
+        swapCircularChart.update();
+    }
     if (diskCircularChart) {
         diskCircularChart.data.datasets[0].data = [disk, 100 - disk];
         diskCircularChart.update();
@@ -211,6 +252,9 @@ function updateChart(cpu, ram, disk) {
     
     const ramText = document.getElementById("ram-chart-text");
     if (ramText) ramText.innerText = `${ram.toFixed(1)}%`;
+    
+    const swapText = document.getElementById("swap-chart-text");
+    if (swapText) swapText.innerText = `${swap.toFixed(1)}%`;
     
     const diskText = document.getElementById("disk-chart-text");
     if (diskText) diskText.innerText = `${disk.toFixed(1)}%`;

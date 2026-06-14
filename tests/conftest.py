@@ -81,35 +81,10 @@ def ensure_postgres_db_exists(admin_url: str):
             grant_engine.dispose()
 
 if not test_app_url:
-    orig_app_url = backend.config.settings.DATABASE_URL
-    orig_admin_url = backend.config.settings.DATABASE_ADMIN_URL or orig_app_url
-    
-    if orig_app_url and "postgresql" in orig_app_url:
-        # Автоматически перенаправляем на spectre_db_test
-        parsed_app = urllib.parse.urlparse(orig_app_url)
-        path_app = parsed_app.path
-        if path_app.endswith("/spectre_db"):
-            new_path_app = path_app.replace("/spectre_db", "/spectre_db_test")
-        elif path_app.endswith("/vpn_panel"):
-            new_path_app = path_app.replace("/vpn_panel", "/spectre_db_test")
-        else:
-            new_path_app = "/spectre_db_test"
-        parsed_app = parsed_app._replace(path=new_path_app)
-        test_app_url = urllib.parse.urlunparse(parsed_app)
-        
-        parsed_admin = urllib.parse.urlparse(orig_admin_url)
-        path_admin = parsed_admin.path
-        if path_admin.endswith("/spectre_db"):
-            new_path_admin = path_admin.replace("/spectre_db", "/spectre_db_test")
-        elif path_admin.endswith("/vpn_panel"):
-            new_path_admin = path_admin.replace("/vpn_panel", "/spectre_db_test")
-        else:
-            new_path_admin = "/spectre_db_test"
-        parsed_admin = parsed_admin._replace(path=new_path_admin)
-        test_admin_url = urllib.parse.urlunparse(parsed_admin)
-    else:
-        test_app_url = f"sqlite:///{backend.config.DB_PATH}"
-        test_admin_url = f"sqlite:///{backend.config.DB_PATH}"
+    # По умолчанию для тестов всегда используем SQLite, чтобы не требовать запущенного PostgreSQL.
+    # Если разработчик явно хочет протестировать на PostgreSQL, он может задать TEST_DATABASE_URL.
+    test_app_url = f"sqlite:///{backend.config.DB_PATH}"
+    test_admin_url = f"sqlite:///{backend.config.DB_PATH}"
 
 # Записываем тестовые URL подключения в настройки
 backend.config.settings.DATABASE_URL = test_app_url
@@ -173,10 +148,12 @@ def mock_send_command(action: str, params: dict = None, timeout: float = 3.0) ->
             "success": True,
             "cpu": 12.5,
             "mem": {"current": 1000000000, "total": 4000000000},
+            "swap": {"current": 500000000, "total": 2000000000, "percent": 25.0},
             "uptime": 7200,
             "netIO": {"up": 500000, "down": 1500000}
         }
     return backend.host_client.host_client._mock_response(action, params)
+
 
 backend.host_client.host_client.send_command = mock_send_command
 

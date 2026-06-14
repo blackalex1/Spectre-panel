@@ -20,6 +20,9 @@ async def server_status_api(request: Request):
         cpu_percent = stats.get("cpu", 0.0)
         mem_current = stats.get("mem", {}).get("current", 0)
         mem_total = stats.get("mem", {}).get("total", 0)
+        swap_current = stats.get("swap", {}).get("current", 0)
+        swap_total = stats.get("swap", {}).get("total", 0)
+        swap_percent = stats.get("swap", {}).get("percent", 0.0)
         uptime = stats.get("uptime", 0)
         net_up = stats.get("netIO", {}).get("up", 0)
         net_down = stats.get("netIO", {}).get("down", 0)
@@ -29,6 +32,15 @@ async def server_status_api(request: Request):
         mem = psutil.virtual_memory()
         mem_current = mem.used
         mem_total = mem.total
+        try:
+            swap = psutil.swap_memory()
+            swap_current = swap.used
+            swap_total = swap.total
+            swap_percent = swap.percent
+        except Exception:
+            swap_current = 0
+            swap_total = 0
+            swap_percent = 0.0
         net_io = psutil.net_io_counters()
         net_up = net_io.bytes_sent
         net_down = net_io.bytes_recv
@@ -57,6 +69,11 @@ async def server_status_api(request: Request):
             "mem": {
                 "current": mem_current,
                 "total": mem_total
+            },
+            "swap": {
+                "current": swap_current,
+                "total": swap_total,
+                "percent": swap_percent
             },
             "disk": {
                 "current": disk_current,

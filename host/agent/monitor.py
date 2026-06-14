@@ -13,6 +13,7 @@ def get_system_stats() -> dict:
         "success": True,
         "cpu": 0.0,
         "mem": {"current": 0, "total": 0},
+        "swap": {"current": 0, "total": 0, "percent": 0.0},
         "uptime": 0,
         "netIO": {"up": 0, "down": 0}
     }
@@ -31,6 +32,11 @@ def get_system_stats() -> dict:
             mem = psutil.virtual_memory()
             stats["mem"]["current"] = mem.used
             stats["mem"]["total"] = mem.total
+            
+            swap = psutil.swap_memory()
+            stats["swap"]["current"] = swap.used
+            stats["swap"]["total"] = swap.total
+            stats["swap"]["percent"] = swap.percent
             
             boot_time = psutil.boot_time()
             stats["uptime"] = int(time.time() - boot_time) if boot_time else 0
@@ -69,6 +75,13 @@ def get_system_stats() -> dict:
             used = total - free - buffers - cached
             stats["mem"]["current"] = max(0, used)
             stats["mem"]["total"] = total
+            
+            swap_total = meminfo.get("SwapTotal", 0)
+            swap_free = meminfo.get("SwapFree", 0)
+            swap_used = swap_total - swap_free
+            stats["swap"]["total"] = swap_total
+            stats["swap"]["current"] = max(0, swap_used)
+            stats["swap"]["percent"] = round((swap_used / swap_total) * 100, 1) if swap_total > 0 else 0.0
     except Exception as e:
         logging.error(f"Error parsing /proc/meminfo: {e}")
 
