@@ -12,6 +12,10 @@ let dashboardClients = [];
 let isDashboardSearchInitialized = false;
 let lastOnlines = [];
 
+let lastNetUp = null;
+let lastNetDown = null;
+let lastStatsTime = null;
+
 export async function loadStats() {
     const res = await apiFetch("/panel/api/server/status");
     if (!res || !res.success) return;
@@ -75,6 +79,26 @@ export async function loadStats() {
     
     const netDownVal = document.getElementById("net-down-value");
     if (netDownVal) netDownVal.innerText = formatBytes(obj.netIO.down);
+    
+    const now = Date.now();
+    if (lastNetUp !== null && lastNetDown !== null && lastStatsTime !== null) {
+        const elapsedSeconds = (now - lastStatsTime) / 1000;
+        if (elapsedSeconds > 0) {
+            const diffUp = obj.netIO.up - lastNetUp;
+            const diffDown = obj.netIO.down - lastNetDown;
+            const speedUp = diffUp >= 0 ? diffUp / elapsedSeconds : 0;
+            const speedDown = diffDown >= 0 ? diffDown / elapsedSeconds : 0;
+            
+            const netSpeedUpVal = document.getElementById("net-speed-up-value");
+            if (netSpeedUpVal) netSpeedUpVal.innerText = `${formatBytes(speedUp)}/s`;
+            
+            const netSpeedDownVal = document.getElementById("net-speed-down-value");
+            if (netSpeedDownVal) netSpeedDownVal.innerText = `${formatBytes(speedDown)}/s`;
+        }
+    }
+    lastNetUp = obj.netIO.up;
+    lastNetDown = obj.netIO.down;
+    lastStatsTime = now;
     
     const diskVal = document.getElementById("disk-value");
     if (diskVal && obj.disk) {
