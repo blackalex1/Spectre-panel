@@ -4,27 +4,35 @@
         <div class="glass-card chart-card">
             <h3 data-i18n="dashboard_usage">Использование ресурсов</h3>
             <div class="chart-wrapper circular-charts-wrapper" style="display: flex; justify-content: space-around; align-items: center; gap: 10px; height: 180px; padding: 5px 0; border-bottom: 1px solid var(--border-color); margin-bottom: 20px; padding-bottom: 15px;">
-                <div class="circular-chart-container" style="position: relative; width: 95px; height: 95px; display: flex; flex-direction: column; align-items: center;">
-                    <canvas id="cpuCircularChart"></canvas>
-                    <div class="chart-inner-text" id="cpu-chart-text" style="position: absolute; top: 35%; left: 50%; transform: translate(-50%, -50%); font-size: 14px; font-weight: 800; color: var(--text-primary); font-family: var(--font-family);">0.0%</div>
+                <div class="circular-chart-container" style="display: flex; flex-direction: column; align-items: center; text-align: center;">
+                    <div style="position: relative; width: 95px; height: 95px;">
+                        <canvas id="cpuCircularChart"></canvas>
+                        <div class="chart-inner-text" id="cpu-chart-text" style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); font-size: 14px; font-weight: 800; color: var(--text-primary); font-family: var(--font-family);">0.0%</div>
+                    </div>
                     <div style="margin-top: 10px; font-size: 11px; font-weight: 700; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.8px;" data-i18n="dashboard_cpu">CPU</div>
                     <div id="cpu-value" style="font-size: 11px; font-weight: 600; color: var(--text-muted); margin-top: 2px;">0%</div>
                 </div>
-                <div class="circular-chart-container" style="position: relative; width: 95px; height: 95px; display: flex; flex-direction: column; align-items: center;">
-                    <canvas id="ramCircularChart"></canvas>
-                    <div class="chart-inner-text" id="ram-chart-text" style="position: absolute; top: 35%; left: 50%; transform: translate(-50%, -50%); font-size: 14px; font-weight: 800; color: var(--text-primary); font-family: var(--font-family);">0.0%</div>
+                <div class="circular-chart-container" style="display: flex; flex-direction: column; align-items: center; text-align: center;">
+                    <div style="position: relative; width: 95px; height: 95px;">
+                        <canvas id="ramCircularChart"></canvas>
+                        <div class="chart-inner-text" id="ram-chart-text" style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); font-size: 14px; font-weight: 800; color: var(--text-primary); font-family: var(--font-family);">0.0%</div>
+                    </div>
                     <div style="margin-top: 10px; font-size: 11px; font-weight: 700; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.8px;" data-i18n="dashboard_ram">RAM</div>
                     <div id="ram-value" style="font-size: 11px; font-weight: 600; color: var(--text-muted); margin-top: 2px;">0 / 0 GB</div>
                 </div>
-                <div class="circular-chart-container" style="position: relative; width: 95px; height: 95px; display: flex; flex-direction: column; align-items: center;">
-                    <canvas id="swapCircularChart"></canvas>
-                    <div class="chart-inner-text" id="swap-chart-text" style="position: absolute; top: 35%; left: 50%; transform: translate(-50%, -50%); font-size: 14px; font-weight: 800; color: var(--text-primary); font-family: var(--font-family);">0.0%</div>
+                <div class="circular-chart-container" style="display: flex; flex-direction: column; align-items: center; text-align: center;">
+                    <div style="position: relative; width: 95px; height: 95px;">
+                        <canvas id="swapCircularChart"></canvas>
+                        <div class="chart-inner-text" id="swap-chart-text" style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); font-size: 14px; font-weight: 800; color: var(--text-primary); font-family: var(--font-family);">0.0%</div>
+                    </div>
                     <div style="margin-top: 10px; font-size: 11px; font-weight: 700; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.8px;" data-i18n="dashboard_swap">SWAP</div>
                     <div id="swap-value" style="font-size: 11px; font-weight: 600; color: var(--text-muted); margin-top: 2px;">0 / 0 GB</div>
                 </div>
-                <div class="circular-chart-container" style="position: relative; width: 95px; height: 95px; display: flex; flex-direction: column; align-items: center;">
-                    <canvas id="diskCircularChart"></canvas>
-                    <div class="chart-inner-text" id="disk-chart-text" style="position: absolute; top: 35%; left: 50%; transform: translate(-50%, -50%); font-size: 14px; font-weight: 800; color: var(--text-primary); font-family: var(--font-family);">0.0%</div>
+                <div class="circular-chart-container" style="display: flex; flex-direction: column; align-items: center; text-align: center;">
+                    <div style="position: relative; width: 95px; height: 95px;">
+                        <canvas id="diskCircularChart"></canvas>
+                        <div class="chart-inner-text" id="disk-chart-text" style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); font-size: 14px; font-weight: 800; color: var(--text-primary); font-family: var(--font-family);">0.0%</div>
+                    </div>
                     <div style="margin-top: 10px; font-size: 11px; font-weight: 700; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.8px;" data-i18n="dashboard_disk">Диск</div>
                     <div id="disk-value" style="font-size: 11px; font-weight: 600; color: var(--text-muted); margin-top: 2px;">0 / 0 GB</div>
                 </div>
