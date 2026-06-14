@@ -89,12 +89,6 @@ export async function loadStats() {
             const speedUp = diffUp >= 0 ? diffUp / elapsedSeconds : 0;
             const speedDown = diffDown >= 0 ? diffDown / elapsedSeconds : 0;
             
-            const netSpeedUpVal = document.getElementById("net-speed-up-value");
-            if (netSpeedUpVal) netSpeedUpVal.innerText = `${formatBytes(speedUp)}/s`;
-            
-            const netSpeedDownVal = document.getElementById("net-speed-down-value");
-            if (netSpeedDownVal) netSpeedDownVal.innerText = `${formatBytes(speedDown)}/s`;
-
             const netSpeedUpValUsage = document.getElementById("net-speed-up-value-usage");
             if (netSpeedUpValUsage) netSpeedUpValUsage.innerText = `${formatBytes(speedUp)}/s`;
             
