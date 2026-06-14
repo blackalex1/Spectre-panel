@@ -4,6 +4,7 @@ import { t } from "./i18n.js";
 
 let cpuCircularChart = null;
 let ramCircularChart = null;
+let diskCircularChart = null;
 
 export async function loadStats() {
     const res = await apiFetch("/panel/api/server/status");
@@ -64,7 +65,7 @@ export async function loadStats() {
     if (diskVal && obj.disk) {
         const diskCurrent = obj.disk.current / (1024**3);
         const diskTotal = obj.disk.total / (1024**3);
-        diskVal.innerText = `${diskCurrent.toFixed(1)} / ${diskTotal.toFixed(1)} GB (${obj.disk.percent.toFixed(1)}%)`;
+        diskVal.innerText = `${diskCurrent.toFixed(1)} / ${diskTotal.toFixed(1)} GB`;
     }
     
     // Uptime and version
@@ -83,7 +84,7 @@ export async function loadStats() {
     if (sysIpEl) sysIpEl.innerText = window.location.hostname;
     
     // Update chart
-    updateChart(obj.cpu, (memCurrent / memTotal) * 100);
+    updateChart(obj.cpu, (memCurrent / memTotal) * 100, obj.disk ? obj.disk.percent : 0);
     await loadGlobalTrafficChart();
 }
 
@@ -108,10 +109,11 @@ export async function loadBbrStatus() {
     }
 }
 
-function updateChart(cpu, ram) {
+function updateChart(cpu, ram, disk) {
     const cpuCanvas = document.getElementById("cpuCircularChart");
     const ramCanvas = document.getElementById("ramCircularChart");
-    if (!cpuCanvas || !ramCanvas) return;
+    const diskCanvas = document.getElementById("diskCircularChart");
+    if (!cpuCanvas || !ramCanvas || !diskCanvas) return;
     
     if (!cpuCircularChart && window.Chart) {
         const ctx = cpuCanvas.getContext("2d");
@@ -165,6 +167,32 @@ function updateChart(cpu, ram) {
         });
     }
     
+    if (!diskCircularChart && window.Chart) {
+        const ctx = diskCanvas.getContext("2d");
+        diskCircularChart = new window.Chart(ctx, {
+            type: 'doughnut',
+            data: {
+                datasets: [{
+                    data: [disk, 100 - disk],
+                    backgroundColor: [
+                        '#f43f5e', // Неоновая роза
+                        'rgba(255, 255, 255, 0.04)'
+                    ],
+                    borderWidth: 0,
+                    cutout: '82%'
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { display: false },
+                    tooltip: { enabled: false }
+                }
+            }
+        });
+    }
+    
     if (cpuCircularChart) {
         cpuCircularChart.data.datasets[0].data = [cpu, 100 - cpu];
         cpuCircularChart.update();
@@ -173,12 +201,19 @@ function updateChart(cpu, ram) {
         ramCircularChart.data.datasets[0].data = [ram, 100 - ram];
         ramCircularChart.update();
     }
+    if (diskCircularChart) {
+        diskCircularChart.data.datasets[0].data = [disk, 100 - disk];
+        diskCircularChart.update();
+    }
     
     const cpuText = document.getElementById("cpu-chart-text");
     if (cpuText) cpuText.innerText = `${cpu.toFixed(1)}%`;
     
     const ramText = document.getElementById("ram-chart-text");
     if (ramText) ramText.innerText = `${ram.toFixed(1)}%`;
+    
+    const diskText = document.getElementById("disk-chart-text");
+    if (diskText) diskText.innerText = `${disk.toFixed(1)}%`;
 }
 
 let globalTrafficChartInstance = null;
