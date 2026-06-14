@@ -121,21 +121,47 @@ function updateChart(cpu, ram) {
                 datasets: [
                     {
                         label: 'CPU (%)',
-                        borderColor: '#2563eb',
-                        backgroundColor: 'rgba(37, 99, 235, 0.1)',
+                        borderColor: '#06b6d4',
+                        backgroundColor: (context) => {
+                            const chart = context.chart;
+                            const {ctx, chartArea} = chart;
+                            if (!chartArea) return null;
+                            const gradient = ctx.createLinearGradient(0, chartArea.top, 0, chartArea.bottom);
+                            gradient.addColorStop(0, 'rgba(6, 182, 212, 0.35)');
+                            gradient.addColorStop(1, 'rgba(6, 182, 212, 0.0)');
+                            return gradient;
+                        },
                         data: chartData.cpu,
-                        borderWidth: 2,
-                        tension: 0.3,
-                        fill: true
+                        borderWidth: 3,
+                        tension: 0.4,
+                        fill: true,
+                        pointRadius: 0,
+                        pointHoverRadius: 6,
+                        pointBackgroundColor: '#06b6d4',
+                        pointBorderColor: '#ffffff',
+                        pointBorderWidth: 2,
                     },
                     {
                         label: 'RAM (%)',
-                        borderColor: '#a855f7',
-                        backgroundColor: 'rgba(168, 85, 247, 0.1)',
+                        borderColor: '#8b5cf6',
+                        backgroundColor: (context) => {
+                            const chart = context.chart;
+                            const {ctx, chartArea} = chart;
+                            if (!chartArea) return null;
+                            const gradient = ctx.createLinearGradient(0, chartArea.top, 0, chartArea.bottom);
+                            gradient.addColorStop(0, 'rgba(139, 92, 246, 0.35)');
+                            gradient.addColorStop(1, 'rgba(139, 92, 246, 0.0)');
+                            return gradient;
+                        },
                         data: chartData.ram,
-                        borderWidth: 2,
-                        tension: 0.3,
-                        fill: true
+                        borderWidth: 3,
+                        tension: 0.4,
+                        fill: true,
+                        pointRadius: 0,
+                        pointHoverRadius: 6,
+                        pointBackgroundColor: '#8b5cf6',
+                        pointBorderColor: '#ffffff',
+                        pointBorderWidth: 2,
                     }
                 ]
             },
@@ -143,11 +169,40 @@ function updateChart(cpu, ram) {
                 responsive: true,
                 maintainAspectRatio: false,
                 scales: {
-                    y: { min: 0, max: 100, grid: { color: 'rgba(255,255,255,0.05)' } },
-                    x: { grid: { display: false } }
+                    y: { 
+                        min: 0, 
+                        suggestedMax: 10,
+                        grid: { color: 'rgba(255, 255, 255, 0.03)' },
+                        ticks: {
+                            color: 'rgba(255, 255, 255, 0.5)',
+                            font: { family: 'Outfit', size: 11 }
+                        }
+                    },
+                    x: { 
+                        grid: { display: false },
+                        ticks: {
+                            color: 'rgba(255, 255, 255, 0.5)',
+                            font: { family: 'Outfit', size: 11 }
+                        }
+                    }
                 },
                 plugins: {
-                    legend: { labels: { color: '#e2e8f0' } }
+                    legend: {
+                        labels: {
+                            color: 'rgba(255, 255, 255, 0.7)',
+                            font: { family: 'Outfit', size: 12, weight: 600 }
+                        }
+                    },
+                    tooltip: {
+                        backgroundColor: 'rgba(15, 23, 42, 0.9)',
+                        borderColor: 'rgba(255, 255, 255, 0.08)',
+                        borderWidth: 1,
+                        titleFont: { family: 'Outfit', size: 12, weight: 600 },
+                        bodyFont: { family: 'Outfit', size: 12 },
+                        padding: 12,
+                        cornerRadius: 8,
+                        displayColors: true
+                    }
                 }
             }
         });
@@ -199,18 +254,46 @@ export async function loadGlobalTrafficChart() {
                     {
                         label: `${t("traffic_upload", "Загрузка")} (GB)`,
                         data: uploadData,
-                        borderColor: '#2ed573',
-                        backgroundColor: 'rgba(46, 213, 115, 0.1)',
-                        tension: 0.3,
-                        fill: true
+                        borderColor: '#10b981',
+                        backgroundColor: (context) => {
+                            const chart = context.chart;
+                            const {ctx, chartArea} = chart;
+                            if (!chartArea) return null;
+                            const gradient = ctx.createLinearGradient(0, chartArea.top, 0, chartArea.bottom);
+                            gradient.addColorStop(0, 'rgba(16, 185, 129, 0.3)');
+                            gradient.addColorStop(1, 'rgba(16, 185, 129, 0.0)');
+                            return gradient;
+                        },
+                        tension: 0.4,
+                        borderWidth: 3,
+                        fill: true,
+                        pointRadius: 0,
+                        pointHoverRadius: 6,
+                        pointBackgroundColor: '#10b981',
+                        pointBorderColor: '#ffffff',
+                        pointBorderWidth: 2,
                     },
                     {
                         label: `${t("traffic_download", "Скачивание")} (GB)`,
                         data: downloadData,
-                        borderColor: '#ff4757',
-                        backgroundColor: 'rgba(255, 71, 87, 0.1)',
-                        tension: 0.3,
-                        fill: true
+                        borderColor: '#f43f5e',
+                        backgroundColor: (context) => {
+                            const chart = context.chart;
+                            const {ctx, chartArea} = chart;
+                            if (!chartArea) return null;
+                            const gradient = ctx.createLinearGradient(0, chartArea.top, 0, chartArea.bottom);
+                            gradient.addColorStop(0, 'rgba(244, 63, 94, 0.3)');
+                            gradient.addColorStop(1, 'rgba(244, 63, 94, 0.0)');
+                            return gradient;
+                        },
+                        tension: 0.4,
+                        borderWidth: 3,
+                        fill: true,
+                        pointRadius: 0,
+                        pointHoverRadius: 6,
+                        pointBackgroundColor: '#f43f5e',
+                        pointBorderColor: '#ffffff',
+                        pointBorderWidth: 2,
                     }
                 ]
             },
@@ -220,26 +303,40 @@ export async function loadGlobalTrafficChart() {
                 plugins: {
                     legend: {
                         labels: {
-                            color: 'rgba(255, 255, 255, 0.7)'
+                            color: 'rgba(255, 255, 255, 0.7)',
+                            font: { family: 'Outfit', size: 12, weight: 600 }
                         }
+                    },
+                    tooltip: {
+                        backgroundColor: 'rgba(15, 23, 42, 0.9)',
+                        borderColor: 'rgba(255, 255, 255, 0.08)',
+                        borderWidth: 1,
+                        titleFont: { family: 'Outfit', size: 12, weight: 600 },
+                        bodyFont: { family: 'Outfit', size: 12 },
+                        padding: 12,
+                        cornerRadius: 8,
+                        displayColors: true
                     }
                 },
                 scales: {
                     x: {
                         grid: {
-                            color: 'rgba(255, 255, 255, 0.05)'
+                            color: 'rgba(255, 255, 255, 0.03)'
                         },
                         ticks: {
-                            color: 'rgba(255, 255, 255, 0.6)'
+                            color: 'rgba(255, 255, 255, 0.5)',
+                            font: { family: 'Outfit', size: 11 }
                         }
                     },
                     y: {
                         min: 0,
+                        suggestedMax: 1,
                         grid: {
-                            color: 'rgba(255, 255, 255, 0.05)'
+                            color: 'rgba(255, 255, 255, 0.03)'
                         },
                         ticks: {
-                            color: 'rgba(255, 255, 255, 0.6)'
+                            color: 'rgba(255, 255, 255, 0.5)',
+                            font: { family: 'Outfit', size: 11 }
                         }
                     }
                 }
