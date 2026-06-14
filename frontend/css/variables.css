@@ -1,28 +1,38 @@
 :root {
-    /* Цветовая палитра HSL */
-    --bg-main: hsl(222, 47%, 6%);
-    --bg-sidebar: hsla(222, 47%, 4%, 0.6);
-    --bg-card: hsla(223, 47%, 11%, 0.45);
-    --bg-input: hsla(223, 47%, 14%, 0.6);
+    /* Цветовая палитра HSL - Premium Space Cyberpunk */
+    --bg-main: hsl(224, 25%, 4%);
+    --bg-sidebar: hsla(224, 30%, 3%, 0.65);
+    --bg-card: hsla(224, 20%, 8%, 0.5);
+    --bg-input: hsla(224, 20%, 12%, 0.55);
     
-    --border-color: hsla(217, 30%, 20%, 0.4);
-    --border-highlight: hsla(217, 30%, 35%, 0.5);
+    --border-color: hsla(224, 20%, 25%, 0.3);
+    --border-highlight: hsla(263, 85%, 64%, 0.4);
     
-    --text-primary: hsl(210, 40%, 96%);
-    --text-secondary: hsl(215, 20%, 65%);
-    --text-muted: hsl(215, 15%, 45%);
+    --text-primary: hsl(210, 40%, 98%);
+    --text-secondary: hsl(217, 20%, 75%);
+    --text-muted: hsl(217, 12%, 50%);
     
-    --primary: hsl(263, 70%, 50%); /* Фиолетовый */
-    --primary-hover: hsl(263, 70%, 57%);
-    --primary-glow: hsla(263, 70%, 50%, 0.35);
+    --primary: hsl(263, 85%, 64%); /* Яркий кибер-фиолетовый */
+    --primary-hover: hsl(263, 90%, 70%);
+    --primary-glow: hsla(263, 85%, 64%, 0.35);
     
-    --accent-blue: hsl(217, 91%, 60%);
-    --accent-purple: hsl(271, 91%, 65%);
-    --accent-green: hsl(142, 71%, 45%);
-    --accent-orange: hsl(32, 95%, 44%);
-    --accent-rose: hsl(350, 89%, 60%);
+    --accent-blue: hsl(195, 100%, 50%); /* Неоновый голубой */
+    --accent-purple: hsl(280, 85%, 65%);
+    --accent-green: hsl(145, 80%, 50%); /* Яркий изумрудный */
+    --accent-orange: hsl(35, 100%, 55%);
+    --accent-rose: hsl(342, 90%, 60%); /* Неоновая роза */
     
     --font-family: 'Outfit', sans-serif;
-    --transition-fast: 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-    --transition-normal: 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    
+    /* Ультраплавные пружинящие переходы (Snappy Premium) */
+    --transition-fast: 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+    --transition-normal: 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+    --transition-premium: 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+    
+    /* Тени и свечения */
+    --shadow-glow: 0 0 25px hsla(263, 85%, 64%, 0.2);
+    --shadow-card: 0 12px 40px 0 rgba(0, 0, 0, 0.6);
+    --shadow-neon-green: 0 0 20px hsla(145, 80%, 50%, 0.25);
+    --shadow-neon-rose: 0 0 20px hsla(342, 90%, 60%, 0.25);
 }
+
