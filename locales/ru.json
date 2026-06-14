@@ -16,6 +16,8 @@
     "dashboard_swap": "SWAP",
     "dashboard_disk": "Диск",
     "dashboard_traffic": "Расход трафика",
+    "loading": "Загрузка...",
+    "xray_updated": "Обновлено",
     "dashboard_global_traffic": "Потребление трафика за 30 дней",
     "dashboard_uptime": "Аптайм сервера",
     "dashboard_net_up": "Исходящий трафик",
