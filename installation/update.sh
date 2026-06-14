@@ -1,0 +1,53 @@
+#!/bin/bash
+
+# Ensure script is run as root
+if [ "$EUID" -ne 0 ]; then
+  echo "[!] Please run as root (use sudo)"
+  exit 1
+fi
+
+# Navigate to project root directory
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+cd "$SCRIPT_DIR"
+
+echo "===================================================="
+echo "🔄 UPDATING SPECTRE PANEL"
+echo "===================================================="
+
+# 1. Pull latest updates from Git
+echo "[+] Pulling latest updates from Git..."
+if git pull; then
+    echo "[+] Git pull completed successfully."
+else
+    echo "[!] Git pull failed. If you have local changes, stash them or resolve conflicts."
+fi
+
+# 2. Rebuild and restart Docker containers
+echo "[+] Rebuilding and restarting Docker containers..."
+docker compose down
+if docker compose up -d --build; then
+    echo "[+] Docker containers rebuilt and started successfully!"
+else
+    echo "[!] Failed to rebuild or start Docker containers."
+fi
+
+# 3. Restart spectre-agent service
+echo "[+] Restarting spectre-agent system service..."
+if systemctl is-active --quiet spectre-agent; then
+    systemctl restart spectre-agent
+    echo "[+] spectre-agent service restarted successfully!"
+else
+    # If the service is not active, try starting it or warn if not installed
+    if [ -f "/etc/systemd/system/spectre-agent.service" ]; then
+        systemctl daemon-reload
+        systemctl enable spectre-agent
+        systemctl start spectre-agent
+        echo "[+] spectre-agent service enabled and started!"
+    else
+        echo "[!] spectre-agent service is not installed on this host."
+    fi
+fi
+
+echo "===================================================="
+echo "[+] Update process complete!"
+echo "===================================================="
