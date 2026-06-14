@@ -178,6 +178,35 @@
     box-shadow: 0 6px 20px rgba(16, 185, 129, 0.35), var(--shadow-neon-green);
 }
 
+/* Полупрозрачные контурные кнопки для WARP */
+.btn-outline-success {
+    background: rgba(46, 213, 115, 0.15) !important;
+    color: #2ed573 !important;
+    border: 1px solid rgba(46, 213, 115, 0.3) !important;
+    box-shadow: none !important;
+    transition: all var(--transition-fast) ease;
+}
+
+.btn-outline-success:hover {
+    background: rgba(46, 213, 115, 0.25) !important;
+    border-color: rgba(46, 213, 115, 0.5) !important;
+    transform: translateY(-1.5px);
+}
+
+.btn-outline-danger {
+    background: rgba(255, 71, 87, 0.15) !important;
+    color: #ff4757 !important;
+    border: 1px solid rgba(255, 71, 87, 0.3) !important;
+    box-shadow: none !important;
+    transition: all var(--transition-fast) ease;
+}
+
+.btn-outline-danger:hover {
+    background: rgba(255, 71, 87, 0.25) !important;
+    border-color: rgba(255, 71, 87, 0.5) !important;
+    transform: translateY(-1.5px);
+}
+
 .icon-btn {
     padding: 10px;
     border-radius: 10px;
