@@ -6,6 +6,7 @@ import logging
 from backend.database import get_setting, db_session
 from backend.models import ClientStats, Inbound
 from backend.utils import read_last_lines
+from backend.config import settings
 
 def detect_and_block_port_scans():
     """
@@ -121,7 +122,7 @@ def detect_and_block_port_scans():
     
     with db_session() as session:
         for email, dst_ips in client_dst_ips.items():
-            if len(dst_ips) > 200:
+            if len(dst_ips) > settings.IPS_PORT_SCAN_LIMIT:
                 clients = session.query(ClientStats).filter_by(email=email, enable=1).all()
                 if not clients:
                     continue
@@ -162,4 +163,5 @@ def detect_and_block_port_scans():
 
     if need_config_update:
         backend.scheduler.write_xray_config()
+        backend.scheduler.restart_xray()
         backend.scheduler.restart_hysteria()
