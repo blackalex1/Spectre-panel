@@ -42,8 +42,17 @@
     <div class="charts-container">
         <div class="glass-card chart-card">
             <h3 data-i18n="dashboard_usage">Использование ресурсов</h3>
-            <div class="chart-wrapper">
-                <canvas id="sysChart"></canvas>
+            <div class="chart-wrapper circular-charts-wrapper" style="display: flex; justify-content: space-around; align-items: center; gap: 20px; height: 200px; padding: 10px 0;">
+                <div class="circular-chart-container" style="position: relative; width: 140px; height: 140px; display: flex; flex-direction: column; align-items: center;">
+                    <canvas id="cpuCircularChart"></canvas>
+                    <div class="chart-inner-text" id="cpu-chart-text" style="position: absolute; top: 40%; left: 50%; transform: translate(-50%, -50%); font-size: 20px; font-weight: 800; color: var(--text-primary); font-family: var(--font-family);">0.0%</div>
+                    <div style="margin-top: 10px; font-size: 12px; font-weight: 700; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.8px;">CPU</div>
+                </div>
+                <div class="circular-chart-container" style="position: relative; width: 140px; height: 140px; display: flex; flex-direction: column; align-items: center;">
+                    <canvas id="ramCircularChart"></canvas>
+                    <div class="chart-inner-text" id="ram-chart-text" style="position: absolute; top: 40%; left: 50%; transform: translate(-50%, -50%); font-size: 20px; font-weight: 800; color: var(--text-primary); font-family: var(--font-family);">0.0%</div>
+                    <div style="margin-top: 10px; font-size: 12px; font-weight: 700; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.8px;">RAM</div>
+                </div>
             </div>
         </div>
         <div class="glass-card info-card">

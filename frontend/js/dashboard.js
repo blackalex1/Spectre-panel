@@ -2,8 +2,8 @@ import { apiFetch } from "./api.js";
 import { showToast, formatBytes } from "./ui.js";
 import { t } from "./i18n.js";
 
-let sysChart = null;
-const chartData = { cpu: [], ram: [], labels: [] };
+let cpuCircularChart = null;
+let ramCircularChart = null;
 
 export async function loadStats() {
     const res = await apiFetch("/panel/api/server/status");
@@ -109,119 +109,76 @@ export async function loadBbrStatus() {
 }
 
 function updateChart(cpu, ram) {
-    const canvas = document.getElementById("sysChart");
-    if (!canvas) return;
+    const cpuCanvas = document.getElementById("cpuCircularChart");
+    const ramCanvas = document.getElementById("ramCircularChart");
+    if (!cpuCanvas || !ramCanvas) return;
     
-    if (!sysChart && window.Chart) {
-        const ctx = canvas.getContext("2d");
-        sysChart = new window.Chart(ctx, {
-            type: 'line',
+    if (!cpuCircularChart && window.Chart) {
+        const ctx = cpuCanvas.getContext("2d");
+        cpuCircularChart = new window.Chart(ctx, {
+            type: 'doughnut',
             data: {
-                labels: chartData.labels,
-                datasets: [
-                    {
-                        label: 'CPU (%)',
-                        borderColor: '#06b6d4',
-                        backgroundColor: (context) => {
-                            const chart = context.chart;
-                            const {ctx, chartArea} = chart;
-                            if (!chartArea) return null;
-                            const gradient = ctx.createLinearGradient(0, chartArea.top, 0, chartArea.bottom);
-                            gradient.addColorStop(0, 'rgba(6, 182, 212, 0.35)');
-                            gradient.addColorStop(1, 'rgba(6, 182, 212, 0.0)');
-                            return gradient;
-                        },
-                        data: chartData.cpu,
-                        borderWidth: 3,
-                        tension: 0.4,
-                        fill: true,
-                        pointRadius: 0,
-                        pointHoverRadius: 6,
-                        pointBackgroundColor: '#06b6d4',
-                        pointBorderColor: '#ffffff',
-                        pointBorderWidth: 2,
-                    },
-                    {
-                        label: 'RAM (%)',
-                        borderColor: '#8b5cf6',
-                        backgroundColor: (context) => {
-                            const chart = context.chart;
-                            const {ctx, chartArea} = chart;
-                            if (!chartArea) return null;
-                            const gradient = ctx.createLinearGradient(0, chartArea.top, 0, chartArea.bottom);
-                            gradient.addColorStop(0, 'rgba(139, 92, 246, 0.35)');
-                            gradient.addColorStop(1, 'rgba(139, 92, 246, 0.0)');
-                            return gradient;
-                        },
-                        data: chartData.ram,
-                        borderWidth: 3,
-                        tension: 0.4,
-                        fill: true,
-                        pointRadius: 0,
-                        pointHoverRadius: 6,
-                        pointBackgroundColor: '#8b5cf6',
-                        pointBorderColor: '#ffffff',
-                        pointBorderWidth: 2,
-                    }
-                ]
+                datasets: [{
+                    data: [cpu, 100 - cpu],
+                    backgroundColor: [
+                        '#06b6d4', // Неоновый голубой
+                        'rgba(255, 255, 255, 0.04)'
+                    ],
+                    borderWidth: 0,
+                    cutout: '82%'
+                }]
             },
             options: {
                 responsive: true,
                 maintainAspectRatio: false,
-                scales: {
-                    y: { 
-                        min: 0, 
-                        suggestedMax: 10,
-                        grid: { color: 'rgba(255, 255, 255, 0.03)' },
-                        ticks: {
-                            color: 'rgba(255, 255, 255, 0.5)',
-                            font: { family: 'Outfit', size: 11 }
-                        }
-                    },
-                    x: { 
-                        grid: { display: false },
-                        ticks: {
-                            color: 'rgba(255, 255, 255, 0.5)',
-                            font: { family: 'Outfit', size: 11 }
-                        }
-                    }
-                },
                 plugins: {
-                    legend: {
-                        labels: {
-                            color: 'rgba(255, 255, 255, 0.7)',
-                            font: { family: 'Outfit', size: 12, weight: 600 }
-                        }
-                    },
-                    tooltip: {
-                        backgroundColor: 'rgba(15, 23, 42, 0.9)',
-                        borderColor: 'rgba(255, 255, 255, 0.08)',
-                        borderWidth: 1,
-                        titleFont: { family: 'Outfit', size: 12, weight: 600 },
-                        bodyFont: { family: 'Outfit', size: 12 },
-                        padding: 12,
-                        cornerRadius: 8,
-                        displayColors: true
-                    }
+                    legend: { display: false },
+                    tooltip: { enabled: false }
                 }
             }
         });
     }
     
-    const timeLabel = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
-    chartData.labels.push(timeLabel);
-    chartData.cpu.push(cpu);
-    chartData.ram.push(ram);
-    
-    if (chartData.labels.length > 15) {
-        chartData.labels.shift();
-        chartData.cpu.shift();
-        chartData.ram.shift();
+    if (!ramCircularChart && window.Chart) {
+        const ctx = ramCanvas.getContext("2d");
+        ramCircularChart = new window.Chart(ctx, {
+            type: 'doughnut',
+            data: {
+                datasets: [{
+                    data: [ram, 100 - ram],
+                    backgroundColor: [
+                        '#8b5cf6', // Неоновый фиолетовый
+                        'rgba(255, 255, 255, 0.04)'
+                    ],
+                    borderWidth: 0,
+                    cutout: '82%'
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { display: false },
+                    tooltip: { enabled: false }
+                }
+            }
+        });
     }
     
-    if (sysChart) {
-        sysChart.update();
+    if (cpuCircularChart) {
+        cpuCircularChart.data.datasets[0].data = [cpu, 100 - cpu];
+        cpuCircularChart.update();
     }
+    if (ramCircularChart) {
+        ramCircularChart.data.datasets[0].data = [ram, 100 - ram];
+        ramCircularChart.update();
+    }
+    
+    const cpuText = document.getElementById("cpu-chart-text");
+    if (cpuText) cpuText.innerText = `${cpu.toFixed(1)}%`;
+    
+    const ramText = document.getElementById("ram-chart-text");
+    if (ramText) ramText.innerText = `${ram.toFixed(1)}%`;
 }
 
 let globalTrafficChartInstance = null;
