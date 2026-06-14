@@ -16,6 +16,8 @@
     "dashboard_swap": "SWAP",
     "dashboard_disk": "Disk",
     "dashboard_traffic": "Traffic Usage",
+    "loading": "Loading...",
+    "xray_updated": "Updated",
     "dashboard_global_traffic": "Traffic Consumption (30 days)",
     "dashboard_uptime": "Server Uptime",
     "dashboard_net_up": "Outgoing Traffic",
