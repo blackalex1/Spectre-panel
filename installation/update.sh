@@ -49,5 +49,6 @@ else
 fi
 
 echo "===================================================="
-echo "[+] Update process complete!"
+echo "[+] Update process complete! Showing logs for spectre-panel (Ctrl+C to exit)..."
 echo "===================================================="
+docker logs -f spectre-panel
