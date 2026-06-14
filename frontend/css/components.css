@@ -566,3 +566,8 @@ select {
     background-size: 16px;
     padding-right: 40px !important;
 }
+
+select option {
+    background-color: #131926;
+    color: var(--text-primary);
+}
