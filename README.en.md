@@ -19,7 +19,7 @@
 To automatically install dependencies, configure cores, and launch the panel, run the following command:
 
 ```bash
-bash <(curl -fsSL https://raw.githubusercontent.com/ReturnFI/spectre-panel/main/install.sh)
+bash <(curl -fsSL https://raw.githubusercontent.com/ReturnFI/spectre-panel/main/installation/install_with_docker.sh)
 ```
 
 > [!NOTE]
@@ -46,7 +46,7 @@ The panel runs in Docker containers and interacts with the host-agent (a system 
 To automatically install Docker, configure system services, and start Spectre Panel:
 
 ```bash
-bash <(curl -fsSL https://raw.githubusercontent.com/blackalex1/Spectre-panel/main/install.sh)
+bash <(curl -fsSL https://raw.githubusercontent.com/blackalex1/Spectre-panel/main/installation/install_with_docker.sh)
 ```
 
 ### 🐳 Build from Local Repository

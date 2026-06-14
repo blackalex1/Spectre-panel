@@ -18,7 +18,7 @@
 Для автоматической установки зависимостей, настройки ядра и запуска панели выполните команду:
 
 ```bash
-bash <(curl -fsSL https://raw.githubusercontent.com/ReturnFI/spectre-panel/main/install.sh)
+bash <(curl -fsSL https://raw.githubusercontent.com/ReturnFI/spectre-panel/main/installation/install_with_docker.sh)
 ```
 
 > [!NOTE]
@@ -45,7 +45,7 @@ bash <(curl -fsSL https://raw.githubusercontent.com/ReturnFI/spectre-panel/main/
 Для автоматической установки Docker, настройки системных служб и запуска Spectre Panel выполните одну команду:
 
 ```bash
-bash <(curl -fsSL https://raw.githubusercontent.com/blackalex1/Spectre-panel/main/install.sh)
+bash <(curl -fsSL https://raw.githubusercontent.com/blackalex1/Spectre-panel/main/installation/install_with_docker.sh)
 ```
 
 ### 🐳 Сборка из локального репозитория

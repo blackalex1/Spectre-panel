@@ -41,12 +41,12 @@ echo "===================================================="
 read -p "Would you like to start a clean installation now? (y/N): " START_INSTALL
 
 if [[ "$START_INSTALL" =~ ^[yY]$ ]]; then
-    if [ -f "./install.sh" ]; then
-        chmod +x ./install.sh
-        ./install.sh
+    if [ -f "./installation/install_with_docker.sh" ]; then
+        chmod +x ./installation/install_with_docker.sh
+        ./installation/install_with_docker.sh
     else
-        echo "[!] install.sh not found in the current directory."
+        echo "[!] installation/install_with_docker.sh not found."
     fi
 else
-    echo "Done. You can start the installation later using: sudo ./install.sh"
+    echo "Done. You can start the installation later using: sudo ./installation/install_with_docker.sh"
 fi
