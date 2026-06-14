@@ -42,17 +42,21 @@
     <div class="charts-container">
         <div class="glass-card chart-card">
             <h3 data-i18n="dashboard_usage">Использование ресурсов</h3>
-            <div class="chart-wrapper circular-charts-wrapper" style="display: flex; justify-content: space-around; align-items: center; gap: 20px; height: 200px; padding: 10px 0;">
-                <div class="circular-chart-container" style="position: relative; width: 140px; height: 140px; display: flex; flex-direction: column; align-items: center;">
+            <div class="chart-wrapper circular-charts-wrapper" style="display: flex; justify-content: space-around; align-items: center; gap: 20px; height: 160px; padding: 5px 0; border-bottom: 1px solid var(--border-color); margin-bottom: 20px; padding-bottom: 15px;">
+                <div class="circular-chart-container" style="position: relative; width: 120px; height: 120px; display: flex; flex-direction: column; align-items: center;">
                     <canvas id="cpuCircularChart"></canvas>
-                    <div class="chart-inner-text" id="cpu-chart-text" style="position: absolute; top: 40%; left: 50%; transform: translate(-50%, -50%); font-size: 20px; font-weight: 800; color: var(--text-primary); font-family: var(--font-family);">0.0%</div>
-                    <div style="margin-top: 10px; font-size: 12px; font-weight: 700; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.8px;">CPU</div>
+                    <div class="chart-inner-text" id="cpu-chart-text" style="position: absolute; top: 38%; left: 50%; transform: translate(-50%, -50%); font-size: 18px; font-weight: 800; color: var(--text-primary); font-family: var(--font-family);">0.0%</div>
+                    <div style="margin-top: 8px; font-size: 11px; font-weight: 700; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.8px;">CPU</div>
                 </div>
-                <div class="circular-chart-container" style="position: relative; width: 140px; height: 140px; display: flex; flex-direction: column; align-items: center;">
+                <div class="circular-chart-container" style="position: relative; width: 120px; height: 120px; display: flex; flex-direction: column; align-items: center;">
                     <canvas id="ramCircularChart"></canvas>
-                    <div class="chart-inner-text" id="ram-chart-text" style="position: absolute; top: 40%; left: 50%; transform: translate(-50%, -50%); font-size: 20px; font-weight: 800; color: var(--text-primary); font-family: var(--font-family);">0.0%</div>
-                    <div style="margin-top: 10px; font-size: 12px; font-weight: 700; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.8px;">RAM</div>
+                    <div class="chart-inner-text" id="ram-chart-text" style="position: absolute; top: 38%; left: 50%; transform: translate(-50%, -50%); font-size: 18px; font-weight: 800; color: var(--text-primary); font-family: var(--font-family);">0.0%</div>
+                    <div style="margin-top: 8px; font-size: 11px; font-weight: 700; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.8px;">RAM</div>
                 </div>
+            </div>
+            <h4 data-i18n="dashboard_global_traffic" style="font-size: 13px; font-weight: 700; margin-bottom: 15px; text-transform: uppercase; letter-spacing: 0.8px; color: var(--text-secondary); border-left: 3px solid var(--primary); padding-left: 10px;">Потребление трафика за 30 дней</h4>
+            <div class="chart-wrapper" style="height: 180px; position: relative;">
+                <canvas id="globalTrafficChart"></canvas>
             </div>
         </div>
         <div class="glass-card info-card">
@@ -91,15 +95,5 @@
                 </div>
             </div>
         </div>
-    </div>
-
-    <!-- Блок глобальной статистики трафика -->
-    <div style="margin-top: 30px;">
-        <div class="glass-card chart-card" style="width: 100%;">
-            <h3 data-i18n="dashboard_global_traffic">Глобальное потребление трафика за 30 дней</h3>
-            <div class="chart-wrapper" style="height: 250px; position: relative;">
-                <canvas id="globalTrafficChart"></canvas>
-            </div>
-        </div>
-    </div>
+    </div></
 </section>
