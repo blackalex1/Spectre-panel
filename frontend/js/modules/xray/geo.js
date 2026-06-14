@@ -8,35 +8,7 @@ export async function loadGeoInfo() {
 
     const info = res.obj;
 
-    // geoip.dat
-    const geoipBadge = document.getElementById("geo-geoip-badge");
-    const geoipMeta  = document.getElementById("geo-geoip-meta");
-    if (geoipBadge && geoipMeta) {
-        if (info["geoip.dat"] && info["geoip.dat"].exists) {
-            geoipBadge.textContent = "✓ Установлен";
-            geoipBadge.className = "tag-badge tag-badge-direct";
-            geoipMeta.textContent = `${info["geoip.dat"].size_kb} КБ · Обновлён: ${info["geoip.dat"].updated_at}`;
-        } else {
-            geoipBadge.textContent = "✗ Отсутствует";
-            geoipBadge.className = "tag-badge tag-badge-blocked";
-            geoipMeta.textContent = "Файл не найден в папке bin/";
-        }
-    }
-
-    // geosite.dat
-    const geositeBadge = document.getElementById("geo-geosite-badge");
-    const geositeMeta  = document.getElementById("geo-geosite-meta");
-    if (geositeBadge && geositeMeta) {
-        if (info["geosite.dat"] && info["geosite.dat"].exists) {
-            geositeBadge.textContent = "✓ Установлен";
-            geositeBadge.className = "tag-badge tag-badge-direct";
-            geositeMeta.textContent = `${info["geosite.dat"].size_kb} КБ · Обновлён: ${info["geosite.dat"].updated_at}`;
-        } else {
-            geositeBadge.textContent = "✗ Отсутствует";
-            geositeBadge.className = "tag-badge tag-badge-blocked";
-            geositeMeta.textContent = "Файл не найден в папке bin/";
-        }
-    }
+    _applyGeoInfoToUI(info);
 
     // Заполняем поля URL (показываем только если не дефолтный)
     const geoipUrlInput   = document.getElementById("geo-geoip-url");
@@ -119,7 +91,7 @@ export function setupGeoListeners() {
                 showToast(t("geo_reset", "URL сброшены к дефолтным (Loyalsoldier)"));
                 await loadGeoInfo();
             } else {
-                showToast(res ? res.msg : "Ошибка сброса URL", "error");
+                showToast(res ? res.msg : t("geo_err_reset", "Ошибка сброса URL"), "error");
             }
         });
     }
@@ -135,7 +107,7 @@ export function setupGeoListeners() {
             updateBtn.innerHTML = `<i class="fa-solid fa-spinner fa-spin" style="margin-right:6px;"></i><span>${t("geo_updating", "Скачивание...")}</span>`;
 
             if (statusSpan) {
-                statusSpan.textContent = "⏳ Скачивание файлов...";
+                statusSpan.textContent = t("geo_updating_status", "⏳ Скачивание файлов...");
                 statusSpan.style.display = "inline";
                 statusSpan.style.color = "var(--text-secondary)";
             }
@@ -167,7 +139,7 @@ export function setupGeoListeners() {
                 }
             } else {
                 if (statusSpan) {
-                    statusSpan.textContent = `✗ ${(res && res.msg) || "Ошибка"}`;
+                    statusSpan.textContent = `✗ ${(res && res.msg) || t("geo_err_generic", "Ошибка")}`;
                     statusSpan.style.color = "var(--accent-rose, #ff4757)";
                     statusSpan.style.display = "inline";
                 }
@@ -189,13 +161,15 @@ function _applyGeoInfoToUI(info) {
         if (!badge || !meta) continue;
         const f = info[key];
         if (f && f.exists) {
-            badge.textContent = "✓ Установлен";
+            badge.textContent = t("geo_installed", "✓ Установлен");
             badge.className = "tag-badge tag-badge-direct";
-            meta.textContent = `${f.size_kb} КБ · Обновлён: ${f.updated_at}`;
+            meta.textContent = t("geo_meta_info", "{size} КБ · Обновлён: {date}")
+                .replace("{size}", f.size_kb)
+                .replace("{date}", f.updated_at);
         } else {
-            badge.textContent = "✗ Отсутствует";
+            badge.textContent = t("geo_missing", "✗ Отсутствует");
             badge.className = "tag-badge tag-badge-blocked";
-            meta.textContent = "Файл не найден в папке bin/";
+            meta.textContent = t("geo_not_found", "Файл не найден в папке bin/");
         }
     }
 }
