@@ -37,7 +37,7 @@ export async function loadAuditLogs() {
         tr.innerHTML = `
             <td style="white-space: nowrap; color: var(--text-secondary);">${date}</td>
             <td style="white-space: nowrap; font-weight: 500; color: var(--text-primary);">${log.username}</td>
-            <td style="white-space: nowrap;"><span class="badge secondary-badge" style="font-size: 12px;">${log.action}</span></td>
+            <td style="white-space: nowrap;"><span class="badge secondary-badge" style="font-size: 12px;">${t("audit_action_" + log.action, log.action)}</span></td>
             <td style="white-space: nowrap; color: var(--accent-blue);">${log.target || "-"}</td>
             <td style="color: var(--text-secondary); font-size: 13px; max-width: 250px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="${log.details || ''}">${log.details || "-"}</td>
         `;
