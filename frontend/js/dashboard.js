@@ -134,7 +134,7 @@ function updateChart(cpu, ram, swap, disk) {
                 datasets: [{
                     data: [cpu, 100 - cpu],
                     backgroundColor: [
-                        '#06b6d4', // Неоновый голубой
+                        '#8b5cf6', // Неоновый фиолетовый (Theme Accent)
                         'rgba(255, 255, 255, 0.04)'
                     ],
                     borderWidth: 0,
@@ -186,7 +186,7 @@ function updateChart(cpu, ram, swap, disk) {
                 datasets: [{
                     data: [swap, 100 - swap],
                     backgroundColor: [
-                        '#f59e0b', // Неоновый оранжевый (Accent Orange)
+                        '#8b5cf6', // Неоновый фиолетовый
                         'rgba(255, 255, 255, 0.04)'
                     ],
                     borderWidth: 0,
@@ -212,7 +212,7 @@ function updateChart(cpu, ram, swap, disk) {
                 datasets: [{
                     data: [disk, 100 - disk],
                     backgroundColor: [
-                        '#f43f5e', // Неоновая роза
+                        '#8b5cf6', // Неоновый фиолетовый
                         'rgba(255, 255, 255, 0.04)'
                     ],
                     borderWidth: 0,
@@ -230,34 +230,53 @@ function updateChart(cpu, ram, swap, disk) {
         });
     }
     
+    const NORMAL_COLOR = '#8b5cf6'; // Единый неоновый фиолетовый
+    const WARNING_COLOR = '#f43f5e'; // Предупреждающий неоновый красный (>90%)
+    
     if (cpuCircularChart) {
         cpuCircularChart.data.datasets[0].data = [cpu, 100 - cpu];
+        cpuCircularChart.data.datasets[0].backgroundColor[0] = (cpu >= 90) ? WARNING_COLOR : NORMAL_COLOR;
         cpuCircularChart.update();
     }
     if (ramCircularChart) {
         ramCircularChart.data.datasets[0].data = [ram, 100 - ram];
+        ramCircularChart.data.datasets[0].backgroundColor[0] = (ram >= 90) ? WARNING_COLOR : NORMAL_COLOR;
         ramCircularChart.update();
     }
     if (swapCircularChart) {
         swapCircularChart.data.datasets[0].data = [swap, 100 - swap];
+        swapCircularChart.data.datasets[0].backgroundColor[0] = (swap >= 90) ? WARNING_COLOR : NORMAL_COLOR;
         swapCircularChart.update();
     }
     if (diskCircularChart) {
         diskCircularChart.data.datasets[0].data = [disk, 100 - disk];
+        diskCircularChart.data.datasets[0].backgroundColor[0] = (disk >= 90) ? WARNING_COLOR : NORMAL_COLOR;
         diskCircularChart.update();
     }
     
     const cpuText = document.getElementById("cpu-chart-text");
-    if (cpuText) cpuText.innerText = `${cpu.toFixed(1)}%`;
+    if (cpuText) {
+        cpuText.innerText = `${cpu.toFixed(1)}%`;
+        cpuText.style.color = (cpu >= 90) ? WARNING_COLOR : 'var(--text-primary)';
+    }
     
     const ramText = document.getElementById("ram-chart-text");
-    if (ramText) ramText.innerText = `${ram.toFixed(1)}%`;
+    if (ramText) {
+        ramText.innerText = `${ram.toFixed(1)}%`;
+        ramText.style.color = (ram >= 90) ? WARNING_COLOR : 'var(--text-primary)';
+    }
     
     const swapText = document.getElementById("swap-chart-text");
-    if (swapText) swapText.innerText = `${swap.toFixed(1)}%`;
+    if (swapText) {
+        swapText.innerText = `${swap.toFixed(1)}%`;
+        swapText.style.color = (swap >= 90) ? WARNING_COLOR : 'var(--text-primary)';
+    }
     
     const diskText = document.getElementById("disk-chart-text");
-    if (diskText) diskText.innerText = `${disk.toFixed(1)}%`;
+    if (diskText) {
+        diskText.innerText = `${disk.toFixed(1)}%`;
+        diskText.style.color = (disk >= 90) ? WARNING_COLOR : 'var(--text-primary)';
+    }
 }
 
 let globalTrafficChartInstance = null;
