@@ -56,3 +56,10 @@ def clean_expired_sessions_db():
     now = int(time.time())
     with backend.database.db_session() as session:
         session.query(UserSession).filter(UserSession.expires_at < now).delete()
+
+def update_session_ip_db(session_id: str, ip_address: str):
+    with backend.database.db_session() as session:
+        db_sess = session.query(UserSession).filter_by(session_id=session_id).first()
+        if db_sess:
+            db_sess.ip_address = ip_address
+            session.commit()

@@ -50,11 +50,20 @@ def check_auth(request: Request) -> bool:
     # 2. Проверка Session Cookie
     session_id = request.cookies.get("session_id")
     if session_id:
-        from backend.database import get_session_db, delete_session_db
+        from backend.database import get_session_db, delete_session_db, update_session_ip_db
         db_sess = get_session_db(session_id)
         if db_sess:
             import time
             if db_sess["expires_at"] > int(time.time()):
+                # Если IP-адрес запроса изменился по сравнению с сохраненным в сессии, обновляем его
+                client_ip = request.client.host if request.client else "unknown"
+                if client_ip != "unknown" and db_sess.get("ip_address") != client_ip:
+                    try:
+                        update_session_ip_db(session_id, client_ip)
+                        db_sess["ip_address"] = client_ip
+                    except Exception as e:
+                        logging.error(f"Failed to update session IP: {e}")
+                
                 # Валидация CSRF для небезопасных методов
                 if request.method in ("POST", "PUT", "DELETE"):
                     csrf_token = request.headers.get("X-CSRF-Token")
