@@ -94,6 +94,12 @@ export async function loadStats() {
             
             const netSpeedDownVal = document.getElementById("net-speed-down-value");
             if (netSpeedDownVal) netSpeedDownVal.innerText = `${formatBytes(speedDown)}/s`;
+
+            const netSpeedUpValUsage = document.getElementById("net-speed-up-value-usage");
+            if (netSpeedUpValUsage) netSpeedUpValUsage.innerText = `${formatBytes(speedUp)}/s`;
+            
+            const netSpeedDownValUsage = document.getElementById("net-speed-down-value-usage");
+            if (netSpeedDownValUsage) netSpeedDownValUsage.innerText = `${formatBytes(speedDown)}/s`;
         }
     }
     lastNetUp = obj.netIO.up;

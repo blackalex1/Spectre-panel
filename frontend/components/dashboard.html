@@ -35,8 +35,21 @@
                     </div>
                     <div style="margin-top: 10px; font-size: 11px; font-weight: 700; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.8px;" data-i18n="dashboard_disk">Диск</div>
                     <div id="disk-value" style="font-size: 11px; font-weight: 600; color: var(--text-muted); margin-top: 2px;">0 / 0 GB</div>
+            </div>
+            
+            <div class="net-speed-row" style="display: flex; justify-content: space-around; align-items: center; margin-bottom: 20px; padding: 12px 15px; background: rgba(255, 255, 255, 0.02); border-radius: 8px; border: 1px solid rgba(255, 255, 255, 0.05); gap: 15px; flex-wrap: wrap;">
+                <div style="display: flex; align-items: center; gap: 8px;">
+                    <i class="fa-solid fa-cloud-arrow-down" style="color: #10b981; font-size: 14px;"></i>
+                    <span style="font-size: 12px; font-weight: 600; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.5px;" data-i18n="dashboard_net_speed_down">Скорость скачивания</span>
+                    <span id="net-speed-down-value-usage" style="font-size: 14px; font-weight: 700; color: #10b981; margin-left: 5px;">0 B/s</span>
+                </div>
+                <div style="display: flex; align-items: center; gap: 8px;">
+                    <i class="fa-solid fa-cloud-arrow-up" style="color: #8b5cf6; font-size: 14px;"></i>
+                    <span style="font-size: 12px; font-weight: 600; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.5px;" data-i18n="dashboard_net_speed_up">Скорость отправки</span>
+                    <span id="net-speed-up-value-usage" style="font-size: 14px; font-weight: 700; color: #8b5cf6; margin-left: 5px;">0 B/s</span>
                 </div>
             </div>
+            
             <h4 data-i18n="dashboard_global_traffic" style="font-size: 13px; font-weight: 700; margin-bottom: 15px; text-transform: uppercase; letter-spacing: 0.8px; color: var(--text-secondary); border-left: 3px solid var(--primary); padding-left: 10px;">Потребление трафика за 30 дней</h4>
             <div class="chart-wrapper" style="height: 180px; position: relative;">
                 <canvas id="globalTrafficChart"></canvas>
