@@ -15,6 +15,9 @@ def test_server_status_via_agent(client):
     assert obj["cpu"] == 12.5
     assert obj["mem"]["current"] == 1000000000
     assert obj["mem"]["total"] == 4000000000
+    assert obj["swap"]["current"] == 500000000
+    assert obj["swap"]["total"] == 2000000000
+    assert obj["swap"]["percent"] == 25.0
     assert obj["uptime"] == 7200
     assert obj["netIO"]["up"] == 500000
     assert obj["netIO"]["down"] == 1500000
