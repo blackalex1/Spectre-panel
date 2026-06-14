@@ -336,16 +336,28 @@ def test_client_alerts_logging(monkeypatch):
         details = json.loads(logs[2].details)
         assert details["username"] == "test_hysteria_user"
 
-    # 4. Test Hysteria 2 disconnection log parsing
-    hysteria_disconnect_line = '2026-06-13T03:05:00.000Z INFO client disconnected {"id": "test_hysteria_user", "addr": "188.134.67.205:1234"}'
-    process_hysteria_log_line(hysteria_disconnect_line)
+    # 3b. Test Hysteria 2 IPv6 connection log parsing
+    hysteria_connect_line_ipv6 = '2026-06-13T03:01:00.000Z INFO client connected {"id": "test_hysteria_user", "addr": "[2001:db8::1]:1234"}'
+    process_hysteria_log_line(hysteria_connect_line_ipv6)
 
     with db_session() as session:
         logs = session.query(AuditLog).order_by(AuditLog.id.asc()).all()
         assert len(logs) == 4
-        assert logs[3].action == "hysteria_disconnect"
-        assert logs[3].target == "188.134.67.205"
+        assert logs[3].action == "hysteria_connect"
+        assert logs[3].target == "2001:db8::1"
         details = json.loads(logs[3].details)
+        assert details["username"] == "test_hysteria_user"
+
+    # 4. Test Hysteria 2 disconnection log parsing
+    hysteria_disconnect_line = '2026-06-13T03:05:00.000Z INFO client disconnected {"id": "test_hysteria_user", "addr": "[2001:db8::1]:1234"}'
+    process_hysteria_log_line(hysteria_disconnect_line)
+
+    with db_session() as session:
+        logs = session.query(AuditLog).order_by(AuditLog.id.asc()).all()
+        assert len(logs) == 5
+        assert logs[4].action == "hysteria_disconnect"
+        assert logs[4].target == "2001:db8::1"
+        details = json.loads(logs[4].details)
         assert details["username"] == "test_hysteria_user"
 
 
@@ -387,6 +399,17 @@ def test_new_ip_security_alerts():
     )
     assert is_new_ip is False
     assert len(history) == 1
+
+    # Test loopback exclusion
+    for ip in ("::1", "[::1]", "127.0.0.1", "localhost"):
+        is_new_ip, history = check_new_ip_and_get_history(
+            username="svatex",
+            current_ip=ip,
+            current_timestamp=100,
+            logs=mock_logs
+        )
+        assert is_new_ip is False
+        assert len(history) == 0
 
 
 def test_auto_trim_emails():
