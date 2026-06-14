@@ -1,27 +1,6 @@
 <section id="tab-dashboard" class="tab-content active">
     <!-- Сетка карточек метрик -->
-    <div class="metrics-grid">
-        <div class="glass-card metric-card">
-            <div class="card-icon blue"><i class="fa-solid fa-microchip"></i></div>
-            <div class="metric-data">
-                <h3 data-i18n="dashboard_cpu">Загрузка CPU</h3>
-                <p class="metric-value" id="cpu-value">0%</p>
-            </div>
-        </div>
-        <div class="glass-card metric-card">
-            <div class="card-icon purple"><i class="fa-solid fa-memory"></i></div>
-            <div class="metric-data">
-                <h3 data-i18n="dashboard_ram">ОЗУ Память</h3>
-                <p class="metric-value" id="ram-value">0 / 0 GB</p>
-            </div>
-        </div>
-        <div class="glass-card metric-card">
-            <div class="card-icon rose"><i class="fa-solid fa-hard-drive"></i></div>
-            <div class="metric-data">
-                <h3 data-i18n="dashboard_disk">Накопитель (Диск)</h3>
-                <p class="metric-value" id="disk-value">0 / 0 GB</p>
-            </div>
-        </div>
+    <div class="metrics-grid" style="grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));">
         <div class="glass-card metric-card">
             <div class="card-icon green"><i class="fa-solid fa-arrow-up"></i></div>
             <div class="metric-data">
@@ -42,16 +21,24 @@
     <div class="charts-container">
         <div class="glass-card chart-card">
             <h3 data-i18n="dashboard_usage">Использование ресурсов</h3>
-            <div class="chart-wrapper circular-charts-wrapper" style="display: flex; justify-content: space-around; align-items: center; gap: 20px; height: 160px; padding: 5px 0; border-bottom: 1px solid var(--border-color); margin-bottom: 20px; padding-bottom: 15px;">
-                <div class="circular-chart-container" style="position: relative; width: 120px; height: 120px; display: flex; flex-direction: column; align-items: center;">
+            <div class="chart-wrapper circular-charts-wrapper" style="display: flex; justify-content: space-around; align-items: center; gap: 15px; height: 180px; padding: 5px 0; border-bottom: 1px solid var(--border-color); margin-bottom: 20px; padding-bottom: 15px;">
+                <div class="circular-chart-container" style="position: relative; width: 110px; height: 110px; display: flex; flex-direction: column; align-items: center;">
                     <canvas id="cpuCircularChart"></canvas>
-                    <div class="chart-inner-text" id="cpu-chart-text" style="position: absolute; top: 38%; left: 50%; transform: translate(-50%, -50%); font-size: 18px; font-weight: 800; color: var(--text-primary); font-family: var(--font-family);">0.0%</div>
-                    <div style="margin-top: 8px; font-size: 11px; font-weight: 700; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.8px;">CPU</div>
+                    <div class="chart-inner-text" id="cpu-chart-text" style="position: absolute; top: 35%; left: 50%; transform: translate(-50%, -50%); font-size: 16px; font-weight: 800; color: var(--text-primary); font-family: var(--font-family);">0.0%</div>
+                    <div style="margin-top: 10px; font-size: 11px; font-weight: 700; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.8px;">CPU</div>
+                    <div id="cpu-value" style="font-size: 11px; font-weight: 600; color: var(--text-muted); margin-top: 2px;">0%</div>
                 </div>
-                <div class="circular-chart-container" style="position: relative; width: 120px; height: 120px; display: flex; flex-direction: column; align-items: center;">
+                <div class="circular-chart-container" style="position: relative; width: 110px; height: 110px; display: flex; flex-direction: column; align-items: center;">
                     <canvas id="ramCircularChart"></canvas>
-                    <div class="chart-inner-text" id="ram-chart-text" style="position: absolute; top: 38%; left: 50%; transform: translate(-50%, -50%); font-size: 18px; font-weight: 800; color: var(--text-primary); font-family: var(--font-family);">0.0%</div>
-                    <div style="margin-top: 8px; font-size: 11px; font-weight: 700; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.8px;">RAM</div>
+                    <div class="chart-inner-text" id="ram-chart-text" style="position: absolute; top: 35%; left: 50%; transform: translate(-50%, -50%); font-size: 16px; font-weight: 800; color: var(--text-primary); font-family: var(--font-family);">0.0%</div>
+                    <div style="margin-top: 10px; font-size: 11px; font-weight: 700; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.8px;">RAM</div>
+                    <div id="ram-value" style="font-size: 11px; font-weight: 600; color: var(--text-muted); margin-top: 2px;">0 / 0 GB</div>
+                </div>
+                <div class="circular-chart-container" style="position: relative; width: 110px; height: 110px; display: flex; flex-direction: column; align-items: center;">
+                    <canvas id="diskCircularChart"></canvas>
+                    <div class="chart-inner-text" id="disk-chart-text" style="position: absolute; top: 35%; left: 50%; transform: translate(-50%, -50%); font-size: 16px; font-weight: 800; color: var(--text-primary); font-family: var(--font-family);">0.0%</div>
+                    <div style="margin-top: 10px; font-size: 11px; font-weight: 700; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.8px;">Диск</div>
+                    <div id="disk-value" style="font-size: 11px; font-weight: 600; color: var(--text-muted); margin-top: 2px;">0 / 0 GB</div>
                 </div>
             </div>
             <h4 data-i18n="dashboard_global_traffic" style="font-size: 13px; font-weight: 700; margin-bottom: 15px; text-transform: uppercase; letter-spacing: 0.8px; color: var(--text-secondary); border-left: 3px solid var(--primary); padding-left: 10px;">Потребление трафика за 30 дней</h4>
