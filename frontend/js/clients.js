@@ -60,6 +60,13 @@ function generateClientPassword(length = 16) {
     return pwd;
 }
 
+function generateRandomUsername() {
+    const prefixes = ["user", "client", "guest", "member", "shadow", "ghost", "cyber", "alpha", "beta", "omega", "nexus", "spectre", "sentinel"];
+    const randomPrefix = prefixes[Math.floor(Math.random() * prefixes.length)];
+    const randomNum = Math.floor(Math.random() * 9000) + 1000;
+    return `${randomPrefix}_${randomNum}`;
+}
+
 export function setupClientListeners(loadInboundsCallback) {
     document.getElementById("add-client-btn").addEventListener("click", () => {
         document.getElementById("client-form").reset();
@@ -67,6 +74,7 @@ export function setupClientListeners(loadInboundsCallback) {
         document.getElementById("c-email").disabled = false;
         document.getElementById("client-modal-title").innerText = "Добавление клиента";
         document.getElementById("client-ib-id").value = activeInboundId || "";
+        document.getElementById("c-email").value = generateRandomUsername();
         
         const flowGroup = document.getElementById("client-flow-group");
         const vmessGroup = document.getElementById("client-vmess-group");
@@ -83,6 +91,10 @@ export function setupClientListeners(loadInboundsCallback) {
         document.getElementById("c-limit-ip").value = 0;
         document.getElementById("c-enable").checked = true;
         document.getElementById("client-modal").classList.add("active");
+    });
+    
+    document.getElementById("c-gen-email-btn").addEventListener("click", () => {
+        document.getElementById("c-email").value = generateRandomUsername();
     });
     
     document.getElementById("c-gen-uuid-btn").addEventListener("click", () => {

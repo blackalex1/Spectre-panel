@@ -9,7 +9,10 @@
                 <input type="hidden" id="client-ib-id">
                 <div class="input-group">
                     <label for="c-email" data-i18n="client_email_label">Имя или Email (Идентификатор)</label>
-                    <input type="text" id="c-email" placeholder="Имя или email (например: alex, user@mail.com)">
+                    <div class="copy-input-group">
+                        <input type="text" id="c-email" placeholder="Имя или email (например: alex, user@mail.com)">
+                        <button type="button" id="c-gen-email-btn" class="btn secondary-btn" title="Сгенерировать"><i class="fa-solid fa-wand-magic-sparkles"></i></button>
+                    </div>
                 </div>
                 <div class="input-group">
                     <label for="c-uuid" data-i18n="client_uuid_label">UUID / Пароль</label>

@@ -99,7 +99,7 @@ export async function openClientsModal(inboundId) {
                 
             const tr = document.createElement("tr");
             tr.innerHTML = `
-                <td><strong>${c.email}</strong></td>
+                <td class="client-email-cell" title="${c.email}"><strong>${c.email}</strong></td>
                 <td>${statusCol}</td>
                 <td>⬆️ ${formatBytes(stats.up)} | ⬇️ ${formatBytes(stats.down)}</td>
                 <td>${limitText}</td>
