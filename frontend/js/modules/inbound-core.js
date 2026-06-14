@@ -31,21 +31,21 @@ export async function loadInbounds() {
             
             <div class="inbound-details">
                 <div class="inbound-detail-row">
-                    <span>Порт:</span>
+                    <span>${t("inbound_port", "Порт")}:</span>
                     <span class="val">${ib.port}</span>
                 </div>
                 <div class="inbound-detail-row">
-                    <span>Пользователи:</span>
+                    <span>${t("inbound_users", "Пользователи")}:</span>
                     <span class="val">${clientsCount}</span>
                 </div>
                 <div class="inbound-detail-row">
-                    <span>Расход трафика:</span>
+                    <span>${t("inbound_traffic", "Расход трафика")}:</span>
                     <span class="val">⬆️ ${formatBytes(ib.up)} | ⬇️ ${formatBytes(ib.down)}</span>
                 </div>
             </div>
             
             <div class="inbound-footer">
-                <button class="btn secondary-btn" onclick="openClientsModal(${ib.id})"><i class="fa-solid fa-users"></i> Клиенты</button>
+                <button class="btn secondary-btn" onclick="openClientsModal(${ib.id})"><i class="fa-solid fa-users"></i> ${t("inbound_btn_clients", "Клиенты")}</button>
                 <button class="table-action-btn edit-btn" onclick="openEditInboundModal(${ib.id})" title="${t("inbound_btn_edit", "Редактировать")}"><i class="fa-regular fa-pen-to-square"></i></button>
                 <button class="table-action-btn delete-btn" onclick="deleteInbound(${ib.id})" title="${t("inbound_btn_delete", "Удалить")}"><i class="fa-regular fa-trash-can"></i></button>
             </div>
