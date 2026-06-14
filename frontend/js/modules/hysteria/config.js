@@ -16,7 +16,7 @@ export async function loadHysteriaConfig(preferredIndex = 0) {
     if (window.hysteriaConfigs.length === 0) {
         if (selectWrapper) selectWrapper.style.display = "none";
         if (parsedContainer) {
-            parsedContainer.innerHTML = `<div style="text-align: center; color: var(--text-muted); padding: 20px;" data-i18n="config_no_active_inbounds">${t("config_no_active_inbounds", "Нет активных подключений Hysteria 2")}</div>`;
+            parsedContainer.innerHTML = `<div style="text-align: center; color: var(--text-muted); padding: 20px;" data-i18n="config_no_active_inbounds">${t("config_no_active_inbounds", "No active Hysteria 2 connections")}</div>`;
         }
         if (rawPre) rawPre.value = "";
         translatePage();
