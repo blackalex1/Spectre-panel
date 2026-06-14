@@ -7,12 +7,12 @@ export async function loadActiveSessions() {
     const tbody = document.getElementById("active-sessions-tbody");
     if (!tbody) return;
     
-    tbody.innerHTML = '<tr><td colspan="5" style="text-align: center;"><i class="fa-solid fa-spinner fa-spin"></i> Загрузка сессий...</td></tr>';
+    tbody.innerHTML = `<tr><td colspan="5" style="text-align: center;"><i class="fa-solid fa-spinner fa-spin"></i> ${t("sessions_loading", "Loading sessions...")}</td></tr>`;
     
     const res = await apiFetch("/api/security/sessions");
     if (res && res.success) {
         if (!res.sessions || res.sessions.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="5" style="text-align: center;">Активных сессий не найдено</td></tr>';
+            tbody.innerHTML = `<tr><td colspan="5" style="text-align: center;">${t("sessions_not_found", "No active sessions found")}</td></tr>`;
             return;
         }
         
@@ -54,12 +54,12 @@ export async function loadActiveSessions() {
             }
             
             // Highlight current device
-            const currentBadge = s.is_current ? ' <span class="badge success-badge" style="font-size: 10px; background: rgba(46, 213, 115, 0.15); color: #2ed573; padding: 2px 6px; margin-left: 6px;">Это устройство</span>' : '';
+            const currentBadge = s.is_current ? ` <span class="badge success-badge" style="font-size: 10px; background: rgba(46, 213, 115, 0.15); color: #2ed573; padding: 2px 6px; margin-left: 6px;">${t("sessions_this_device", "This device")}</span>` : '';
             
             // Terminate button
             const actionHtml = s.is_current 
-                ? '<span style="color: var(--text-secondary); font-size: 13px;">Текущая сессия</span>' 
-                : `<button class="btn danger-btn btn-terminate-session" data-id="${s.session_id}" style="padding: 4px 8px; font-size: 12px; height: auto;"><i class="fa-solid fa-right-from-bracket"></i> Завершить</button>`;
+                ? `<span style="color: var(--text-secondary); font-size: 13px;">${t("sessions_current_session", "Current session")}</span>` 
+                : `<button class="btn danger-btn btn-terminate-session" data-id="${s.session_id}" style="padding: 4px 8px; font-size: 12px; height: auto;"><i class="fa-solid fa-right-from-bracket"></i> ${t("sessions_btn_terminate", "Terminate")}</button>`;
             
             tr.innerHTML = `
                 <td style="white-space: nowrap;"><strong>${s.ip_address}</strong>${currentBadge}</td>
@@ -75,7 +75,7 @@ export async function loadActiveSessions() {
         document.querySelectorAll(".btn-terminate-session").forEach(btn => {
             btn.addEventListener("click", async (e) => {
                 const sid = e.currentTarget.getAttribute("data-id");
-                if (!confirm("Вы уверены, что хотите принудительно завершить эту сессию?")) return;
+                if (!confirm(t("sessions_confirm_terminate", "Are you sure you want to terminate this session?"))) return;
                 
                 const deleteRes = await apiFetch("/api/security/sessions/terminate", {
                     method: "POST",
@@ -84,15 +84,15 @@ export async function loadActiveSessions() {
                 });
                 
                 if (deleteRes && deleteRes.success) {
-                    showToast("Сессия успешно завершена!");
+                    showToast(t("sessions_terminated_success", "Session terminated successfully!"));
                     loadActiveSessions();
                 } else {
-                    showToast(deleteRes ? deleteRes.msg : "Не удалось завершить сессию", "error");
+                    showToast(deleteRes ? deleteRes.msg : t("sessions_terminate_error", "Failed to terminate session"), "error");
                 }
             });
         });
     } else {
-        tbody.innerHTML = '<tr><td colspan="5" style="text-align: center; color: var(--danger-color);">Не удалось загрузить активные сессии</td></tr>';
+        tbody.innerHTML = `<tr><td colspan="5" style="text-align: center; color: var(--danger-color);">${t("sessions_load_error", "Failed to load active sessions")}</td></tr>`;
     }
 }
 
