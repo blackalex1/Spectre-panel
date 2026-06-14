@@ -63,6 +63,7 @@ from backend.database.crud.sessions import (
     get_all_sessions_db,
     delete_session_db,
     clean_expired_sessions_db,
+    update_session_ip_db,
 )
 
 from backend.database.crud.outbounds import (
@@ -132,6 +133,7 @@ __all__ = [
     "get_all_sessions_db",
     "delete_session_db",
     "clean_expired_sessions_db",
+    "update_session_ip_db",
     "outbound_to_dict",
     "get_all_outbounds",
     "get_outbound_by_id",
