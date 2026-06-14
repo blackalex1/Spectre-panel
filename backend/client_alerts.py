@@ -86,6 +86,21 @@ def process_xray_log_line(line: str):
     except Exception as e:
         logging.error(f"[Xray Alert Tracker] Error parsing log line: {e}")
 
+def parse_ip_from_addr(addr: str) -> str:
+    if not addr:
+        return ""
+    addr = addr.strip()
+    if addr.startswith("["):
+        idx = addr.find("]")
+        if idx != -1:
+            return addr[1:idx]
+    if addr.count(":") > 1:
+        return addr
+    parts = addr.rsplit(":", 1)
+    if len(parts) == 2 and parts[1].isdigit():
+        return parts[0]
+    return addr
+
 def process_hysteria_log_line(line: str):
     """Parses Hysteria log lines to track connections/disconnections immediately."""
     try:
@@ -94,7 +109,7 @@ def process_hysteria_log_line(line: str):
             if match:
                 data = json.loads(match.group(1))
                 username = data.get("id") or "Unknown"
-                client_ip = data.get("addr", "").split(":")[0]
+                client_ip = parse_ip_from_addr(data.get("addr", ""))
                 
                 tx, rx = get_user_traffic_bytes(username)
                 log_action(
@@ -108,7 +123,7 @@ def process_hysteria_log_line(line: str):
             if match:
                 data = json.loads(match.group(1))
                 username = data.get("id") or "Unknown"
-                client_ip = data.get("addr", "").split(":")[0]
+                client_ip = parse_ip_from_addr(data.get("addr", ""))
                 
                 # Tiny wait for stats API to update values
                 time.sleep(0.1)
