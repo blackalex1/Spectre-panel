@@ -1,5 +1,5 @@
 import { apiFetch } from "../api.js";
-import { showToast, formatBytes } from "../ui.js";
+import { showToast, formatBytes, showConfirmDialog } from "../ui.js";
 import { t } from "../i18n.js";
 import { showClientTrafficChart } from "./clients-chart.js";
 import { openEditClientModal } from "./clients-form.js";
@@ -173,7 +173,8 @@ export async function toggleClientActiveStatus(inboundId, clientData, enabled) {
 }
 
 export async function deleteClient(inboundId, clientId, loadInboundsCallback) {
-    if (!confirm(t("confirm_delete_client", "Вы уверены, что хотите удалить этого клиента?"))) return;
+    const confirmed = await showConfirmDialog(t("confirm_delete_client", "Вы уверены, что хотите удалить этого клиента?"));
+    if (!confirmed) return;
     
     const res = await apiFetch(`/panel/api/inbounds/${inboundId}/delClient/${clientId}`, { method: "POST" });
     if (res && res.success) {

@@ -1,5 +1,5 @@
 import { apiFetch } from "../api.js";
-import { showToast, formatBytes } from "../ui.js";
+import { showToast, formatBytes, showConfirmDialog } from "../ui.js";
 import { t } from "../i18n.js";
 import { updateOutboundFormFields } from "./routing/outbound-form.js";
 
@@ -351,7 +351,8 @@ export async function toggleOutbound(id, checked) {
 }
 
 export async function deleteOutbound(id) {
-    if (!confirm(t("routing_confirm_delete_outbound", "Вы уверены, что хотите удалить это исходящее подключение? Любые правила маршрутизации, ссылающиеся на него, больше не будут работать."))) return;
+    const confirmed = await showConfirmDialog(t("routing_confirm_delete_outbound", "Вы уверены, что хотите удалить это исходящее подключение? Любые правила маршрутизации, ссылающиеся на него, больше не будут работать."));
+    if (!confirmed) return;
     
     const res = await apiFetch(`/api/routing/outbounds/delete/${id}`, { method: "POST" });
     if (res && res.success) {
