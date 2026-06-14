@@ -200,9 +200,10 @@ export function setupBackupsListeners() {
         backupEncryptInput.addEventListener("change", (e) => {
             const checked = e.target.checked;
             const backupPasswordGroup = document.getElementById("setting-backup-password-group");
+            const initialEncrypt = backupEncryptInput.dataset.initial === "true";
             
             if (checked) {
-                if (!window.backupPasswordSet) {
+                if (!initialEncrypt || !window.backupPasswordSet) {
                     const modal = document.getElementById("backup-pwd-setup-modal");
                     if (modal) {
                         document.getElementById("setup-backup-password").value = "";
@@ -238,8 +239,9 @@ export function setupBackupsListeners() {
 
         const closeModal = () => {
             modalSetup.classList.remove("active");
-            if (!window.backupPasswordSet) {
-                const checkbox = document.getElementById("setting-backup-encrypt");
+            const checkbox = document.getElementById("setting-backup-encrypt");
+            const initialEncrypt = checkbox ? checkbox.dataset.initial === "true" : false;
+            if (!initialEncrypt) {
                 if (checkbox) checkbox.checked = false;
                 const backupPasswordGroup = document.getElementById("setting-backup-password-group");
                 if (backupPasswordGroup) backupPasswordGroup.style.display = "none";

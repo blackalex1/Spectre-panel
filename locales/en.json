@@ -184,7 +184,7 @@
     "settings_backup_pwd_changed": "Backup encryption password changed successfully!",
     "settings_backup_passwords_mismatch": "New passwords do not match!",
     "settings_backup_fields_required": "Please fill in all fields to change the password!",
-    "settings_backup_password_warning": "⚠️ WARNING: Make sure to keep/remember this password! Without it, restoring backups will be impossible.",
+    "settings_backup_password_warning": "WARNING: Make sure to keep/remember this password! Without it, restoring backups will be impossible.",
     "settings_backup_confirm_restore": "Are you sure you want to restore the database? This will erase all current connections and users and overwrite them with data from the backup file!",
     "settings_backup_pwd_prompt": "Backup file is encrypted. Enter password to decrypt:",
     "settings_backup_pwd_invalid_prompt": "Incorrect password. Please enter correct password to decrypt:",
