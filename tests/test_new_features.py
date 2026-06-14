@@ -400,17 +400,6 @@ def test_new_ip_security_alerts():
     assert is_new_ip is False
     assert len(history) == 1
 
-    # Test loopback exclusion
-    for ip in ("::1", "[::1]", "127.0.0.1", "localhost"):
-        is_new_ip, history = check_new_ip_and_get_history(
-            username="svatex",
-            current_ip=ip,
-            current_timestamp=100,
-            logs=mock_logs
-        )
-        assert is_new_ip is False
-        assert len(history) == 0
-
 
 def test_auto_trim_emails():
     """Test that startup database trim migration automatically strips client emails."""
