@@ -568,6 +568,6 @@ select {
 }
 
 select option {
-    background-color: #131926;
+    background-color: transparent;
     color: var(--text-primary);
 }
