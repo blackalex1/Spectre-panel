@@ -1,11 +1,16 @@
 import { apiFetch } from "./api.js";
 import { showToast, formatBytes } from "./ui.js";
 import { t } from "./i18n.js";
+import { openLinksModal, openEditClientModal, deleteClient } from "./clients.js";
 
 let cpuCircularChart = null;
 let ramCircularChart = null;
 let swapCircularChart = null;
 let diskCircularChart = null;
+
+let dashboardClients = [];
+let isDashboardSearchInitialized = false;
+let lastOnlines = [];
 
 export async function loadStats() {
     const res = await apiFetch("/panel/api/server/status");
@@ -96,6 +101,7 @@ export async function loadStats() {
     // Update chart
     updateChart(obj.cpu, (memCurrent / memTotal) * 100, swapPercent, obj.disk ? obj.disk.percent : 0);
     await loadGlobalTrafficChart();
+    await loadDashboardClients();
 }
 
 export async function loadBbrStatus() {
@@ -390,4 +396,202 @@ export async function loadGlobalTrafficChart() {
             }
         });
     }
+}
+
+export async function loadDashboardClients() {
+    try {
+        const inboundsRes = await apiFetch("/panel/api/inbounds/list");
+        const onlinesRes = await apiFetch("/panel/api/clients/onlines", { method: "POST" });
+        if (!inboundsRes || !inboundsRes.success || !onlinesRes || !onlinesRes.success) return;
+
+        lastOnlines = onlinesRes.obj || [];
+        const tempClients = [];
+
+        inboundsRes.obj.forEach(ib => {
+            let settings = {};
+            try {
+                settings = JSON.parse(ib.settings);
+            } catch (e) {
+                console.error("Error parsing settings for inbound", ib.id, e);
+            }
+            const clients = settings.clients || [];
+            clients.forEach(c => {
+                const stats = ib.clientStats.find(s => s.email === c.email) || { up: 0, down: 0 };
+                tempClients.push({
+                    email: c.email,
+                    enable: c.enable,
+                    limitIp: c.limitIp,
+                    totalGB: c.totalGB,
+                    expiryTime: c.expiryTime,
+                    up: stats.up,
+                    down: stats.down,
+                    inboundId: ib.id,
+                    inboundRemark: ib.remark,
+                    inboundProtocol: ib.protocol,
+                    rawClient: c
+                });
+            });
+        });
+
+        // Stable sort alphabetically by email
+        tempClients.sort((a, b) => a.email.localeCompare(b.email));
+        dashboardClients = tempClients;
+
+        filterAndRenderClients();
+        setupDashboardClientsListeners();
+    } catch (err) {
+        console.error("Error loading dashboard clients:", err);
+    }
+}
+
+function filterAndRenderClients() {
+    const tableBody = document.getElementById("dashboard-clients-table-body");
+    if (!tableBody) return;
+
+    const searchInput = document.getElementById("dashboard-clients-search");
+    const onlineFilter = document.getElementById("dashboard-filter-online");
+    const blockedFilter = document.getElementById("dashboard-filter-blocked");
+
+    const searchQuery = searchInput ? searchInput.value.toLowerCase().trim() : "";
+    const showOnlyOnline = onlineFilter ? onlineFilter.checked : false;
+    const showOnlyBlocked = blockedFilter ? blockedFilter.checked : false;
+
+    // Filter
+    const filtered = dashboardClients.filter(c => {
+        const isOnline = lastOnlines.includes(c.email);
+        const matchesSearch = c.email.toLowerCase().includes(searchQuery) || 
+                              c.inboundRemark.toLowerCase().includes(searchQuery) ||
+                              c.inboundProtocol.toLowerCase().includes(searchQuery);
+
+        if (!matchesSearch) return false;
+        if (showOnlyOnline && !isOnline) return false;
+        if (showOnlyBlocked && c.enable) return false;
+
+        return true;
+    });
+
+    // Render
+    tableBody.innerHTML = "";
+    if (filtered.length === 0) {
+        tableBody.innerHTML = `
+            <tr>
+                <td colspan="7" style="text-align: center; color: var(--text-muted); padding: 30px;">
+                    ${t("no_matching_clients", "Клиенты не найдены")}
+                </td>
+            </tr>
+        `;
+        return;
+    }
+
+    filtered.forEach(c => {
+        const isOnline = lastOnlines.includes(c.email);
+        
+        let statusHtml = "";
+        if (isOnline) {
+            statusHtml = `<span class="badge" style="background: rgba(46, 213, 115, 0.15); color: #2ed573; box-shadow: 0 0 8px rgba(46, 213, 115, 0.2);"><span style="display: inline-block; width: 6px; height: 6px; background: #2ed573; border-radius: 50%; margin-right: 6px; vertical-align: middle;"></span>${t("client_status_online", "Онлайн")}</span>`;
+        } else if (c.enable) {
+            statusHtml = `<span class="badge" style="background: rgba(255, 255, 255, 0.05); color: var(--text-secondary);"><span style="display: inline-block; width: 6px; height: 6px; background: var(--text-muted); border-radius: 50%; margin-right: 6px; vertical-align: middle; opacity: 0.5;"></span>${t("client_status_offline", "Офлайн")}</span>`;
+        } else {
+            statusHtml = `<span class="badge inactive" style="cursor: help;">${t("client_status_blocked", "Бан ⚠️")}</span>`;
+        }
+
+        const trafficLimit = c.totalGB > 0 ? `${c.totalGB} GB` : t("client_status_unlimited", "Безлимит");
+        const ipLimit = c.limitIp > 0 ? `IP: ${c.limitIp}` : "IP: ♾️";
+        const limitText = `
+            <div style="display: flex; flex-direction: column; font-size: 13px; gap: 2px;">
+                <span>📊 ${trafficLimit}</span>
+                <span style="color: var(--text-secondary);">🖥️ ${ipLimit}</span>
+            </div>
+        `;
+
+        const expiryDate = c.expiryTime > 0 
+            ? new Date(c.expiryTime * 1000).toLocaleDateString() 
+            : t("client_status_never_expires", "Бессрочно");
+
+        const emailSafe = c.email.replace(/@/g, '_').replace(/\./g, '_');
+
+        const tr = document.createElement("tr");
+        tr.innerHTML = `
+            <td><strong>${c.email}</strong></td>
+            <td>${statusHtml}</td>
+            <td>
+                <a href="#" class="inbound-link" id="db-link-inbound-${c.inboundId}-${emailSafe}">
+                    ${c.inboundProtocol.toUpperCase()} (${c.inboundRemark})
+                </a>
+            </td>
+            <td>⬆️ ${formatBytes(c.up)} | ⬇️ ${formatBytes(c.down)}</td>
+            <td>${limitText}</td>
+            <td>${expiryDate}</td>
+            <td>
+                <div class="actions-group">
+                    <button class="table-action-btn links-btn" id="db-btn-links-${c.inboundId}-${emailSafe}" title="${t("links_modal_title", "Ссылки подключения")}"><i class="fa-solid fa-qrcode"></i></button>
+                    <button class="table-action-btn edit-btn" id="db-btn-edit-${c.inboundId}-${emailSafe}" title="${t("inbound_btn_edit", "Редактировать")}"><i class="fa-regular fa-pen-to-square"></i></button>
+                    <button class="table-action-btn delete-btn" id="db-btn-del-${c.inboundId}-${emailSafe}" title="${t("inbound_btn_delete", "Удалить")}"><i class="fa-regular fa-trash-can"></i></button>
+                </div>
+            </td>
+        `;
+
+        tableBody.appendChild(tr);
+
+        // Add event listeners to the inline elements
+        const inboundLink = document.getElementById(`db-link-inbound-${c.inboundId}-${emailSafe}`);
+        if (inboundLink) {
+            inboundLink.addEventListener("click", (e) => {
+                e.preventDefault();
+                if (window.openClientsModal) {
+                    window.openClientsModal(c.inboundId);
+                }
+            });
+        }
+
+        const linksBtn = document.getElementById(`db-btn-links-${c.inboundId}-${emailSafe}`);
+        if (linksBtn) {
+            linksBtn.addEventListener("click", () => openLinksModal(c.inboundId, c.email));
+        }
+
+        const editBtn = document.getElementById(`db-btn-edit-${c.inboundId}-${emailSafe}`);
+        if (editBtn) {
+            editBtn.addEventListener("click", () => openEditClientModal(c.inboundId, c.rawClient));
+        }
+
+        const delBtn = document.getElementById(`db-btn-del-${c.inboundId}-${emailSafe}`);
+        if (delBtn) {
+            delBtn.addEventListener("click", () => deleteClient(
+                c.inboundId, 
+                c.rawClient.id || c.rawClient.password || c.rawClient.client_uuid_or_pwd, 
+                async () => {
+                    await loadDashboardClients();
+                }
+            ));
+        }
+    });
+}
+
+function setupDashboardClientsListeners() {
+    if (isDashboardSearchInitialized) return;
+    
+    const searchInput = document.getElementById("dashboard-clients-search");
+    const onlineFilter = document.getElementById("dashboard-filter-online");
+    const blockedFilter = document.getElementById("dashboard-filter-blocked");
+    const refreshBtn = document.getElementById("dashboard-clients-refresh");
+
+    if (searchInput) {
+        searchInput.addEventListener("input", () => filterAndRenderClients());
+    }
+    if (onlineFilter) {
+        onlineFilter.addEventListener("change", () => filterAndRenderClients());
+    }
+    if (blockedFilter) {
+        blockedFilter.addEventListener("change", () => filterAndRenderClients());
+    }
+    if (refreshBtn) {
+        refreshBtn.addEventListener("click", async () => {
+            const spinIcon = refreshBtn.querySelector("i");
+            if (spinIcon) spinIcon.classList.add("fa-spin");
+            await loadDashboardClients();
+            if (spinIcon) spinIcon.classList.remove("fa-spin");
+        });
+    }
+
+    isDashboardSearchInitialized = true;
 }

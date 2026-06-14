@@ -652,7 +652,12 @@
     "backup_current_password_incorrect": "Неверный текущий пароль для шифрования бэкапов",
     "backup_password_changed_success": "Пароль шифрования бэкапов успешно изменен!",
     "backup_password_change_error": "Ошибка смены пароля: {error}",
-    "backup_scheduler_telegram_caption": "📁 <b>[Автоматический Бэкап]</b>\nСоздана автоматическая резервная копия базы данных.\nФайл: <code>{filename}</code>"
+    "backup_scheduler_telegram_caption": "📁 <b>[Автоматический Бэкап]</b>\nСоздана автоматическая резервная копия базы данных.\nФайл: <code>{filename}</code>",
+    "dashboard_clients_title": "Список клиентов",
+    "dashboard_clients_search_placeholder": "Поиск по email или подключению...",
+    "dashboard_clients_th_inbound": "Подключение",
+    "dashboard_clients_only_online": "Только онлайн",
+    "dashboard_clients_only_blocked": "Только заблокированные"
   },
   "bot": {
     "access_denied": "⛔️ <b>Доступ заблокирован.</b> Ваш Telegram ID отсутствует в белом списке панели.",
