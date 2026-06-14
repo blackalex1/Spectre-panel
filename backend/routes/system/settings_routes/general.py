@@ -25,6 +25,7 @@ async def get_settings_api(request: Request):
         "success": True,
         "api_token": settings.API_TOKEN,
         "secret_path": settings.PANEL_SECRET_PATH,
+        "ips_port_scan_limit": settings.IPS_PORT_SCAN_LIMIT,
         "admin_username": admin_username,
         "totp_enabled": totp_enabled,
         "decoy_type": get_setting("decoy_type", "none"),
@@ -69,6 +70,17 @@ async def update_settings_api(request: Request):
             system_facade.save_settings_to_env({
                 "PANEL_SECRET_PATH": secret_path,
             })
+            
+        if "ips_port_scan_limit" in data:
+            try:
+                ips_limit = int(data.get("ips_port_scan_limit"))
+                if ips_limit <= 0:
+                    raise ValueError()
+                system_facade.save_settings_to_env({
+                    "IPS_PORT_SCAN_LIMIT": ips_limit,
+                })
+            except ValueError:
+                return {"success": False, "msg": "Неверный лимит IPS (должно быть целое положительное число)"}
             
         if "session_timeout_days" in data:
             try:
