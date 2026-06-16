@@ -440,7 +440,7 @@ export async function loadDashboardClients() {
             }
             const clients = settings.clients || [];
             clients.forEach(c => {
-                const stats = ib.clientStats.find(s => s.email === c.email) || { up: 0, down: 0 };
+                const stats = ib.clientStats.find(s => s.email === c.email) || { up: 0, down: 0, blockReason: "" };
                 tempClients.push({
                     email: c.email,
                     enable: c.enable,
@@ -449,6 +449,7 @@ export async function loadDashboardClients() {
                     expiryTime: c.expiryTime,
                     up: stats.up,
                     down: stats.down,
+                    blockReason: stats.blockReason || c.blockReason || "",
                     inboundId: ib.id,
                     inboundRemark: ib.remark,
                     inboundProtocol: ib.protocol,
@@ -511,12 +512,13 @@ function filterAndRenderClients() {
         const isOnline = lastOnlines.includes(c.email);
         
         let statusHtml = "";
-        if (isOnline) {
+        if (!c.enable) {
+            const reasonStr = c.blockReason || t("client_status_blocked", "Заблокирован");
+            statusHtml = `<span class="badge inactive" title="Причина: ${reasonStr}" style="cursor: help;">${t("client_status_blocked", "Бан ⚠️")}</span>`;
+        } else if (isOnline) {
             statusHtml = `<span class="badge" style="background: rgba(46, 213, 115, 0.15); color: #2ed573; box-shadow: 0 0 8px rgba(46, 213, 115, 0.2);"><span style="display: inline-block; width: 6px; height: 6px; background: #2ed573; border-radius: 50%; margin-right: 6px; vertical-align: middle;"></span>${t("client_status_online", "Онлайн")}</span>`;
-        } else if (c.enable) {
-            statusHtml = `<span class="badge" style="background: rgba(255, 255, 255, 0.05); color: var(--text-secondary);"><span style="display: inline-block; width: 6px; height: 6px; background: var(--text-muted); border-radius: 50%; margin-right: 6px; vertical-align: middle; opacity: 0.5;"></span>${t("client_status_offline", "Офлайн")}</span>`;
         } else {
-            statusHtml = `<span class="badge inactive" style="cursor: help;">${t("client_status_blocked", "Бан ⚠️")}</span>`;
+            statusHtml = `<span class="badge" style="background: rgba(255, 255, 255, 0.05); color: var(--text-secondary);"><span style="display: inline-block; width: 6px; height: 6px; background: var(--text-muted); border-radius: 50%; margin-right: 6px; vertical-align: middle; opacity: 0.5;"></span>${t("client_status_offline", "Офлайн")}</span>`;
         }
 
         const trafficLimit = c.totalGB > 0 ? `${c.totalGB} GB` : t("client_status_unlimited", "Безлимит");
