@@ -23,7 +23,6 @@ backend.config.settings.PANEL_SECRET_PATH = "ui_test_secret"
 backend.config.settings.API_TOKEN = "test_bearer_token"
 backend.config.settings.ADMIN_USERNAME = "test_admin"
 backend.config.settings.ADMIN_PASSWORD = "test_password"
-backend.config.settings.IPS_PORT_SCAN_LIMIT = 200
 
 # --- Автоконфигурация тестовой базы данных PostgreSQL / SQLite ---
 test_admin_url = os.getenv("TEST_DATABASE_ADMIN_URL")

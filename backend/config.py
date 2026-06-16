@@ -34,10 +34,6 @@ PANEL_SECRET_PATH={secret_path}
 # Токен для интеграции с контроллером
 API_TOKEN={api_token}
 
-# Лимит IPS (автоблокировка при обнаружении сканирования портов)
-# Количество уникальных IP-адресов назначения за 10 секунд
-IPS_PORT_SCAN_LIMIT=200
-
 # Настройки СУБД PostgreSQL (Параметры безопасности)
 POSTGRES_DB=spectre_db
 POSTGRES_USER=postgres
@@ -95,9 +91,7 @@ class Settings(BaseSettings):
     LOGIN_ATTEMPTS_PERIOD: int = 60
     LOGIN_FAIL_DELAY: float = 1.0
 
-    # Лимит IPS (автоблокировка при обнаружении сканирования портов)
-    # Количество уникальных IP-адресов назначения за 10 секунд
-    IPS_PORT_SCAN_LIMIT: int = 200
+
 
 
     model_config = SettingsConfigDict(
