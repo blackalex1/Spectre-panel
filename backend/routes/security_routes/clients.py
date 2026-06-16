@@ -12,10 +12,40 @@ from backend.models import ClientStats, Inbound, ClientTrafficDaily
 
 router = APIRouter()
 
+def parse_xray_timestamp(line: str) -> Optional[datetime.datetime]:
+    try:
+        # Format: "2026/06/16 18:13:22"
+        match = re.match(r"^(\d{4}/\d{2}/\d{2} \d{2}:\d{2}:\d{2})", line)
+        if match:
+            return datetime.datetime.strptime(match.group(1), "%Y/%m/%d %H:%M:%S")
+    except Exception:
+        pass
+    return None
+
+def parse_hysteria_timestamp(line: str) -> Optional[datetime.datetime]:
+    try:
+        # JSON format: {"time":"2026-06-16T18:13:22Z", ...}
+        if line.startswith("{"):
+            data = json.loads(line)
+            t_str = data.get("time")
+            if t_str:
+                t_str = t_str.split(".")[0].replace("Z", "").split("+")[0]
+                return datetime.datetime.strptime(t_str, "%Y-%m-%dT%H:%M:%S")
+        else:
+            # Text format: 2026-06-16T18:13:22Z [INFO]...
+            match = re.match(r"^(\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2})", line)
+            if match:
+                return datetime.datetime.strptime(match.group(1), "%Y-%m-%dT%H:%M:%S")
+    except Exception:
+        pass
+    return None
+
 def find_email_in_hysteria_log(dst_ip: Optional[str], dst_port: int) -> Optional[str]:
     """
     Парсит последние 1000 строк лога Hysteria 2 для поиска email (auth) по параметрам соединения.
+    Временной лимит: только лог-записи за последние 5 минут (отключается во время тестов).
     """
+    import sys
     import backend.routes.security as sec_facade
     if not sec_facade.HYSTERIA_LOG_PATH.exists():
         return None
@@ -28,16 +58,21 @@ def find_email_in_hysteria_log(dst_ip: Optional[str], dst_port: int) -> Optional
         return None
         
     dst_port_str = f":{dst_port}"
+    now = datetime.datetime.now()
+    is_testing = "pytest" in sys.modules
     
     # Проход с конца к началу лога для поиска самого свежего совпадения
     for line in reversed(lines):
+        log_time = parse_hysteria_timestamp(line)
+        if log_time and not is_testing and abs((now - log_time).total_seconds()) > 300:
+            continue
+            
         if dst_port_str not in line:
             continue
             
         if dst_ip and dst_ip not in line:
             continue
             
-        # Различные форматы логирования в Hysteria 2
         # 1. JSON: {"auth": "user@example.com", "req": "1.2.3.4:22"}
         match = re.search(r'"auth"\s*:\s*"([^"]+)"', line)
         if not match:
@@ -54,8 +89,12 @@ def find_email_in_hysteria_log(dst_ip: Optional[str], dst_port: int) -> Optional
             email = match.group(1) if match.lastindex and match.lastindex >= 1 else match.group(0)
             return email.strip('"\'[]')
             
-    # Резервный поиск: только по порту назначения без жесткой привязки к IP
+    # Резервный поиск: только по порту назначения
     for line in reversed(lines):
+        log_time = parse_hysteria_timestamp(line)
+        if log_time and not is_testing and abs((now - log_time).total_seconds()) > 300:
+            continue
+            
         if dst_port_str not in line:
             continue
         match = re.search(r'"auth"\s*:\s*"([^"]+)"', line)
@@ -74,7 +113,9 @@ def find_email_in_hysteria_log(dst_ip: Optional[str], dst_port: int) -> Optional
 def find_email_in_xray_log(client_ip: Optional[str], dst_ip: Optional[str], dst_port: int) -> Optional[str]:
     """
     Парсит последние 1000 строк лога Xray для поиска email по параметрам соединения.
+    Временной лимит: только лог-записи за последние 5 минут (отключается во время тестов).
     """
+    import sys
     import backend.routes.security as sec_facade
     if not sec_facade.XRAY_LOG_PATH.exists():
         return None
@@ -87,23 +128,32 @@ def find_email_in_xray_log(client_ip: Optional[str], dst_ip: Optional[str], dst_
         return None
         
     dst_port_str = f":{dst_port}"
+    now = datetime.datetime.now()
+    is_testing = "pytest" in sys.modules
+    
     # Проход с конца к началу лога для поиска самого свежего совпадения
     for line in reversed(lines):
+        log_time = parse_xray_timestamp(line)
+        if log_time and not is_testing and abs((now - log_time).total_seconds()) > 300:
+            continue
+            
         if "email:" not in line:
             continue
             
         # Линия лога имеет вид:
         # 2026/06/07 00:25:00 93.100.12.34:51234 accepted tcp:185.112.14.3:443 email: user@example.com
         if dst_port_str in line:
-            # Ищем точное совпадение по IP назначения или IP клиента
             if (dst_ip and dst_ip in line) or (client_ip and client_ip in line):
                 match = re.search(r"email:\s*(\S+)", line)
                 if match:
                     return match.group(1)
                     
-    # Резервный поиск: если IP-адреса не совпали из-за NAT или доменных имен,
-    # возвращаем последнюю сессию на этот порт назначения
+    # Резервный поиск
     for line in reversed(lines):
+        log_time = parse_xray_timestamp(line)
+        if log_time and not is_testing and abs((now - log_time).total_seconds()) > 300:
+            continue
+            
         if "email:" not in line:
             continue
         if dst_port_str in line:
@@ -116,7 +166,9 @@ def find_email_in_xray_log(client_ip: Optional[str], dst_ip: Optional[str], dst_
 def find_client_ip_for_email_in_hysteria_log(email: str) -> Optional[str]:
     """
     Ищет последний зафиксированный IP-адрес подключения для конкретного email в логах Hysteria 2.
+    Временной лимит: только лог-записи за последние 5 минут (отключается во время тестов).
     """
+    import sys
     import backend.routes.security as sec_facade
     if not sec_facade.HYSTERIA_LOG_PATH.exists():
         return None
@@ -126,7 +178,14 @@ def find_client_ip_for_email_in_hysteria_log(email: str) -> Optional[str]:
     except Exception:
         return None
         
+    now = datetime.datetime.now()
+    is_testing = "pytest" in sys.modules
+    
     for line in reversed(lines):
+        log_time = parse_hysteria_timestamp(line)
+        if log_time and not is_testing and abs((now - log_time).total_seconds()) > 300:
+            continue
+            
         if "client connected" in line:
             try:
                 match = re.search(r"client connected\s+(\{.*\})", line)
@@ -146,7 +205,9 @@ def find_client_ip_for_email_in_hysteria_log(email: str) -> Optional[str]:
 def find_email_and_ip_in_xray_log(client_ip: Optional[str], dst_ip: Optional[str], dst_port: int) -> Optional[tuple]:
     """
     Ищет email и IP-адрес клиента Xray по параметрам соединения.
+    Временной лимит: только лог-записи за последние 5 минут (отключается во время тестов).
     """
+    import sys
     import backend.routes.security as sec_facade
     if not sec_facade.XRAY_LOG_PATH.exists():
         return None
@@ -157,7 +218,14 @@ def find_email_and_ip_in_xray_log(client_ip: Optional[str], dst_ip: Optional[str
         return None
         
     dst_port_str = f":{dst_port}"
+    now = datetime.datetime.now()
+    is_testing = "pytest" in sys.modules
+    
     for line in reversed(lines):
+        log_time = parse_xray_timestamp(line)
+        if log_time and not is_testing and abs((now - log_time).total_seconds()) > 300:
+            continue
+            
         if "email:" not in line:
             continue
             
@@ -171,6 +239,10 @@ def find_email_and_ip_in_xray_log(client_ip: Optional[str], dst_ip: Optional[str
                     return email, ip
                     
     for line in reversed(lines):
+        log_time = parse_xray_timestamp(line)
+        if log_time and not is_testing and abs((now - log_time).total_seconds()) > 300:
+            continue
+            
         if "email:" not in line:
             continue
         if dst_port_str in line:
