@@ -80,7 +80,16 @@ def update_online_emails():
     except Exception as e:
         logging.error(f"Error querying online Hysteria 2 clients in background: {e}")
 
-    _online_emails = list(set(emails))
+    # Keep only emails of clients that are enabled in the database
+    try:
+        from backend.database import db_session
+        from backend.models import ClientStats
+        with db_session() as session:
+            enabled_emails = {c.email for c in session.query(ClientStats).filter_by(enable=1).all()}
+        _online_emails = list(set(emails) & enabled_emails)
+    except Exception as e:
+        logging.error(f"Error filtering online emails by enabled status: {e}")
+        _online_emails = list(set(emails))
     _last_traffic_check_time = time.time()
 
 @router.post("/panel/api/clients/onlines")

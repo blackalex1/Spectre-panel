@@ -59,13 +59,13 @@ export async function openClientsModal(inboundId) {
             const isOnline = onlines.includes(c.email);
             
             let statusHtml = "";
-            if (isOnline) {
-                statusHtml = `<span class="badge" style="background: rgba(46, 213, 115, 0.15); color: #2ed573; box-shadow: 0 0 8px rgba(46, 213, 115, 0.2);"><span style="display: inline-block; width: 6px; height: 6px; background: #2ed573; border-radius: 50%; margin-right: 6px; vertical-align: middle;"></span>${t("client_status_online", "Онлайн")}</span>`;
-            } else if (c.enable) {
-                statusHtml = `<span class="badge" style="background: rgba(255, 255, 255, 0.05); color: var(--text-secondary);"><span style="display: inline-block; width: 6px; height: 6px; background: var(--text-muted); border-radius: 50%; margin-right: 6px; vertical-align: middle; opacity: 0.5;"></span>${t("client_status_offline", "Офлайн")}</span>`;
-            } else {
+            if (!c.enable) {
                 const reasonStr = stats.blockReason || c.blockReason || t("client_status_blocked", "Заблокирован");
                 statusHtml = `<span class="badge inactive" title="Причина: ${reasonStr}" style="cursor: help;">${t("client_status_blocked", "Бан ⚠️")}</span>`;
+            } else if (isOnline) {
+                statusHtml = `<span class="badge" style="background: rgba(46, 213, 115, 0.15); color: #2ed573; box-shadow: 0 0 8px rgba(46, 213, 115, 0.2);"><span style="display: inline-block; width: 6px; height: 6px; background: #2ed573; border-radius: 50%; margin-right: 6px; vertical-align: middle;"></span>${t("client_status_online", "Онлайн")}</span>`;
+            } else {
+                statusHtml = `<span class="badge" style="background: rgba(255, 255, 255, 0.05); color: var(--text-secondary);"><span style="display: inline-block; width: 6px; height: 6px; background: var(--text-muted); border-radius: 50%; margin-right: 6px; vertical-align: middle; opacity: 0.5;"></span>${t("client_status_offline", "Офлайн")}</span>`;
             }
             
             let statusCol = `
