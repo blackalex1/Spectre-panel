@@ -81,14 +81,18 @@ def find_email_in_hysteria_log(dst_ip: Optional[str], dst_port: int) -> Optional
         return None
         
     dst_port_str = f":{dst_port}"
-    now = datetime.datetime.now(datetime.timezone.utc).replace(tzinfo=None)
+    now_local = datetime.datetime.now()
+    now_utc = datetime.datetime.now(datetime.timezone.utc).replace(tzinfo=None)
     is_testing = "pytest" in sys.modules
     
     # Проход с конца к началу лога для поиска самого свежего совпадения
     for line in reversed(lines):
         log_time = parse_hysteria_timestamp(line)
-        if log_time and not is_testing and abs((now - log_time).total_seconds()) > 300:
-            continue
+        if log_time and not is_testing:
+            diff_local = abs((now_local - log_time).total_seconds())
+            diff_utc = abs((now_utc - log_time).total_seconds())
+            if diff_local > 300 and diff_utc > 300:
+                continue
             
         if dst_port_str not in line:
             continue
@@ -118,8 +122,11 @@ def find_email_in_hysteria_log(dst_ip: Optional[str], dst_port: int) -> Optional
     # Резервный поиск: только по порту назначения
     for line in reversed(lines):
         log_time = parse_hysteria_timestamp(line)
-        if log_time and not is_testing and abs((now - log_time).total_seconds()) > 300:
-            continue
+        if log_time and not is_testing:
+            diff_local = abs((now_local - log_time).total_seconds())
+            diff_utc = abs((now_utc - log_time).total_seconds())
+            if diff_local > 300 and diff_utc > 300:
+                continue
             
         if dst_port_str not in line:
             continue
@@ -177,14 +184,18 @@ def find_email_in_xray_log(client_ip: Optional[str], dst_ip: Optional[str], dst_
         return None
         
     dst_port_str = f":{dst_port}"
-    now = datetime.datetime.now()
+    now_local = datetime.datetime.now()
+    now_utc = datetime.datetime.now(datetime.timezone.utc).replace(tzinfo=None)
     is_testing = "pytest" in sys.modules
     
     # Проход с конца к началу лога для поиска самого свежего совпадения
     for line in reversed(lines):
         log_time = parse_xray_timestamp(line)
-        if log_time and not is_testing and abs((now - log_time).total_seconds()) > 300:
-            continue
+        if log_time and not is_testing:
+            diff_local = abs((now_local - log_time).total_seconds())
+            diff_utc = abs((now_utc - log_time).total_seconds())
+            if diff_local > 300 and diff_utc > 300:
+                continue
             
         if "email:" not in line:
             continue
@@ -200,8 +211,11 @@ def find_email_in_xray_log(client_ip: Optional[str], dst_ip: Optional[str], dst_
     # Резервный поиск
     for line in reversed(lines):
         log_time = parse_xray_timestamp(line)
-        if log_time and not is_testing and abs((now - log_time).total_seconds()) > 300:
-            continue
+        if log_time and not is_testing:
+            diff_local = abs((now_local - log_time).total_seconds())
+            diff_utc = abs((now_utc - log_time).total_seconds())
+            if diff_local > 300 and diff_utc > 300:
+                continue
             
         if "email:" not in line:
             continue
@@ -235,13 +249,17 @@ def find_client_ip_for_email_in_hysteria_log(email: str) -> Optional[str]:
     except Exception:
         return None
         
-    now = datetime.datetime.now(datetime.timezone.utc).replace(tzinfo=None)
+    now_local = datetime.datetime.now()
+    now_utc = datetime.datetime.now(datetime.timezone.utc).replace(tzinfo=None)
     is_testing = "pytest" in sys.modules
     
     for line in reversed(lines):
         log_time = parse_hysteria_timestamp(line)
-        if log_time and not is_testing and abs((now - log_time).total_seconds()) > 300:
-            continue
+        if log_time and not is_testing:
+            diff_local = abs((now_local - log_time).total_seconds())
+            diff_utc = abs((now_utc - log_time).total_seconds())
+            if diff_local > 300 and diff_utc > 300:
+                continue
             
         # Try parsing JSON to extract addr for the specified email/id
         json_match = re.search(r'(\{.*\})', line)
