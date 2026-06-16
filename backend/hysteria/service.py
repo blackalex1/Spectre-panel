@@ -168,10 +168,14 @@ def start_hysteria():
         logging.info(f"Starting Hysteria 2 on port {ib['port']} (Admin port: 10100+{ib_id})...")
         try:
             log_file = open(backend.hysteria.HYSTERIA_LOG_PATH, "a", encoding="utf-8", errors="ignore")
+            import os
+            env = os.environ.copy()
+            env["HYSTERIA_LOG_LEVEL"] = "debug"
             process = subprocess.Popen(
                 [str(backend.hysteria.HYSTERIA_BIN_PATH), "server", "-c", str(config_path)],
                 stdout=log_file,
                 stderr=log_file,
+                env=env,
                 close_fds=True
             )  # nosec B603
             
