@@ -113,6 +113,76 @@ def find_email_in_xray_log(client_ip: Optional[str], dst_ip: Optional[str], dst_
                 
     return None
 
+def find_client_ip_for_email_in_hysteria_log(email: str) -> Optional[str]:
+    """
+    Ищет последний зафиксированный IP-адрес подключения для конкретного email в логах Hysteria 2.
+    """
+    import backend.routes.security as sec_facade
+    if not sec_facade.HYSTERIA_LOG_PATH.exists():
+        return None
+    from backend.utils import read_last_lines
+    try:
+        lines = read_last_lines(sec_facade.HYSTERIA_LOG_PATH, 1000)
+    except Exception:
+        return None
+        
+    for line in reversed(lines):
+        if "client connected" in line:
+            try:
+                match = re.search(r"client connected\s+(\{.*\})", line)
+                if match:
+                    data = json.loads(match.group(1))
+                    if data.get("id") == email:
+                        addr = data.get("addr", "")
+                        return addr.split(":")[0] if ":" in addr else addr
+            except Exception:
+                pass
+            if email in line:
+                match = re.search(r"(\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})", line)
+                if match:
+                    return match.group(1)
+    return None
+
+def find_email_and_ip_in_xray_log(client_ip: Optional[str], dst_ip: Optional[str], dst_port: int) -> Optional[tuple]:
+    """
+    Ищет email и IP-адрес клиента Xray по параметрам соединения.
+    """
+    import backend.routes.security as sec_facade
+    if not sec_facade.XRAY_LOG_PATH.exists():
+        return None
+    from backend.utils import read_last_lines
+    try:
+        lines = read_last_lines(sec_facade.XRAY_LOG_PATH, 1000)
+    except Exception:
+        return None
+        
+    dst_port_str = f":{dst_port}"
+    for line in reversed(lines):
+        if "email:" not in line:
+            continue
+            
+        if dst_port_str in line:
+            if (dst_ip and dst_ip in line) or (client_ip and client_ip in line):
+                match_email = re.search(r"email:\s*(\S+)", line)
+                if match_email:
+                    email = match_email.group(1)
+                    match_ip = re.search(r"(\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}):\d+\s+accepted", line)
+                    ip = match_ip.group(1) if match_ip else None
+                    return email, ip
+                    
+    for line in reversed(lines):
+        if "email:" not in line:
+            continue
+        if dst_port_str in line:
+            match_email = re.search(r"email:\s*(\S+)", line)
+            if match_email:
+                email = match_email.group(1)
+                match_ip = re.search(r"(\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}):\d+\s+accepted", line)
+                ip = match_ip.group(1) if match_ip else None
+                return email, ip
+                
+    return None
+
 @router.get("/api/security/client-by-connection")
 async def client_by_connection(
     request: Request,
@@ -127,12 +197,14 @@ async def client_by_connection(
     # Сначала ищем в логах Hysteria
     email = sec_facade.find_email_in_hysteria_log(dst_ip, port)
     if email:
-        return {"success": True, "email": email, "source": "hysteria"}
+        real_client_ip = find_client_ip_for_email_in_hysteria_log(email)
+        return {"success": True, "email": email, "source": "hysteria", "client_ip": real_client_ip}
         
     # Затем ищем в логах Xray
-    email = sec_facade.find_email_in_xray_log(client_ip, dst_ip, port)
-    if email:
-        return {"success": True, "email": email, "source": "xray"}
+    res = find_email_and_ip_in_xray_log(client_ip, dst_ip, port)
+    if res:
+        found_email, found_ip = res
+        return {"success": True, "email": found_email, "source": "xray", "client_ip": found_ip}
         
     return {"success": False, "msg": "Client not found in logs"}
 
