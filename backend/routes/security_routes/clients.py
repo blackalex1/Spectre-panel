@@ -24,25 +24,48 @@ def parse_xray_timestamp(line: str) -> Optional[datetime.datetime]:
 
 def parse_hysteria_timestamp(line: str) -> Optional[datetime.datetime]:
     try:
+        # Check if line contains a JSON payload
         # JSON format: {"time":"2026-06-16T18:13:22Z", ...}
+        # First try to find a JSON substring with "time" field
+        json_match = re.search(r'(\{.*"time"\s*:\s*"([^"]+)".*\})', line)
+        if json_match:
+            try:
+                data = json.loads(json_match.group(1))
+                t_str = data.get("time")
+                if t_str:
+                    t_str = t_str.split(".")[0].replace("Z", "").split("+")[0]
+                    return datetime.datetime.strptime(t_str, "%Y-%m-%dT%H:%M:%S")
+            except Exception:
+                pass
+
         if line.startswith("{"):
-            data = json.loads(line)
-            t_str = data.get("time")
-            if t_str:
-                t_str = t_str.split(".")[0].replace("Z", "").split("+")[0]
-                return datetime.datetime.strptime(t_str, "%Y-%m-%dT%H:%M:%S")
-        else:
-            # Text format: 2026-06-16T18:13:22Z [INFO]...
-            match = re.match(r"^(\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2})", line)
-            if match:
-                return datetime.datetime.strptime(match.group(1), "%Y-%m-%dT%H:%M:%S")
+            try:
+                data = json.loads(line)
+                t_str = data.get("time")
+                if t_str:
+                    t_str = t_str.split(".")[0].replace("Z", "").split("+")[0]
+                    return datetime.datetime.strptime(t_str, "%Y-%m-%dT%H:%M:%S")
+            except Exception:
+                pass
+
+        # Text format: e.g. 2026-06-16T18:13:22Z or [Hysteria] 2026-06-16T18:13:22Z
+        match = re.search(r"(\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2})", line)
+        if match:
+            return datetime.datetime.strptime(match.group(1), "%Y-%m-%dT%H:%M:%S")
+
+        # Text format without year: e.g. 06-16T15:17:37Z
+        match_no_year = re.search(r"\b(\d{2}-\d{2}T\d{2}:\d{2}:\d{2})", line)
+        if match_no_year:
+            current_year = datetime.datetime.now().year
+            t_str = f"{current_year}-{match_no_year.group(1)}"
+            return datetime.datetime.strptime(t_str, "%Y-%m-%dT%H:%M:%S")
     except Exception:
         pass
     return None
 
 def find_email_in_hysteria_log(dst_ip: Optional[str], dst_port: int) -> Optional[str]:
     """
-    Парсит последние 1000 строк лога Hysteria 2 для поиска email (auth) по параметрам соединения.
+    Парсит последние 1000 строк лога Hysteria 2 для поиска email (auth/id) по параметрам соединения.
     Временной лимит: только лог-записи за последние 5 минут (отключается во время тестов).
     """
     import sys
@@ -58,7 +81,7 @@ def find_email_in_hysteria_log(dst_ip: Optional[str], dst_port: int) -> Optional
         return None
         
     dst_port_str = f":{dst_port}"
-    now = datetime.datetime.now()
+    now = datetime.datetime.now(datetime.timezone.utc).replace(tzinfo=None)
     is_testing = "pytest" in sys.modules
     
     # Проход с конца к началу лога для поиска самого свежего совпадения
@@ -73,16 +96,19 @@ def find_email_in_hysteria_log(dst_ip: Optional[str], dst_port: int) -> Optional
         if dst_ip and dst_ip not in line:
             continue
             
-        # 1. JSON: {"auth": "user@example.com", "req": "1.2.3.4:22"}
-        match = re.search(r'"auth"\s*:\s*"([^"]+)"', line)
+        # 1. JSON (Hysteria 2 debug): {"id": "den_mihomo", "reqAddr": "8.8.8.8:22"}
+        match = re.search(r'"id"\s*:\s*"([^"]+)"', line)
         if not match:
-            # 2. Text log: auth=user@example.com или [auth=user@example.com]
+            # 2. JSON (alternative): {"auth": "user@example.com", "req": "1.2.3.4:22"}
+            match = re.search(r'"auth"\s*:\s*"([^"]+)"', line)
+        if not match:
+            # 3. Text log: auth=user@example.com или [auth=user@example.com]
             match = re.search(r'auth\s*=\s*([^\s,}]+)', line)
         if not match:
-            # 3. Text log: connection: user_name (1.2.3.4:5678) -> target
+            # 4. Text log: connection: user_name (1.2.3.4:5678) -> target
             match = re.search(r'connection:\s*([^\s(]+)', line)
         if not match:
-            # 4. Поиск любого email в строке лога в качестве резерва
+            # 5. Поиск любого email в строке лога в качестве резерва
             match = re.search(r'[\w\.-]+@[\w\.-]+\.\w+', line)
             
         if match:
@@ -97,7 +123,30 @@ def find_email_in_hysteria_log(dst_ip: Optional[str], dst_port: int) -> Optional
             
         if dst_port_str not in line:
             continue
-        match = re.search(r'"auth"\s*:\s*"([^"]+)"', line)
+            
+        # Verify destination IP to prevent false port-only match on different IP
+        dest_host = None
+        json_match = re.search(r'(\{.*\})', line)
+        if json_match:
+            try:
+                data = json.loads(json_match.group(1))
+                req_val = data.get("reqAddr") or data.get("req")
+                if req_val and ":" in req_val:
+                    dest_host = req_val.split(":")[0]
+            except Exception:
+                pass
+        if not dest_host:
+            match_dest = re.search(r"->\s*(\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}):\d+", line)
+            if match_dest:
+                dest_host = match_dest.group(1)
+                
+        if dest_host and dst_ip and re.match(r"^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}$", dest_host):
+            if dest_host != dst_ip:
+                continue
+
+        match = re.search(r'"id"\s*:\s*"([^"]+)"', line)
+        if not match:
+            match = re.search(r'"auth"\s*:\s*"([^"]+)"', line)
         if not match:
             match = re.search(r'auth\s*=\s*([^\s,}]+)', line)
         if not match:
@@ -157,6 +206,14 @@ def find_email_in_xray_log(client_ip: Optional[str], dst_ip: Optional[str], dst_
         if "email:" not in line:
             continue
         if dst_port_str in line:
+            # Verify destination IP to prevent false port-only match on different IP
+            match_dest = re.search(r"accepted\s+(?:tcp|udp):([^:]+):", line)
+            if match_dest:
+                dest_host = match_dest.group(1)
+                if dst_ip and re.match(r"^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}$", dest_host):
+                    if dest_host != dst_ip:
+                        continue
+                        
             match = re.search(r"email:\s*(\S+)", line)
             if match:
                 return match.group(1)
@@ -178,7 +235,7 @@ def find_client_ip_for_email_in_hysteria_log(email: str) -> Optional[str]:
     except Exception:
         return None
         
-    now = datetime.datetime.now()
+    now = datetime.datetime.now(datetime.timezone.utc).replace(tzinfo=None)
     is_testing = "pytest" in sys.modules
     
     for line in reversed(lines):
@@ -186,16 +243,19 @@ def find_client_ip_for_email_in_hysteria_log(email: str) -> Optional[str]:
         if log_time and not is_testing and abs((now - log_time).total_seconds()) > 300:
             continue
             
-        if "client connected" in line:
+        # Try parsing JSON to extract addr for the specified email/id
+        json_match = re.search(r'(\{.*\})', line)
+        if json_match:
             try:
-                match = re.search(r"client connected\s+(\{.*\})", line)
-                if match:
-                    data = json.loads(match.group(1))
-                    if data.get("id") == email:
-                        addr = data.get("addr", "")
+                data = json.loads(json_match.group(1))
+                if data.get("id") == email or data.get("auth") == email:
+                    addr = data.get("addr", "")
+                    if addr:
                         return addr.split(":")[0] if ":" in addr else addr
             except Exception:
                 pass
+
+        if "client connected" in line:
             if email in line:
                 match = re.search(r"(\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})", line)
                 if match:
@@ -246,6 +306,14 @@ def find_email_and_ip_in_xray_log(client_ip: Optional[str], dst_ip: Optional[str
         if "email:" not in line:
             continue
         if dst_port_str in line:
+            # Verify destination IP to prevent false port-only match on different IP
+            match_dest = re.search(r"accepted\s+(?:tcp|udp):([^:]+):", line)
+            if match_dest:
+                dest_host = match_dest.group(1)
+                if dst_ip and re.match(r"^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}$", dest_host):
+                    if dest_host != dst_ip:
+                        continue
+                        
             match_email = re.search(r"email:\s*(\S+)", line)
             if match_email:
                 email = match_email.group(1)

@@ -62,10 +62,17 @@ def test_api_crud_flow(client):
     """Test full API inbound and client CRUD cycle (using Bearer bypass)."""
     headers = {"Authorization": "Bearer test_bearer_token"}
 
+    # Dynamically find a free port to avoid OS socket bind collision on host
+    import socket
+    temp_sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    temp_sock.bind(("127.0.0.1", 0))
+    free_port = temp_sock.getsockname()[1]
+    temp_sock.close()
+
     # 1. Create Inbound
     payload = {
         "remark": "API CRUD Inbound",
-        "port": 55554,
+        "port": free_port,
         "protocol": "vless",
         "settings": {},
         "streamSettings": {

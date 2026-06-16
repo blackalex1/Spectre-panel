@@ -144,6 +144,33 @@ def test_security_client_by_connection_hysteria(client, tmp_path, monkeypatch):
     assert data["source"] == "hysteria"
 
 
+def test_security_client_by_connection_hysteria_v2(client, tmp_path, monkeypatch):
+    """
+    Проверка поиска клиента по соединению в логах Hysteria 2 (новый формат с id и reqAddr, а также без года).
+    """
+    headers = {"Authorization": "Bearer test_bearer_token"}
+    
+    # 1. Записываем тестовые логи Hysteria в новом формате
+    log_file = tmp_path / "hysteria.log"
+    log_content = (
+        '06-16T15:17:38Z DEBUG\tTCP request\t{"addr": "198.51.100.42:47534", "id": "test_hysteria_v2_user@vpn.net", "reqAddr": "mtalk.google.com:5228"}\n'
+        '[Hysteria] 2026-06-16T15:17:45Z DEBUG\tTCP request\t{"addr": "198.51.100.42:47534", "id": "test_hysteria_v2_user@vpn.net", "reqAddr": "203.0.113.84:22"}\n'
+    )
+    log_file.write_text(log_content)
+    
+    # Мокаем путь к логам Hysteria в конфигурации
+    monkeypatch.setattr("backend.routes.security.HYSTERIA_LOG_PATH", log_file)
+    
+    # 2. Вызываем эндпоинт поиска
+    response = client.get("/api/security/client-by-connection?dst_ip=203.0.113.84&port=22", headers=headers)
+    assert response.status_code == 200
+    data = response.json()
+    assert data["success"] is True
+    assert data["email"] == "test_hysteria_v2_user@vpn.net"
+    assert data["source"] == "hysteria"
+    assert data["client_ip"] == "198.51.100.42"
+
+
 def test_security_top_traffic(client):
     """
     Проверка эндпоинта /api/security/top-traffic.

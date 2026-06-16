@@ -11,7 +11,6 @@ from backend.scheduler_jobs.limits import (
     parse_recent_xray_ips,
     asyncio_notify_admin
 )
-from backend.scheduler_jobs.ips import detect_and_block_port_scans
 from backend.scheduler_jobs.watchdog import run_service_watchdog
 from backend.scheduler_jobs.backups import check_and_run_backups
 from backend.scheduler_jobs.maintenance import (
