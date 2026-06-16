@@ -83,9 +83,8 @@ async def add_client_api(request: Request, payload: Optional[ClientSettings] = N
                 inbound["enable"], inbound["total"], inbound["expiry_time"]
             )
             
-            # Перезапуск Xray и Hysteria
+            # Перезапуск Xray
             restart_xray()
-            restart_hysteria()
             return {"success": True, "msg": "Клиент добавлен"}
             
         return {"success": False, "msg": "Клиент с таким email уже существует"}
@@ -207,8 +206,14 @@ async def update_client_api(request: Request, client_id: str, payload: Optional[
                 inbound["enable"], inbound["total"], inbound["expiry_time"]
             )
             
+            if inbound["protocol"] == "hysteria2" and not bool(enable):
+                from backend.hysteria import kick_client_hysteria_api
+                try:
+                    kick_client_hysteria_api(ib_id, email)
+                except Exception:
+                    pass
+
             restart_xray()
-            restart_hysteria()
             return {"success": True, "msg": "Клиент обновлен"}
         return {"success": False, "msg": "Клиент не найден"}
     except Exception as e:
@@ -245,8 +250,14 @@ async def delete_client_api(request: Request, inbound_id: int, client_id: str):
             inbound["enable"], inbound["total"], inbound["expiry_time"]
         )
         
+        if inbound["protocol"] == "hysteria2":
+            from backend.hysteria import kick_client_hysteria_api
+            try:
+                kick_client_hysteria_api(inbound_id, email)
+            except Exception:
+                pass
+
         restart_xray()
-        restart_hysteria()
         return {"success": True, "msg": "Клиент удален"}
         
     return {"success": False, "msg": "Ошибка удаления"}

@@ -476,7 +476,6 @@ async def disable_client(request: Request, email: str = Form(...)):
         
     if disabled_count > 0:
         restart_xray()
-        restart_hysteria()
         
         # Запись в аудит-лог
         try:
@@ -529,7 +528,6 @@ async def enable_client(request: Request, email: str = Form(...)):
         
     if enabled_count > 0:
         restart_xray()
-        restart_hysteria()
         
         # Запись в аудит-лог
         try:

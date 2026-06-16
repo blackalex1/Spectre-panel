@@ -176,3 +176,30 @@ async def reset_hysteria_config(request: Request, payload: dict):
         return {"success": False, "msg": str(e)}
 
 
+@router.post("/api/hysteria/auth")
+async def hysteria_client_auth(request: Request, payload: dict):
+    from fastapi.responses import JSONResponse
+    from backend.database import db_session
+    from backend.models import ClientStats
+    
+    # Разрешаем доступ только локально
+    client_host = request.client.host if request.client else None
+    if client_host not in ("127.0.0.1", "::1", "localhost"):
+        return JSONResponse(status_code=403, content={"msg": "Forbidden"})
+        
+    auth_str = payload.get("auth", "")
+    if not auth_str or ":" not in auth_str:
+        return {"ok": False}
+        
+    email, password = auth_str.split(":", 1)
+    
+    with db_session() as session:
+        # Проверяем, существует ли клиент с таким email и паролем, и включен ли он
+        client = session.query(ClientStats).filter_by(email=email, client_uuid_or_pwd=password).first()
+        if client and client.enable == 1:
+            return {"ok": True, "id": email}
+            
+    return {"ok": False}
+
+
+
