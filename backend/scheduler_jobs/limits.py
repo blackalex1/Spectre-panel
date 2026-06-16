@@ -160,7 +160,6 @@ def enforce_client_limits_and_rules():
     if need_config_update:
         backend.scheduler.write_xray_config()
         backend.scheduler.restart_xray()
-        backend.scheduler.restart_hysteria()
 
     # Run Watchdog
     try:
