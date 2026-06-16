@@ -196,9 +196,12 @@ async def disable_client(request: Request, email: str = Form(...)):
     from backend.xray import restart_xray, remove_client_api
     from backend.hysteria import restart_hysteria, kick_client_hysteria_api
     
+    client_exists = False
     disabled_count = 0
     with db_session() as session:
         clients = session.query(ClientStats).filter_by(email=email).all()
+        if clients:
+            client_exists = True
         for c in clients:
             if c.enable == 1:
                 c.enable = 0
@@ -247,7 +250,9 @@ async def disable_client(request: Request, email: str = Form(...)):
             pass
             
         return {"success": True, "msg": f"Client {email} blocked and active sessions terminated."}
-    return {"success": False, "msg": f"Client {email} not found or already blocked."}
+    if client_exists:
+        return {"success": True, "msg": f"Client {email} is already blocked."}
+    return {"success": False, "msg": f"Client {email} not found."}
 
 @router.post("/api/security/enable-client")
 async def enable_client(request: Request, email: str = Form(...)):
@@ -257,9 +262,12 @@ async def enable_client(request: Request, email: str = Form(...)):
     from backend.xray import restart_xray
     from backend.hysteria import restart_hysteria
     
+    client_exists = False
     enabled_count = 0
     with db_session() as session:
         clients = session.query(ClientStats).filter_by(email=email).all()
+        if clients:
+            client_exists = True
         for c in clients:
             if c.enable == 0:
                 c.enable = 1
@@ -295,7 +303,9 @@ async def enable_client(request: Request, email: str = Form(...)):
             pass
             
         return {"success": True, "msg": f"Client {email} unblocked and services reloaded."}
-    return {"success": False, "msg": f"Client {email} not found or already active."}
+    if client_exists:
+        return {"success": True, "msg": f"Client {email} is already active."}
+    return {"success": False, "msg": f"Client {email} not found."}
 
 @router.get("/api/security/top-traffic")
 async def get_top_traffic(request: Request, period: str = Query("today")):
