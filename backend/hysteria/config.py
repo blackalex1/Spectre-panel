@@ -116,7 +116,7 @@ def generate_hysteria_config(inbound_id: int, port: int, clients: list, stream_s
     from backend.ssl_utils import SSL_CERT_PATH, SSL_KEY_PATH
     use_https = SSL_CERT_PATH.exists() and SSL_KEY_PATH.exists()
     panel_proto = "https" if use_https else "http"
-    auth_url = f"{panel_proto}://127.0.0.1:{settings.PANEL_PORT}/api/hysteria/auth"
+    auth_url = f"{panel_proto}://127.0.0.1:{settings.PANEL_PORT}/api/hysteria/auth?secret={settings.API_TOKEN}"
 
     config = {
         "listen": listen_str,

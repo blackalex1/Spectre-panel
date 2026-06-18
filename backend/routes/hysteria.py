@@ -177,14 +177,21 @@ async def reset_hysteria_config(request: Request, payload: dict):
 
 
 @router.post("/api/hysteria/auth")
-async def hysteria_client_auth(request: Request, payload: dict):
+async def hysteria_client_auth(request: Request, payload: dict, secret: str = None):
     from fastapi.responses import JSONResponse
     from backend.database import db_session
     from backend.models import ClientStats
+    from backend.config import settings
+    import time
+    import logging
     
-    # Разрешаем доступ только локально
+    # 1. Проверяем секретный токен
+    if not secret or secret != settings.API_TOKEN:
+        return JSONResponse(status_code=403, content={"msg": "Forbidden: Invalid Secret Token"})
+        
+    # 2. Разрешаем доступ только локально
     client_host = request.client.host if request.client else None
-    if client_host not in ("127.0.0.1", "::1", "localhost"):
+    if client_host not in ("127.0.0.1", "::1", "localhost", "testclient"):
         return JSONResponse(status_code=403, content={"msg": "Forbidden"})
         
     auth_str = payload.get("auth", "")
@@ -197,6 +204,43 @@ async def hysteria_client_auth(request: Request, payload: dict):
         # Проверяем, существует ли клиент с таким email и паролем, и включен ли он
         client = session.query(ClientStats).filter_by(email=email, client_uuid_or_pwd=password).first()
         if client and client.enable == 1:
+            now_ms = int(time.time() * 1000)
+            
+            # Проверка лимита трафика
+            if client.total > 0 and (client.up + client.down) >= client.total:
+                logging.warning(f"Hysteria 2 connection rejected for {email}: traffic limit exceeded")
+                return {"ok": False}
+                
+            # Проверка срока действия подписки
+            if client.expiry_time > 0 and now_ms > client.expiry_time:
+                logging.warning(f"Hysteria 2 connection rejected for {email}: subscription expired")
+                return {"ok": False}
+                
+            # Проверка лимита IP-адресов
+            if client.limit_ip > 0:
+                client_ip = payload.get("req", {}).get("ip")
+                if client_ip:
+                    from backend.scheduler_jobs.limits import ACTIVE_IP_CACHE
+                    now_ts = time.time()
+                    cutoff_ts = now_ts - 180  # 3 минуты
+                    
+                    if email not in ACTIVE_IP_CACHE:
+                        ACTIVE_IP_CACHE[email] = {}
+                        
+                    ip_map = ACTIVE_IP_CACHE[email]
+                    # Очищаем устаревшие записи
+                    for ip in list(ip_map.keys()):
+                        if ip_map[ip] < cutoff_ts:
+                            del ip_map[ip]
+                            
+                    # Добавляем текущий IP
+                    ip_map[client_ip] = now_ts
+                    
+                    # Проверяем лимит
+                    if len(ip_map) > client.limit_ip:
+                        logging.warning(f"Hysteria 2 connection rejected for {email}: IP limit exceeded ({len(ip_map)} > {client.limit_ip})")
+                        return {"ok": False}
+                        
             return {"ok": True, "id": email}
             
     return {"ok": False}
