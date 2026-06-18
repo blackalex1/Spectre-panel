@@ -60,12 +60,13 @@ def parse_recent_xray_ips():
                 continue
             email = email_part[1].strip()
             
-            ip_port = parts[2]
-            if ":" in ip_port:
-                ip = ip_port.rsplit(":", 1)[0]
-                ip = ip.replace("[", "").replace("]", "")
-            else:
-                ip = ip_port
+            import re
+            match = re.search(r"from\s+\[([^\]]+)\]", line)
+            if not match:
+                match = re.search(r"from\s+(?:tcp:|udp:)?([^:\s]+)", line)
+            if not match:
+                continue
+            ip = match.group(1)
                 
             if email not in ACTIVE_IP_CACHE:
                 ACTIVE_IP_CACHE[email] = {}

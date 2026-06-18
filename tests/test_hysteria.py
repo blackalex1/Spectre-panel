@@ -33,7 +33,9 @@ def test_hysteria_config_generation():
         hyst_config = generate_hysteria_config(ib_hyst_id, 60003, clients, hyst_stream_settings)
         
         assert hyst_config["listen"] == ":60003"
-        assert hyst_config["auth"]["userpass"]["client2@hysteria.com"] == "pass-client-2"
+        assert hyst_config["auth"]["type"] == "http"
+        assert "api/hysteria/auth" in hyst_config["auth"]["http"]["url"]
+        assert "secret=" in hyst_config["auth"]["http"]["url"]
         assert hyst_config["trafficStats"]["listen"] == f"127.0.0.1:{10100 + ib_hyst_id}"
         assert hyst_config["obfs"]["type"] == "salamander"
         assert hyst_config["obfs"]["salamander"]["password"] == "obfs_test_pwd"
@@ -287,6 +289,31 @@ def test_update_online_emails_hysteria(monkeypatch):
     ]
     monkeypatch.setattr("backend.database.get_all_inbounds", lambda: mock_inbounds)
     
+    # Mock db_session to return mock clients
+    class MockClient:
+        def __init__(self, email):
+            self.email = email
+            self.enable = 1
+
+    class MockSession:
+        def query(self, model):
+            class MockQuery:
+                def filter_by(self, **kwargs):
+                    class MockResult:
+                        def all(self):
+                            return [MockClient("user_traffic@mail.com"), MockClient("user_online@mail.com")]
+                    return MockResult()
+            return MockQuery()
+        def commit(self): pass
+        def rollback(self): pass
+
+    import contextlib
+    @contextlib.contextmanager
+    def mock_db_session():
+        yield MockSession()
+
+    monkeypatch.setattr("backend.database.db_session", mock_db_session)
+    
     # 2. Mock is_xray_running to return False so Xray query is skipped
     monkeypatch.setattr("backend.xray.is_xray_running", lambda: False)
     
@@ -326,4 +353,123 @@ def test_update_online_emails_hysteria(monkeypatch):
     assert "user_traffic@mail.com" in backend.routes.clients.actions._online_emails
     assert "user_online@mail.com" in backend.routes.clients.actions._online_emails
     assert "user_zero_conn@mail.com" not in backend.routes.clients.actions._online_emails
+
+
+def test_hysteria_auth_endpoint(client, monkeypatch):
+    """Test `/api/hysteria/auth` with token authentication and real-time limit checks."""
+    from backend.config import settings
+    
+    # 1. Access without token -> 403
+    response = client.post("/api/hysteria/auth", json={"auth": "test@mail.com:pwd"})
+    assert response.status_code == 403
+    assert "Invalid Secret Token" in response.json()["msg"]
+    
+    # 2. Access with wrong token -> 403
+    response = client.post(f"/api/hysteria/auth?secret=wrong_token", json={"auth": "test@mail.com:pwd"})
+    assert response.status_code == 403
+    
+    # 3. Access with correct token but client not found -> {"ok": False}
+    import contextlib
+    class MockSessionNone:
+        def query(self, model):
+            class MockQuery:
+                def filter_by(self, **kwargs):
+                    class MockResult:
+                        def first(self):
+                            return None
+                    return MockResult()
+            return MockQuery()
+    @contextlib.contextmanager
+    def mock_db_session_none():
+        yield MockSessionNone()
+        
+    monkeypatch.setattr("backend.database.db_session", mock_db_session_none)
+    
+    response = client.post(f"/api/hysteria/auth?secret={settings.API_TOKEN}", json={"auth": "test@mail.com:pwd"})
+    assert response.status_code == 200
+    assert response.json() == {"ok": False}
+    
+    # 4. Access with correct token and valid enabled client -> {"ok": True}
+    class MockClient:
+        def __init__(self, email, pwd, enable=1, total=0, up=0, down=0, expiry_time=0, limit_ip=0):
+            self.email = email
+            self.client_uuid_or_pwd = pwd
+            self.enable = enable
+            self.total = total
+            self.up = up
+            self.down = down
+            self.expiry_time = expiry_time
+            self.limit_ip = limit_ip
+
+    class MockSessionValid:
+        def __init__(self, client_obj):
+            self.client_obj = client_obj
+        def query(self, model):
+            class MockQuery:
+                def __init__(self, outer):
+                    self.outer = outer
+                def filter_by(self, **kwargs):
+                    class MockResult:
+                        def __init__(self, outer):
+                            self.outer = outer
+                        def first(self):
+                            return self.outer.outer.client_obj
+                    return MockResult(self)
+            return MockQuery(self)
+            
+    c_valid = MockClient("test@mail.com", "pwd")
+    @contextlib.contextmanager
+    def mock_db_session_valid():
+        yield MockSessionValid(c_valid)
+    monkeypatch.setattr("backend.database.db_session", mock_db_session_valid)
+    
+    response = client.post(f"/api/hysteria/auth?secret={settings.API_TOKEN}", json={"auth": "test@mail.com:pwd"})
+    assert response.status_code == 200
+    assert response.json() == {"ok": True, "id": "test@mail.com"}
+    
+    # 5. Traffic limit exceeded -> {"ok": False}
+    c_traffic = MockClient("test@mail.com", "pwd", total=1000, up=600, down=400)
+    @contextlib.contextmanager
+    def mock_db_session_traffic():
+        yield MockSessionValid(c_traffic)
+    monkeypatch.setattr("backend.database.db_session", mock_db_session_traffic)
+    
+    response = client.post(f"/api/hysteria/auth?secret={settings.API_TOKEN}", json={"auth": "test@mail.com:pwd"})
+    assert response.json() == {"ok": False}
+    
+    # 6. Subscription expired -> {"ok": False}
+    import time
+    c_expired = MockClient("test@mail.com", "pwd", expiry_time=int(time.time() * 1000) - 5000)
+    @contextlib.contextmanager
+    def mock_db_session_expired():
+        yield MockSessionValid(c_expired)
+    monkeypatch.setattr("backend.database.db_session", mock_db_session_expired)
+    
+    response = client.post(f"/api/hysteria/auth?secret={settings.API_TOKEN}", json={"auth": "test@mail.com:pwd"})
+    assert response.json() == {"ok": False}
+
+    # 7. IP limit exceeded -> {"ok": False}
+    c_ip_limit = MockClient("test@mail.com", "pwd", limit_ip=1)
+    @contextlib.contextmanager
+    def mock_db_session_ip_limit():
+        yield MockSessionValid(c_ip_limit)
+    monkeypatch.setattr("backend.database.db_session", mock_db_session_ip_limit)
+    
+    # Clear ACTIVE_IP_CACHE to ensure test is clean
+    from backend.scheduler_jobs.limits import ACTIVE_IP_CACHE
+    ACTIVE_IP_CACHE.clear()
+
+    # First IP connect -> True
+    response = client.post(f"/api/hysteria/auth?secret={settings.API_TOKEN}", json={
+        "auth": "test@mail.com:pwd",
+        "req": {"ip": "1.1.1.1"}
+    })
+    assert response.json() == {"ok": True, "id": "test@mail.com"}
+    
+    # Second IP connect -> False (since limit_ip = 1)
+    response = client.post(f"/api/hysteria/auth?secret={settings.API_TOKEN}", json={
+        "auth": "test@mail.com:pwd",
+        "req": {"ip": "2.2.2.2"}
+    })
+    assert response.json() == {"ok": False}
 

@@ -111,6 +111,15 @@ def process_hysteria_log_line(line: str):
                 username = data.get("id") or "Unknown"
                 client_ip = parse_ip_from_addr(data.get("addr", ""))
                 
+                # Update ACTIVE_IP_CACHE for IP limiting
+                try:
+                    from backend.scheduler_jobs.limits import ACTIVE_IP_CACHE
+                    if username not in ACTIVE_IP_CACHE:
+                        ACTIVE_IP_CACHE[username] = {}
+                    ACTIVE_IP_CACHE[username][client_ip] = time.time()
+                except Exception as ex:
+                    logging.error(f"Error updating ACTIVE_IP_CACHE on Hysteria connect: {ex}")
+                
                 tx, rx = get_user_traffic_bytes(username)
                 log_action(
                     username="system",
@@ -124,6 +133,16 @@ def process_hysteria_log_line(line: str):
                 data = json.loads(match.group(1))
                 username = data.get("id") or "Unknown"
                 client_ip = parse_ip_from_addr(data.get("addr", ""))
+                
+                # Remove from ACTIVE_IP_CACHE
+                try:
+                    from backend.scheduler_jobs.limits import ACTIVE_IP_CACHE
+                    if username in ACTIVE_IP_CACHE and client_ip in ACTIVE_IP_CACHE[username]:
+                        del ACTIVE_IP_CACHE[username][client_ip]
+                        if not ACTIVE_IP_CACHE[username]:
+                            del ACTIVE_IP_CACHE[username]
+                except Exception as ex:
+                    logging.error(f"Error updating ACTIVE_IP_CACHE on Hysteria disconnect: {ex}")
                 
                 # Tiny wait for stats API to update values
                 time.sleep(0.1)
