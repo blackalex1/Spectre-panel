@@ -329,4 +329,76 @@ def test_xray_socks_inbound_for_hysteria():
         delete_inbound(ib_id)
 
 
+def test_xray_routing_loop_prevention_for_hysteria():
+    """Test that routing rules targeting Hysteria outbounds automatically exclude Hysteria internal SOCKS5 inbounds."""
+    from backend.database import add_outbound, delete_outbound, add_routing_rule, delete_routing_rule
+    
+    # 1. Create a VLESS inbound (standard client inbound)
+    vless_id = add_inbound(
+        remark="VLESS User Inbound",
+        port=60040,
+        protocol="vless",
+        settings_dict={},
+        stream_settings_dict={"network": "tcp"}
+    )
+    
+    # 2. Create a Hysteria 2 inbound with Xray routing
+    hys_settings = {
+        "hysteria": {
+            "routingViaXray": True,
+            "socksUsername": "socks_user_abc",
+            "socksPassword": "socks_password_abc"
+        }
+    }
+    hys_id = add_inbound(
+        remark="Hysteria Inbound",
+        port=60041,
+        protocol="hysteria2",
+        settings_dict={},
+        stream_settings_dict=hys_settings
+    )
+    
+    # 3. Create a Hysteria outbound
+    ob_id = add_outbound(
+        remark="Hysteria Outbound Connection",
+        protocol="hysteria",
+        tag="hysteria-out-tag",
+        settings_dict={"address": "127.0.0.1", "port": 443},
+        enable=1
+    )
+    
+    # 4. Create a catch-all routing rule to Hysteria outbound
+    rule_id = add_routing_rule(
+        remark="Route All to Hysteria Outbound",
+        outbound_tag="hysteria-out-tag",
+        inbound_tags=[],  # Empty list means "All Inbounds"
+        enable=1
+    )
+    
+    try:
+        xray_config = generate_xray_config_json()
+        routing_rules = xray_config["routing"]["rules"]
+        
+        # Find the rule matching our Hysteria outbound tag
+        rule = next((r for r in routing_rules if r.get("outboundTag") == "hysteria-out-tag"), None)
+        
+        assert rule is not None
+        # Should NOT be catch-all anymore. Should explicitly define inboundTag
+        assert "inboundTag" in rule
+        
+        inbound_tags = rule["inboundTag"]
+        # Should include the active VLESS inbound tag
+        assert f"inbound-{vless_id}" in inbound_tags
+        # Should NOT include the Hysteria internal SOCKS5 inbound tag
+        assert f"inbound-{hys_id}-socks" not in inbound_tags
+        
+    finally:
+        # Cleanup
+        delete_inbound(vless_id)
+        delete_inbound(hys_id)
+        delete_outbound(ob_id)
+        delete_routing_rule(rule_id)
+
+
+
 
