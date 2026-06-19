@@ -311,6 +311,15 @@ def generate_xray_config_json() -> dict:
         })
 
     # 3. User Routing Rules from DB
+    hysteria_outbound_tags = {
+        ob["tag"] for ob in db_outbounds 
+        if ob["enable"] == 1 and ob.get("protocol") == "hysteria"
+    }
+    active_non_socks_inbound_tags = [
+        f"inbound-{ib['id']}" for ib in inbounds 
+        if ib["enable"] and ib.get("protocol") != "hysteria2"
+    ]
+
     db_rules = get_all_routing_rules()
     for r in db_rules:
         if r["enable"] != 1:
@@ -322,7 +331,18 @@ def generate_xray_config_json() -> dict:
         }
         
         if r["inbound_tags"]:
-            rule_dict["inboundTag"] = r["inbound_tags"]
+            inbound_tags_list = r["inbound_tags"]
+            if r["outbound_tag"] in hysteria_outbound_tags:
+                inbound_tags_list = [
+                    t for t in inbound_tags_list 
+                    if not (t.startswith("inbound-") and t.endswith("-socks"))
+                ]
+            if inbound_tags_list:
+                rule_dict["inboundTag"] = inbound_tags_list
+        else:
+            if r["outbound_tag"] in hysteria_outbound_tags:
+                if active_non_socks_inbound_tags:
+                    rule_dict["inboundTag"] = active_non_socks_inbound_tags
         if r.get("users"):
             rule_dict["user"] = r["users"]
         if r["domains"]:
