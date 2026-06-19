@@ -96,16 +96,21 @@ def enforce_client_limits_and_rules():
     bot_token = get_setting("telegram_bot_token", "")
     tg_admin_ids = get_setting("telegram_admin_ids", "")
     
+    from backend.models import ClientTrafficDaily
+
+    current_date = datetime.date.today().isoformat()
     with db_session() as session:
         active_clients = session.query(ClientStats).filter_by(enable=1).all()
+        # Bulk load inbounds and daily traffic records to avoid N+1 query problem
+        inbounds_by_id = {ib.id: ib for ib in session.query(Inbound).all()}
+        daily_records = {rec.email: rec for rec in session.query(ClientTrafficDaily).filter_by(date=current_date).all()}
         
         for c in active_clients:
-            inbound = session.query(Inbound).filter_by(id=c.inbound_id).first()
+            inbound = inbounds_by_id.get(c.inbound_id)
             if not inbound:
                 continue
                 
             # Calculate daily delta
-            current_date = datetime.date.today().isoformat()
             delta_up = c.up - c.last_seen_up if c.up >= c.last_seen_up else c.up
             delta_down = c.down - c.last_seen_down if c.down >= c.last_seen_down else c.down
             
@@ -113,8 +118,7 @@ def enforce_client_limits_and_rules():
             delta_down = max(0, delta_down)
             
             if delta_up > 0 or delta_down > 0:
-                from backend.models import ClientTrafficDaily
-                daily_record = session.query(ClientTrafficDaily).filter_by(email=c.email, date=current_date).first()
+                daily_record = daily_records.get(c.email)
                 if daily_record:
                     daily_record.up += delta_up
                     daily_record.down += delta_down
@@ -126,6 +130,7 @@ def enforce_client_limits_and_rules():
                         down=delta_down
                     )
                     session.add(new_record)
+                    daily_records[c.email] = new_record
                     
             c.last_seen_up = c.up
             c.last_seen_down = c.down
