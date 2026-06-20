@@ -391,6 +391,21 @@ def test_security_audit_logs(client):
     assert data["logs"][0]["username"] == "bot"
     assert data["logs"][1]["username"] == "admin"
 
+    # 3. Фильтрация по поисковому запросу
+    response = client.get("/api/security/audit-logs?search=sync", headers=headers)
+    assert response.status_code == 200
+    data = response.json()
+    assert data["success"] is True
+    assert len(data["logs"]) == 1
+    assert data["logs"][0]["action"] == "sync_whitelist"
+
+    response = client.get("/api/security/audit-logs?search=admin", headers=headers)
+    assert response.status_code == 200
+    data = response.json()
+    assert data["success"] is True
+    assert len(data["logs"]) == 1
+    assert data["logs"][0]["username"] == "admin"
+
 
 def test_security_sessions_management(client):
     """

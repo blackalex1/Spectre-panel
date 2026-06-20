@@ -50,7 +50,7 @@ async def unban_ip(request: Request, ip: str = Form(...)):
 
 
 @router.get("/api/security/audit-logs")
-async def get_audit_logs(request: Request, limit: int = 10):
+async def get_audit_logs(request: Request, limit: int = 10, search: str = ""):
     if not check_auth(request):
         return decoy_response()
         
@@ -59,7 +59,15 @@ async def get_audit_logs(request: Request, limit: int = 10):
         from backend.database import db_session
         
         with db_session() as session:
-            logs = session.query(AuditLog).order_by(AuditLog.timestamp.desc()).limit(limit).all()
+            query = session.query(AuditLog)
+            if search:
+                query = query.filter(
+                    (AuditLog.username.ilike(f"%{search}%")) |
+                    (AuditLog.action.ilike(f"%{search}%")) |
+                    (AuditLog.target.ilike(f"%{search}%")) |
+                    (AuditLog.details.ilike(f"%{search}%"))
+                )
+            logs = query.order_by(AuditLog.timestamp.desc()).limit(limit).all()
             
             result = []
             for log in logs:
