@@ -85,6 +85,33 @@ async def get_audit_logs(request: Request, limit: int = 10, search: str = ""):
         return {"success": False, "msg": f"Failed to get audit logs: {e}"}
 
 
+@router.post("/api/security/audit-logs/clear-connections")
+async def clear_connection_logs(request: Request):
+    if not check_auth(request):
+        return decoy_response()
+        
+    try:
+        from backend.models import AuditLog
+        from backend.database import db_session
+        
+        with db_session() as session:
+            session.query(AuditLog).filter(
+                AuditLog.action.in_([
+                    "xray_connect", "xray_disconnect", 
+                    "hysteria_connect", "hysteria_disconnect"
+                ])
+            ).delete(synchronize_session=False)
+            session.commit()
+            
+        from backend.audit import log_action
+        from backend.audit import get_actor_username
+        log_action(get_actor_username(request), "clear_connection_logs", details="Connection logs cleared via Web UI")
+        
+        return {"success": True, "msg": "База подключений успешно очищена"}
+    except Exception as e:
+        return {"success": False, "msg": f"Failed to clear connection logs: {e}"}
+
+
 class ReportToMasterRequest(BaseModel):
     action: str                         # "investigation_result" | "investigation_failed"
     client_email: str = ""
