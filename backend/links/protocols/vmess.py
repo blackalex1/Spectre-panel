@@ -89,6 +89,23 @@ def build_vmess_link(inbound: dict, client: dict, host: str, port: int, display_
         vmess_obj["path"] = xhttp_settings.get('path', '/')
         vmess_obj["host"] = xhttp_settings.get('host', '')
 
+    # Mux parameters
+    from backend.database import get_setting
+    mux_enabled = get_setting("mux_enabled", "false") == "true"
+    if mux_enabled:
+        mux_concurrency = get_setting("mux_concurrency", "8")
+        vmess_obj["mux"] = 1
+        try:
+            vmess_obj["muxConcurrency"] = int(mux_concurrency)
+        except ValueError:
+            vmess_obj["muxConcurrency"] = 8
+        mux_xver = get_setting("mux_xver", "0")
+        if mux_xver and mux_xver != "0":
+            try:
+                vmess_obj["xver"] = int(mux_xver)
+            except ValueError:
+                pass
+
     json_str = json.dumps(vmess_obj)
     b64_str = base64.b64encode(json_str.encode('utf-8')).decode('utf-8')
     return f"vmess://{b64_str}"

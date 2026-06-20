@@ -105,6 +105,18 @@ export async function loadSettings() {
         if (sslEmailInput) {
             sslEmailInput.value = setObj.ssl_email || "";
         }
+        const muxEnabledInput = document.getElementById("setting-mux-enabled");
+        if (muxEnabledInput) {
+            muxEnabledInput.checked = setObj.mux_enabled !== undefined ? setObj.mux_enabled : false;
+        }
+        const muxConcurrencyInput = document.getElementById("setting-mux-concurrency");
+        if (muxConcurrencyInput) {
+            muxConcurrencyInput.value = setObj.mux_concurrency !== undefined ? setObj.mux_concurrency : 8;
+        }
+        const muxXverInput = document.getElementById("setting-mux-xver");
+        if (muxXverInput) {
+            muxXverInput.checked = setObj.mux_xver !== undefined ? setObj.mux_xver : false;
+        }
         // Load Telegram fields
         const telegramTokenInput = document.getElementById("setting-telegram-token");
         if (telegramTokenInput) {
@@ -322,6 +334,41 @@ export function setupGeneralListeners() {
                 })
             });
             btnSaveSsl.disabled = false;
+
+            if (res && res.success) {
+                showToast(t("settings_saved_toast", "Настройки успешно сохранены!"));
+                loadSettings();
+            } else {
+                showToast(res ? res.msg : t("settings_save_error", "Не удалось сохранить настройки"), "error");
+            }
+        });
+    }
+
+    // Card 4.5: Mux Settings Save
+    const btnSaveMux = document.getElementById("btn-save-mux");
+    if (btnSaveMux) {
+        btnSaveMux.addEventListener("click", async () => {
+            const muxEnabled = document.getElementById("setting-mux-enabled").checked;
+            const muxConcurrencyInput = document.getElementById("setting-mux-concurrency");
+            const muxConcurrency = muxConcurrencyInput ? parseInt(muxConcurrencyInput.value) : 8;
+            const muxXver = document.getElementById("setting-mux-xver").checked;
+
+            if (isNaN(muxConcurrency) || muxConcurrency <= 0) {
+                showToast(t("invalid_mux_concurrency", "Неверный лимит соединений (должно быть целое положительное число)"), "error");
+                return;
+            }
+
+            btnSaveMux.disabled = true;
+            const res = await apiFetch("/api/settings/update", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    mux_enabled: muxEnabled,
+                    mux_concurrency: muxConcurrency,
+                    mux_xver: muxXver
+                })
+            });
+            btnSaveMux.disabled = false;
 
             if (res && res.success) {
                 showToast(t("settings_saved_toast", "Настройки успешно сохранены!"));
