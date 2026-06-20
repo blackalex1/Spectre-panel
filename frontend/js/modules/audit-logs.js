@@ -1,6 +1,6 @@
 import { apiFetch } from "../api.js";
 import { t } from "../i18n.js";
-import { showToast } from "../ui.js";
+import { showToast, showConfirmDialog } from "../ui.js";
 
 export let auditPage = 1;
 export const auditLimit = 10;
@@ -84,7 +84,8 @@ export function setupAuditLogsListeners() {
     const btnClearConnections = document.getElementById("btn-clear-connections");
     if (btnClearConnections) {
         btnClearConnections.addEventListener("click", async () => {
-            if (!confirm(t("confirm_clear_connections", "Вы действительно хотите полностью очистить всю историю подключений? Это удалит все логи входов/выходов из журнала."))) {
+            const confirmed = await showConfirmDialog(t("confirm_clear_connections", "Вы действительно хотите полностью очистить всю историю подключений? Это удалит все логи входов/выходов из журнала."));
+            if (!confirmed) {
                 return;
             }
             
