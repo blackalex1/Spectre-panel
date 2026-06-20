@@ -1,5 +1,6 @@
 import { apiFetch } from "../api.js";
 import { t } from "../i18n.js";
+import { showToast } from "../ui.js";
 
 export let auditPage = 1;
 export const auditLimit = 10;
@@ -64,6 +65,44 @@ export function setupAuditLogsListeners() {
             setAuditSearch(e.target.value);
             setAuditPage(1);
             loadAuditLogs();
+        });
+    }
+
+    const auditCategorySelect = document.getElementById("audit-logs-category");
+    if (auditCategorySelect) {
+        auditCategorySelect.addEventListener("change", (e) => {
+            const val = e.target.value;
+            setAuditSearch(val);
+            if (auditSearchInput) {
+                auditSearchInput.value = val;
+            }
+            setAuditPage(1);
+            loadAuditLogs();
+        });
+    }
+
+    const btnClearConnections = document.getElementById("btn-clear-connections");
+    if (btnClearConnections) {
+        btnClearConnections.addEventListener("click", async () => {
+            if (!confirm(t("confirm_clear_connections", "Вы действительно хотите полностью очистить всю историю подключений? Это удалит все логи входов/выходов из журнала."))) {
+                return;
+            }
+            
+            try {
+                const res = await apiFetch("/api/security/audit-logs/clear-connections", {
+                    method: "POST"
+                });
+                
+                if (res && res.success) {
+                    showToast(res.msg || t("connections_cleared_success", "История подключений успешно очищена!"), "success");
+                    setAuditPage(1);
+                    loadAuditLogs();
+                } else {
+                    showToast(res ? res.msg : t("connections_clear_failed", "Не удалось очистить историю подключений."), "error");
+                }
+            } catch (err) {
+                showToast(t("connections_clear_error", "Ошибка при очистке истории подключений."), "error");
+            }
         });
     }
     

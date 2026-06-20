@@ -406,6 +406,25 @@ def test_security_audit_logs(client):
     assert len(data["logs"]) == 1
     assert data["logs"][0]["username"] == "admin"
 
+    # 4. Проверка очистки логов подключений
+    with db_session() as session:
+        conn_log1 = AuditLog(timestamp=int(time.time()), username="system", action="xray_connect", target="192.168.1.10", details="Connected")
+        conn_log2 = AuditLog(timestamp=int(time.time()), username="system", action="hysteria_connect", target="192.168.1.20", details="Connected")
+        session.add(conn_log1)
+        session.add(conn_log2)
+        session.commit()
+
+    response = client.post("/api/security/audit-logs/clear-connections", headers=headers)
+    assert response.status_code == 200
+    assert response.json()["success"] is True
+
+    response = client.get("/api/security/audit-logs", headers=headers)
+    logs = response.json()["logs"]
+    actions = [l["action"] for l in logs]
+    assert "xray_connect" not in actions
+    assert "hysteria_connect" not in actions
+    assert "clear_connection_logs" in actions
+
 
 def test_security_sessions_management(client):
     """

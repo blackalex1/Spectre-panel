@@ -528,11 +528,25 @@
                     <p class="card-desc" data-i18n="audit_logs_desc">History of administrator actions and system configuration changes.</p>
                     
                     <div style="margin-top: 20px;">
-                        <div style="margin-bottom: 15px; display: flex; gap: 10px;">
-                            <div class="search-bar" style="width: 100%;">
+                        <div style="margin-bottom: 15px; display: flex; gap: 10px; flex-wrap: wrap; align-items: center;">
+                            <div class="search-bar" style="flex-grow: 1; min-width: 200px; margin-bottom: 0;">
                                 <i class="fa-solid fa-magnifying-glass"></i>
                                 <input type="text" id="audit-logs-search" placeholder="Поиск по логам..." data-i18n-placeholder="audit_logs_search">
                             </div>
+                            <div style="min-width: 180px;">
+                                <select id="audit-logs-category" style="width: 100%; height: 40px; padding: 0 10px; border-radius: var(--border-radius); background: var(--bg-input, rgba(255,255,255,0.05)); border: 1px solid var(--border-color, rgba(255,255,255,0.1)); color: var(--text-primary); cursor: pointer; outline: none; font-size: 14px;">
+                                    <option value="" data-i18n="audit_cat_all">📂 Все логи</option>
+                                    <option value="login" data-i18n="audit_cat_logins">🔑 Авторизация</option>
+                                    <option value="client" data-i18n="audit_cat_clients">👤 Клиенты</option>
+                                    <option value="inbound" data-i18n="audit_cat_inbounds">🔌 Подключения / Протоколы</option>
+                                    <option value="block" data-i18n="audit_cat_security">🛡️ Безопасность / Блокировки</option>
+                                    <option value="setting" data-i18n="audit_cat_settings">⚙️ Настройки</option>
+                                </select>
+                            </div>
+                            <button type="button" id="btn-clear-connections" class="btn danger-btn" style="height: 40px; display: flex; align-items: center; gap: 6px; padding: 0 15px; font-size: 13px; font-weight: 600; border: 1px solid rgba(255, 71, 87, 0.3); color: #ff4757; background: rgba(255, 71, 87, 0.1);">
+                                <i class="fa-solid fa-trash-can"></i>
+                                <span data-i18n="btn_clear_connections">Сбросить базу подключений</span>
+                            </button>
                         </div>
                         
                         <div class="table-container">
