@@ -50,7 +50,10 @@ async def get_settings_api(request: Request):
         "block_ads": get_setting("block_ads", "false") == "true",
         "block_cn": get_setting("block_cn", "false") == "true",
         "block_ru": get_setting("block_ru", "false") == "true",
-        "block_us": get_setting("block_us", "false") == "true"
+        "block_us": get_setting("block_us", "false") == "true",
+        "mux_enabled": get_setting("mux_enabled", "false") == "true",
+        "mux_concurrency": int(get_setting("mux_concurrency", "8")),
+        "mux_xver": get_setting("mux_xver", "0") == "1"
     }
 
 @router.post("/api/settings/update")
@@ -213,7 +216,23 @@ async def update_settings_api(request: Request):
             write_xray_config()
             restart_xray()
             restart_hysteria()
- 
+
+        # 7. Client Multiplexing (Mux) Settings
+        if "mux_enabled" in data:
+            set_setting("mux_enabled", "true" if data.get("mux_enabled") in (True, "true") else "false")
+        if "mux_concurrency" in data:
+            try:
+                concurrency = int(data.get("mux_concurrency"))
+                if concurrency <= 0:
+                    raise ValueError()
+                set_setting("mux_concurrency", str(concurrency))
+            except ValueError:
+                lang = get_setting("language", "ru")
+                from backend.i18n import t
+                return {"success": False, "msg": t("invalid_mux_concurrency", lang)}
+        if "mux_xver" in data:
+            set_setting("mux_xver", "1" if data.get("mux_xver") in (True, "true", "1", 1) else "0")
+
         # Log action
         from backend.audit import log_action, get_actor_username
         actor = get_actor_username(request)

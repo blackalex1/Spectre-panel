@@ -109,5 +109,17 @@ def build_vless_link(inbound: dict, client: dict, host: str, port: int, display_
         mode = xhttp_settings.get('mode', 'auto')
         if mode and mode != 'auto': params.append(f"mode={mode}")
 
+    # Mux parameters
+    from backend.database import get_setting
+    mux_enabled = get_setting("mux_enabled", "false") == "true"
+    if mux_enabled:
+        mux_concurrency = get_setting("mux_concurrency", "8")
+        params.append("mux=1")
+        if mux_concurrency:
+            params.append(f"muxConcurrency={mux_concurrency}")
+        mux_xver = get_setting("mux_xver", "0")
+        if mux_xver and mux_xver != "0":
+            params.append(f"xver={mux_xver}")
+
     query = "&".join(params)
     return f"vless://{uid}@{host}:{port}?{query}#{quote(display_name)}"

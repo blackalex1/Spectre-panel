@@ -245,6 +245,32 @@
                         </div>
                     </div>
                 </div>
+
+                <!-- CARD 4.5: Мультиплексирование (Mux) -->
+                <div class="glass-card settings-card">
+                    <h3 data-i18n="settings_mux_title">Мультиплексирование клиентов (Mux)</h3>
+                    <p class="card-desc" data-i18n="settings_mux_desc">Мультиплексирование позволяет передавать несколько виртуальных соединений в одном TCP-канале, снижая задержку при установке связи (handshake). Не рекомендуется для высокоскоростной загрузки больших файлов.</p>
+                    <div class="settings-form-content" style="margin-top: auto; display: flex; flex-direction: column; gap: 15px;">
+                        <label class="checkbox-container" style="display: flex; align-items: center; gap: 10px; cursor: pointer; color: var(--text-secondary); font-size: 14px; font-weight: normal; text-transform: none; margin-bottom: 0;">
+                            <input type="checkbox" id="setting-mux-enabled">
+                            <span data-i18n="settings_mux_enable">Включить мультиплексирование (Mux)</span>
+                        </label>
+
+                        <div class="input-group" id="mux-concurrency-group">
+                            <label for="setting-mux-concurrency" data-i18n="settings_mux_concurrency">Максимум соединений (Concurrency)</label>
+                            <input type="number" id="setting-mux-concurrency" min="1" max="1024" value="8">
+                        </div>
+
+                        <label class="checkbox-container" id="mux-xver-group" style="display: flex; align-items: center; gap: 10px; cursor: pointer; color: var(--text-secondary); font-size: 14px; font-weight: normal; text-transform: none; margin-bottom: 0;">
+                            <input type="checkbox" id="setting-mux-xver">
+                            <span data-i18n="settings_mux_xver">Использовать XMux (xver=1)</span>
+                        </label>
+
+                        <div style="margin-top: 10px;">
+                            <button type="button" id="btn-save-mux" class="btn primary-btn w-100" style="padding: 10px; font-weight: 600;"><i class="fa-solid fa-floppy-disk"></i> <span data-i18n="settings_btn_save_short">Сохранить</span></button>
+                        </div>
+                    </div>
+                </div>
             </div>
 
             <!-- SECTION 3: TELEGRAM BOT -->
