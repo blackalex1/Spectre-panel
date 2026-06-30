@@ -35,7 +35,7 @@ Session = scoped_session(session_factory)
 @contextmanager
 def db_session():
     """Контекстный менеджер для безопасного управления сессиями бд"""
-    session = Session()
+    session = session_factory()
     try:
         yield session
         session.commit()
@@ -43,7 +43,7 @@ def db_session():
         session.rollback()
         raise
     finally:
-        Session.remove()
+        session.close()
 
 def get_db_connection():
     """Обратная совместимость для унаследованного кода"""
