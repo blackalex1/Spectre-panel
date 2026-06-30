@@ -360,6 +360,51 @@ def test_security_unban_ip(client):
     assert "3.3.3.3" in banned_ips
 
 
+def test_security_banned_ips_list(client):
+    """
+    Проверка эндпоинта /api/security/banned-ips с поиском причин в аудите.
+    """
+    from backend.database import set_setting
+    from backend.models import AuditLog
+    import time
+    
+    headers = {"Authorization": "Bearer test_bearer_token"}
+    
+    # Подготавливаем заблокированные IP и логи аудита
+    set_setting("banned_login_ips", "1.1.1.1,5.5.5.5")
+    
+    with db_session() as session:
+        session.query(AuditLog).delete()
+        log1 = AuditLog(
+            timestamp=int(time.time()), 
+            username="system", 
+            action="login_rate_limited", 
+            target="1.1.1.1", 
+            details="IP 1.1.1.1 exceeded max login attempts."
+        )
+        session.add(log1)
+        session.commit()
+        
+    # 1. Запрос без авторизации -> 404 decoy
+    response = client.get("/api/security/banned-ips")
+    assert response.status_code == 404
+    
+    # 2. Запрос с авторизацией
+    response = client.get("/api/security/banned-ips", headers=headers)
+    assert response.status_code == 200
+    data = response.json()
+    assert data["success"] is True
+    assert len(data["banned_ips"]) == 2
+    
+    # Проверяем, что 1.1.1.1 получил причину Bruteforce из аудита
+    ip1 = next(item for item in data["banned_ips"] if item["ip"] == "1.1.1.1")
+    assert "Bruteforce" in ip1["reason"]
+    
+    # Проверяем, что 5.5.5.5 получил дефолтную причину (так как лога для него нет)
+    ip2 = next(item for item in data["banned_ips"] if item["ip"] == "5.5.5.5")
+    assert ip2["reason"] == "2FA-блокировка или настройки"
+
+
 def test_security_audit_logs(client):
     """
     Проверка эндпоинта /api/security/audit-logs.
