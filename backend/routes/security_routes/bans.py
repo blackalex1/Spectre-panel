@@ -140,3 +140,15 @@ async def report_to_master(request: Request, body: ReportToMasterRequest):
         details=body.details
     )
     return {"success": True, "reported": success}
+
+
+@router.get("/api/security/banned-ips")
+async def get_banned_ips(request: Request):
+    if not check_auth(request):
+        return decoy_response()
+        
+    from backend.database import get_setting
+    banned_ips = get_setting("banned_login_ips", "")
+    banned_list = [i.strip() for i in banned_ips.split(",") if i.strip()]
+    return {"success": True, "banned_ips": banned_list}
+
