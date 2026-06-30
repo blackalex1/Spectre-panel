@@ -147,8 +147,32 @@ async def get_banned_ips(request: Request):
     if not check_auth(request):
         return decoy_response()
         
-    from backend.database import get_setting
+    from backend.database import get_setting, db_session
+    from backend.models import AuditLog
+    
     banned_ips = get_setting("banned_login_ips", "")
     banned_list = [i.strip() for i in banned_ips.split(",") if i.strip()]
-    return {"success": True, "banned_ips": banned_list}
+    
+    result = []
+    with db_session() as session:
+        for ip in banned_list:
+            log_entry = session.query(AuditLog).filter(
+                (AuditLog.target == ip) | (AuditLog.details.like(f"%{ip}%"))
+            ).order_by(AuditLog.timestamp.desc()).first()
+            
+            reason = "2FA-блокировка или настройки"
+            if log_entry:
+                if log_entry.action == "login_rate_limited":
+                    reason = "Превышение попыток входа (Bruteforce)"
+                elif "block" in log_entry.action or "ban" in log_entry.action:
+                    reason = f"Блокировка ({log_entry.action})"
+                else:
+                    reason = f"Активность: {log_entry.details[:40]}"
+            
+            result.append({
+                "ip": ip,
+                "reason": reason
+            })
+            
+    return {"success": True, "banned_ips": result}
 
