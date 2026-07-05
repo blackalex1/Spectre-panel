@@ -24,9 +24,24 @@ def start_xray():
         return True
         
     inbounds = get_all_inbounds()
-    xray_inbounds = [ib for ib in inbounds if ib["protocol"] != "hysteria2" and ib["enable"]]
-    if not xray_inbounds:
-        logging.info("No active Xray inbounds found. Xray core will not be started.")
+    has_active_xray = False
+    for ib in inbounds:
+        if not ib["enable"]:
+            continue
+        if ib["protocol"] != "hysteria2":
+            has_active_xray = True
+            break
+        else:
+            try:
+                stream_settings = json.loads(ib["stream_settings"] or "{}")
+                if stream_settings.get("hysteria", {}).get("routingViaXray"):
+                    has_active_xray = True
+                    break
+            except Exception:
+                pass
+                
+    if not has_active_xray:
+        logging.info("No active Xray inbounds or Hysteria routing via Xray found. Xray core will not be started.")
         return True
         
     backend.xray.ensure_xray_installed()

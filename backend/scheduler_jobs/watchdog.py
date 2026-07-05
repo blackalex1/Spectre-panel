@@ -17,12 +17,20 @@ def run_service_watchdog():
             ).count() > 0
             
             # Check active hysteria inbounds
-            hysteria_inbound_ids = [
-                ib.id for ib in session.query(Inbound).filter_by(
-                    enable=1,
-                    protocol="hysteria2"
-                ).all()
-            ]
+            import json
+            hysteria_inbound_ids = []
+            hysteria_inbounds = session.query(Inbound).filter_by(
+                enable=1,
+                protocol="hysteria2"
+            ).all()
+            for ib in hysteria_inbounds:
+                hysteria_inbound_ids.append(ib.id)
+                try:
+                    stream_settings = json.loads(ib.stream_settings or "{}")
+                    if stream_settings.get("hysteria", {}).get("routingViaXray"):
+                        has_xray_inbounds = True
+                except Exception:
+                    pass
             
         # Xray core check
         if has_xray_inbounds:
