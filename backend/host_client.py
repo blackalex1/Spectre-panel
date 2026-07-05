@@ -3,6 +3,32 @@ import sys
 import json
 import socket
 import logging
+import threading
+import time
+
+try:
+    import psutil
+except ImportError:
+    psutil = None
+
+_cpu_usage = 0.0
+
+def _cpu_worker():
+    global _cpu_usage
+    if psutil is None:
+        return
+    try:
+        psutil.cpu_percent(interval=None)
+    except Exception:
+        pass
+    while True:
+        try:
+            _cpu_usage = psutil.cpu_percent(interval=1.0)
+        except Exception:
+            time.sleep(1.0)
+
+if psutil is not None:
+    threading.Thread(target=_cpu_worker, daemon=True).start()
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - [HostClient] - %(levelname)s - %(message)s")
 
@@ -123,17 +149,18 @@ class HostClient:
                 "netIO": {"up": 0, "down": 0}
             }
             try:
-                import psutil
-                stats["cpu"] = psutil.cpu_percent(interval=None)
-                mem = psutil.virtual_memory()
-                stats["mem"]["current"] = mem.used
-                stats["mem"]["total"] = mem.total
-                import time
-                boot_time = psutil.boot_time()
-                stats["uptime"] = int(time.time() - boot_time) if boot_time else 0
-                net_io = psutil.net_io_counters()
-                stats["netIO"]["up"] = net_io.bytes_sent
-                stats["netIO"]["down"] = net_io.bytes_recv
+                stats["cpu"] = _cpu_usage
+                if psutil is not None:
+                    mem = psutil.virtual_memory()
+                    stats["mem"]["current"] = mem.used
+                    stats["mem"]["total"] = mem.total
+                    boot_time = psutil.boot_time()
+                    stats["uptime"] = int(time.time() - boot_time) if boot_time else 0
+                    net_io = psutil.net_io_counters()
+                    stats["netIO"]["up"] = net_io.bytes_sent
+                    stats["netIO"]["down"] = net_io.bytes_recv
+                else:
+                    raise Exception("psutil not available")
             except Exception:
                 # hardcoded mock values if psutil is not available
                 stats["cpu"] = 15.4

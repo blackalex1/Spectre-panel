@@ -28,7 +28,8 @@ async def server_status_api(request: Request):
         net_down = stats.get("netIO", {}).get("down", 0)
     else:
         # Резервный вариант сбора локальных метрик
-        cpu_percent = psutil.cpu_percent()
+        from backend.host_client import _cpu_usage
+        cpu_percent = _cpu_usage
         mem = psutil.virtual_memory()
         mem_current = mem.used
         mem_total = mem.total

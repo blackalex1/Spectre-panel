@@ -1,10 +1,30 @@
 import time
 import logging
+import threading
 
 try:
     import psutil
 except ImportError:
     psutil = None
+
+_cpu_usage = 0.0
+
+def _cpu_worker():
+    global _cpu_usage
+    if psutil is None:
+        return
+    try:
+        psutil.cpu_percent(interval=None)
+    except Exception:
+        pass
+    while True:
+        try:
+            _cpu_usage = psutil.cpu_percent(interval=1.0)
+        except Exception:
+            time.sleep(1.0)
+
+if psutil is not None:
+    threading.Thread(target=_cpu_worker, daemon=True).start()
 
 def get_system_stats() -> dict:
     """Gathers real host-level metrics."""
@@ -23,12 +43,14 @@ def get_system_stats() -> dict:
         try:
             import psutil as ps
             psutil = ps
+            # Start worker if psutil became available
+            threading.Thread(target=_cpu_worker, daemon=True).start()
         except ImportError:
             pass
 
     if psutil is not None:
         try:
-            stats["cpu"] = psutil.cpu_percent(interval=None)
+            stats["cpu"] = _cpu_usage
             mem = psutil.virtual_memory()
             stats["mem"]["current"] = mem.used
             stats["mem"]["total"] = mem.total
