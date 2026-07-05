@@ -317,7 +317,7 @@ async def proxy_decoy_request(request: Request, path: str) -> Response:
             
         headers = {k: v for k, v in request.headers.items() if k.lower() not in ("host", "accept-encoding")}
         
-        async with httpx.AsyncClient(follow_redirects=True, timeout=10.0) as client:
+        async with httpx.AsyncClient(follow_redirects=True, timeout=10.0, verify=False) as client:
             req_method = request.method
             req_content = await request.body()
             
