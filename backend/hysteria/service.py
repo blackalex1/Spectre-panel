@@ -96,9 +96,6 @@ def start_hysteria():
     """Запускает процессы Hysteria 2 для всех hysteria2 подключений из БД"""
     global hysteria_processes
     
-    # Гарантируем установку ядра Hysteria 2 на старте
-    backend.hysteria.ensure_hysteria_installed()
-    
     inbounds = get_all_inbounds()
     hysteria_inbounds = [ib for ib in inbounds if ib["protocol"] == "hysteria2" and ib["enable"]]
     
@@ -135,9 +132,12 @@ def start_hysteria():
                     pass
     
     if not hysteria_inbounds:
-        logging.info("No active Hysteria 2 inbounds found.")
+        logging.info("No active Hysteria 2 inbounds found. Hysteria core will not be started.")
         return True
         
+    # Гарантируем установку ядра Hysteria 2 на старте
+    backend.hysteria.ensure_hysteria_installed()
+    
     backend.hysteria.generate_self_signed_cert()
     
     success = True

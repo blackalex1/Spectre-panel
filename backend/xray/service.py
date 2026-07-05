@@ -23,6 +23,12 @@ def start_xray():
         logging.info("Xray is already running.")
         return True
         
+    inbounds = get_all_inbounds()
+    xray_inbounds = [ib for ib in inbounds if ib["protocol"] != "hysteria2" and ib["enable"]]
+    if not xray_inbounds:
+        logging.info("No active Xray inbounds found. Xray core will not be started.")
+        return True
+        
     backend.xray.ensure_xray_installed()
     backend.xray.write_xray_config()
     

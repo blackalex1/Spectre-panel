@@ -228,7 +228,7 @@ def init_db():
                 settings="{}",
                 stream_settings=json.dumps(hys_stream_settings),
                 sniffing="{}",
-                enable=1
+                enable=0
             )
             session.add(default_hys)
             session.flush()
