@@ -28,36 +28,22 @@ async def server_status_api(request: Request):
         net_down = stats.get("netIO", {}).get("down", 0)
     else:
         # Резервный вариант сбора локальных метрик
-        from backend.host_client import _cpu_usage
-        cpu_percent = _cpu_usage
-        mem = psutil.virtual_memory()
-        mem_current = mem.used
-        mem_total = mem.total
-        try:
-            swap = psutil.swap_memory()
-            swap_current = swap.used
-            swap_total = swap.total
-            swap_percent = swap.percent
-        except Exception:
-            swap_current = 0
-            swap_total = 0
-            swap_percent = 0.0
-        net_io = psutil.net_io_counters()
-        net_up = net_io.bytes_sent
-        net_down = net_io.bytes_recv
-        boot_time = psutil.boot_time()
-        uptime = int(time.time() - boot_time)
+        from backend.host_client import _cached_stats, _boot_time
+        cpu_percent = _cached_stats["cpu"]
+        mem_current = _cached_stats["mem"]["current"]
+        mem_total = _cached_stats["mem"]["total"]
+        swap_current = _cached_stats["swap"]["current"]
+        swap_total = _cached_stats["swap"]["total"]
+        swap_percent = _cached_stats["swap"]["percent"]
+        uptime = int(time.time() - _boot_time) if _boot_time else 0
+        net_up = _cached_stats["netIO"]["up"]
+        net_down = _cached_stats["netIO"]["down"]
     
     # Disk stats
-    try:
-        disk_info = psutil.disk_usage('/')
-        disk_current = disk_info.used
-        disk_total = disk_info.total
-        disk_percent = disk_info.percent
-    except Exception:
-        disk_current = 0
-        disk_total = 0
-        disk_percent = 0.0
+    from backend.host_client import _cached_stats
+    disk_current = _cached_stats["disk"]["current"]
+    disk_total = _cached_stats["disk"]["total"]
+    disk_percent = _cached_stats["disk"]["percent"]
 
     # Получаем версию xray и hysteria
     xray_status = "running" if is_xray_running() else "stopped"

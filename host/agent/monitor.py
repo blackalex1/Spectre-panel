@@ -7,24 +7,45 @@ try:
 except ImportError:
     psutil = None
 
-_cpu_usage = 0.0
+_cached_stats = {
+    "cpu": 0.0,
+    "mem": {"current": 0, "total": 0},
+    "swap": {"current": 0, "total": 0, "percent": 0.0},
+    "uptime": 0,
+    "netIO": {"up": 0, "down": 0}
+}
+_boot_time = 0.0
 
-def _cpu_worker():
-    global _cpu_usage
+def _stats_worker():
+    global _cached_stats, _boot_time
     if psutil is None:
         return
     try:
+        _boot_time = psutil.boot_time()
         psutil.cpu_percent(interval=None)
     except Exception:
         pass
     while True:
         try:
-            _cpu_usage = psutil.cpu_percent(interval=1.0)
-        except Exception:
-            time.sleep(1.0)
+            cpu = psutil.cpu_percent(interval=None)
+            mem = psutil.virtual_memory()
+            try:
+                swap = psutil.swap_memory()
+                swap_dict = {"current": swap.used, "total": swap.total, "percent": swap.percent}
+            except Exception:
+                swap_dict = {"current": 0, "total": 0, "percent": 0.0}
+            net_io = psutil.net_io_counters()
+            
+            _cached_stats["cpu"] = cpu
+            _cached_stats["mem"] = {"current": mem.used, "total": mem.total}
+            _cached_stats["swap"] = swap_dict
+            _cached_stats["netIO"] = {"up": net_io.bytes_sent, "down": net_io.bytes_recv}
+        except Exception as e:
+            logging.error(f"Error in stats worker thread: {e}")
+        time.sleep(2.0)
 
 if psutil is not None:
-    threading.Thread(target=_cpu_worker, daemon=True).start()
+    threading.Thread(target=_stats_worker, daemon=True).start()
 
 def get_system_stats() -> dict:
     """Gathers real host-level metrics."""
@@ -44,28 +65,17 @@ def get_system_stats() -> dict:
             import psutil as ps
             psutil = ps
             # Start worker if psutil became available
-            threading.Thread(target=_cpu_worker, daemon=True).start()
+            threading.Thread(target=_stats_worker, daemon=True).start()
         except ImportError:
             pass
 
     if psutil is not None:
         try:
-            stats["cpu"] = _cpu_usage
-            mem = psutil.virtual_memory()
-            stats["mem"]["current"] = mem.used
-            stats["mem"]["total"] = mem.total
-            
-            swap = psutil.swap_memory()
-            stats["swap"]["current"] = swap.used
-            stats["swap"]["total"] = swap.total
-            stats["swap"]["percent"] = swap.percent
-            
-            boot_time = psutil.boot_time()
-            stats["uptime"] = int(time.time() - boot_time) if boot_time else 0
-            
-            net_io = psutil.net_io_counters()
-            stats["netIO"]["up"] = net_io.bytes_sent
-            stats["netIO"]["down"] = net_io.bytes_recv
+            stats["cpu"] = _cached_stats["cpu"]
+            stats["mem"] = _cached_stats["mem"].copy()
+            stats["swap"] = _cached_stats["swap"].copy()
+            stats["uptime"] = int(time.time() - _boot_time) if _boot_time else 0
+            stats["netIO"] = _cached_stats["netIO"].copy()
             return stats
         except Exception as e:
             logging.error(f"Error collecting host stats via psutil: {e}")

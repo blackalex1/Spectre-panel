@@ -15,8 +15,17 @@ from backend.auth_utils import (
 
 router = APIRouter()
 
-# Rate limiting attempts store: IP -> list of timestamps
-LOGIN_ATTEMPTS = {}
+class DbLoginAttempts:
+    def clear(self):
+        from backend.database import db_session
+        from backend.models import SharedCache
+        try:
+            with db_session() as session:
+                session.query(SharedCache).filter(SharedCache.key.like("login_attempts:%")).delete()
+        except Exception:
+            pass
+
+LOGIN_ATTEMPTS = DbLoginAttempts()
 
 def is_ip_whitelisted_sync(client_ip: str) -> bool:
     from backend.database import get_setting
@@ -42,20 +51,44 @@ def check_rate_limit(ip: str) -> bool:
     if is_ip_whitelisted_sync(ip):
         return True
     from backend.database import get_setting
+    from backend.database.crud.shared_cache import get_shared_cache
+    import json
     now = time.time()
     
     period = int(get_setting("login_attempts_period", str(settings.LOGIN_ATTEMPTS_PERIOD)))
     max_attempts = int(get_setting("login_max_attempts", str(settings.LOGIN_MAX_ATTEMPTS)))
     
-    # Clean up old attempts
-    attempts = [t for t in LOGIN_ATTEMPTS.get(ip, []) if now - t < period]
-    LOGIN_ATTEMPTS[ip] = attempts
+    attempts_str = get_shared_cache(f"login_attempts:{ip}")
+    if attempts_str:
+        try:
+            attempts = json.loads(attempts_str)
+        except Exception:
+            attempts = []
+    else:
+        attempts = []
+        
+    attempts = [t for t in attempts if now - t < period]
     return len(attempts) < max_attempts
 
 def record_attempt(ip: str):
-    if ip not in LOGIN_ATTEMPTS:
-        LOGIN_ATTEMPTS[ip] = []
-    LOGIN_ATTEMPTS[ip].append(time.time())
+    from backend.database.crud.shared_cache import get_shared_cache, set_shared_cache
+    from backend.database import get_setting
+    import json
+    now = time.time()
+    
+    period = int(get_setting("login_attempts_period", str(settings.LOGIN_ATTEMPTS_PERIOD)))
+    
+    attempts_str = get_shared_cache(f"login_attempts:{ip}")
+    if attempts_str:
+        try:
+            attempts = json.loads(attempts_str)
+        except Exception:
+            attempts = []
+    else:
+        attempts = []
+        
+    attempts.append(now)
+    set_shared_cache(f"login_attempts:{ip}", json.dumps(attempts), period)
 
 class LoginRequest(BaseModel):
     username: str

@@ -9,6 +9,7 @@ from backend.models import (
     RoutingRule,
     Node,
     NodeJoinCode,
+    SharedCache,
 )
 
 from backend.database.connection import (
@@ -86,6 +87,13 @@ from backend.database.crud.routing import (
     update_rules_priority,
 )
 
+from backend.database.crud.shared_cache import (
+    get_shared_cache,
+    set_shared_cache,
+    delete_shared_cache,
+    clean_expired_shared_cache,
+)
+
 __all__ = [
     "Base",
     "User",
@@ -148,4 +156,8 @@ __all__ = [
     "update_routing_rule",
     "delete_routing_rule",
     "update_rules_priority",
+    "get_shared_cache",
+    "set_shared_cache",
+    "delete_shared_cache",
+    "clean_expired_shared_cache",
 ]

@@ -11,24 +11,52 @@ try:
 except ImportError:
     psutil = None
 
-_cpu_usage = 0.0
+_cached_stats = {
+    "cpu": 0.0,
+    "mem": {"current": 0, "total": 0},
+    "swap": {"current": 0, "total": 0, "percent": 0.0},
+    "uptime": 0,
+    "netIO": {"up": 0, "down": 0},
+    "disk": {"current": 0, "total": 0, "percent": 0.0}
+}
+_boot_time = 0.0
 
-def _cpu_worker():
-    global _cpu_usage
+def _stats_worker():
+    global _cached_stats, _boot_time
     if psutil is None:
         return
     try:
+        _boot_time = psutil.boot_time()
         psutil.cpu_percent(interval=None)
     except Exception:
         pass
     while True:
         try:
-            _cpu_usage = psutil.cpu_percent(interval=1.0)
-        except Exception:
-            time.sleep(1.0)
+            cpu = psutil.cpu_percent(interval=None)
+            mem = psutil.virtual_memory()
+            try:
+                swap = psutil.swap_memory()
+                swap_dict = {"current": swap.used, "total": swap.total, "percent": swap.percent}
+            except Exception:
+                swap_dict = {"current": 0, "total": 0, "percent": 0.0}
+            try:
+                disk = psutil.disk_usage('/')
+                disk_dict = {"current": disk.used, "total": disk.total, "percent": disk.percent}
+            except Exception:
+                disk_dict = {"current": 0, "total": 0, "percent": 0.0}
+            net_io = psutil.net_io_counters()
+            
+            _cached_stats["cpu"] = cpu
+            _cached_stats["mem"] = {"current": mem.used, "total": mem.total}
+            _cached_stats["swap"] = swap_dict
+            _cached_stats["disk"] = disk_dict
+            _cached_stats["netIO"] = {"up": net_io.bytes_sent, "down": net_io.bytes_recv}
+        except Exception as e:
+            logging.error(f"Error in stats worker thread: {e}")
+        time.sleep(2.0)
 
 if psutil is not None:
-    threading.Thread(target=_cpu_worker, daemon=True).start()
+    threading.Thread(target=_stats_worker, daemon=True).start()
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - [HostClient] - %(levelname)s - %(message)s")
 
@@ -149,16 +177,11 @@ class HostClient:
                 "netIO": {"up": 0, "down": 0}
             }
             try:
-                stats["cpu"] = _cpu_usage
+                stats["cpu"] = _cached_stats["cpu"]
                 if psutil is not None:
-                    mem = psutil.virtual_memory()
-                    stats["mem"]["current"] = mem.used
-                    stats["mem"]["total"] = mem.total
-                    boot_time = psutil.boot_time()
-                    stats["uptime"] = int(time.time() - boot_time) if boot_time else 0
-                    net_io = psutil.net_io_counters()
-                    stats["netIO"]["up"] = net_io.bytes_sent
-                    stats["netIO"]["down"] = net_io.bytes_recv
+                    stats["mem"] = _cached_stats["mem"].copy()
+                    stats["uptime"] = int(time.time() - _boot_time) if _boot_time else 0
+                    stats["netIO"] = _cached_stats["netIO"].copy()
                 else:
                     raise Exception("psutil not available")
             except Exception:

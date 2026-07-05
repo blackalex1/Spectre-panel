@@ -152,3 +152,11 @@ class NodeJoinCode(Base):
     created_at = Column(BigInteger, nullable=False)            # UTC epoch seconds
 
 
+class SharedCache(Base):
+    __tablename__ = "shared_cache"
+    
+    key = Column(String, primary_key=True)
+    value = Column(String, nullable=False)
+    expires_at = Column(BigInteger, nullable=False, index=True)
+
+

@@ -54,11 +54,13 @@ def run_db_cleanup_maintenance():
     logging.info("[Scheduler] Starting database maintenance (cleanup of expired sessions & old audit logs)...")
     
     try:
-        from backend.database import clean_expired_sessions_db
+        from backend.database import clean_expired_sessions_db, clean_expired_shared_cache
         clean_expired_sessions_db()
         logging.info("[Scheduler] Expired user sessions cleaned successfully.")
+        clean_expired_shared_cache()
+        logging.info("[Scheduler] Expired shared cache entries cleaned successfully.")
     except Exception as e:
-        logging.error(f"[Scheduler] Failed to clean expired sessions: {e}")
+        logging.error(f"[Scheduler] Failed to clean expired sessions or shared cache: {e}")
         
     try:
         from backend.models import AuditLog
