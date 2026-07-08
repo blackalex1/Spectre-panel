@@ -42,7 +42,7 @@
 .glass-card:hover {
     border-color: var(--border-highlight);
     box-shadow: var(--shadow-card), var(--shadow-glow);
-    transform: translateY(-4px) scale(1.005);
+    transform: translateY(-3px);
 }
 
 /* Оверлеи / Всплывающие окна */

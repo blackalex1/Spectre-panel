@@ -105,7 +105,7 @@
 }
 
 .metric-card:hover .card-icon {
-    transform: scale(1.12) rotate(6deg);
+    transform: scale(1.05) rotate(3deg);
 }
 
 .card-icon.blue { background: rgba(6, 182, 212, 0.08); color: var(--accent-cyan); border: 1px solid rgba(6, 182, 212, 0.15); box-shadow: 0 4px 15px rgba(6, 182, 212, 0.05); }
