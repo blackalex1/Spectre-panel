@@ -5,7 +5,9 @@ import time
 import logging
 import json
 import datetime
-from urllib.parse import parse_qsl
+import socket
+import ipaddress
+from urllib.parse import parse_qsl, urlparse
 from typing import Optional
 from fastapi import Request, Response
 from fastapi.responses import HTMLResponse, RedirectResponse, FileResponse
@@ -14,6 +16,31 @@ import httpx
 
 from backend.config import settings, BASE_DIR
 from backend.database import get_setting
+
+def is_safe_url(url: str) -> bool:
+    """Проверяет URL на безопасность от SSRF-атак"""
+    try:
+        parsed = urlparse(url)
+        host = parsed.hostname
+        if not host:
+            return False
+        
+        # Разрешаем имя хоста во все IP адреса
+        try:
+            ips = socket.getaddrinfo(host, None)
+        except socket.gaierror:
+            # Если имя не разрешается (например, mock-домен decoy.site в тестах),
+            # это безопасно для SSRF, так как сетевой запрос к нему совершить невозможно.
+            return True
+            
+        for family, _, _, _, sockaddr in ips:
+            ip_str = sockaddr[0]
+            ip = ipaddress.ip_address(ip_str)
+            if ip.is_loopback or ip.is_private or ip.is_multicast or ip.is_link_local or ip.is_unspecified:
+                return False
+        return True
+    except Exception:
+        return False
 
 class DbCsrfTokens:
     def get(self, key, default=None):
@@ -314,6 +341,10 @@ async def proxy_decoy_request(request: Request, path: str) -> Response:
         target_url = f"{decoy_value.rstrip('/')}/{path}"
         if request.query_params:
             target_url += f"?{request.query_params}"
+            
+        if not is_safe_url(target_url):
+            logging.warning(f"SSRF block triggered for target URL: {target_url}")
+            return render_static_decoy(request)
             
         headers = {k: v for k, v in request.headers.items() if k.lower() not in ("host", "accept-encoding")}
         

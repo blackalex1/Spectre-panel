@@ -76,6 +76,17 @@ async def enable_2fa_api(request: Request):
             
         if verify_totp_token(user.totp_secret, code):
             user.totp_enabled = 1
+            # Invalidate all other sessions of this user for security
+            session_id = request.cookies.get("session_id")
+            if session_id:
+                from backend.models import UserSession, SharedCache
+                other_sessions = session.query(UserSession).filter(
+                    UserSession.username == actor,
+                    UserSession.session_id != session_id
+                ).all()
+                for s in other_sessions:
+                    session.query(SharedCache).filter(SharedCache.key == f"csrf:{s.session_id}").delete()
+                    session.delete(s)
             session.commit()
             log_action(actor, "enable_2fa", details="TOTP enabled successfully")
             return {"success": True, "msg": "Двухфакторная аутентификация успешно включена"}
@@ -112,6 +123,17 @@ async def disable_2fa_api(request: Request):
         if verify_totp_token(user.totp_secret, code):
             user.totp_enabled = 0
             user.totp_secret = None
+            # Invalidate all other sessions of this user for security
+            session_id = request.cookies.get("session_id")
+            if session_id:
+                from backend.models import UserSession, SharedCache
+                other_sessions = session.query(UserSession).filter(
+                    UserSession.username == actor,
+                    UserSession.session_id != session_id
+                ).all()
+                for s in other_sessions:
+                    session.query(SharedCache).filter(SharedCache.key == f"csrf:{s.session_id}").delete()
+                    session.delete(s)
             session.commit()
             log_action(actor, "disable_2fa", details="TOTP disabled successfully")
             return {"success": True, "msg": "Двухфакторная аутентификация успешно отключена"}
