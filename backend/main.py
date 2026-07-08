@@ -221,6 +221,7 @@ if frontend_dir.exists():
         name="frontend"
     )
     logging.info(f"Frontend mounted at: /{settings.PANEL_SECRET_PATH}/")
+
 else:
     logging.warning("Frontend directory not found. Serving API only.")
 

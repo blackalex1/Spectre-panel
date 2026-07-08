@@ -19,6 +19,10 @@ body {
     -webkit-font-smoothing: antialiased;
 }
 
+h1, h2, h3, h4, h5, h6 {
+    letter-spacing: var(--tracking-tight);
+}
+
 /* Декоративные фоновые свечения (Авроры) */
 body::before {
     content: '';
@@ -78,16 +82,27 @@ input, select, textarea, button {
 
 /* Боковое меню */
 .sidebar {
-    width: 270px;
+    width: 280px;
     background: var(--bg-sidebar);
     border-right: 1px solid var(--border-color);
-    backdrop-filter: blur(24px) saturate(120%);
-    -webkit-backdrop-filter: blur(24px) saturate(120%);
+    backdrop-filter: blur(32px) saturate(150%);
+    -webkit-backdrop-filter: blur(32px) saturate(150%);
     display: flex;
     flex-direction: column;
-    padding: 30px 24px;
+    padding: 40px 24px 30px;
     position: relative;
     z-index: 10;
+}
+
+.sidebar::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    right: 0;
+    width: 1px;
+    height: 100%;
+    background: linear-gradient(to bottom, var(--border-color) 0%, var(--primary) 50%, var(--border-color) 100%);
+    opacity: 0.5;
 }
 
 .sidebar-brand {
@@ -103,11 +118,11 @@ input, select, textarea, button {
     font-size: 28px;
     color: var(--primary);
     filter: drop-shadow(0 0 12px var(--primary-glow));
-    transition: transform var(--transition-normal);
+    transition: transform var(--transition-elastic);
 }
 
 .sidebar-brand:hover .logo {
-    transform: rotate(12deg) scale(1.05);
+    transform: rotate(12deg) scale(1.08);
 }
 
 .sidebar-brand span {
@@ -122,16 +137,16 @@ input, select, textarea, button {
 .sidebar-menu {
     display: flex;
     flex-direction: column;
-    gap: 10px;
+    gap: 8px;
     flex: 1;
 }
 
 .nav-item {
     background: transparent;
     border: none;
-    border-radius: 12px;
+    border-radius: var(--radius-md);
     padding: 14px 18px;
-    font-size: 15px;
+    font-size: 14px;
     font-weight: 600;
     color: var(--text-secondary);
     display: flex;
@@ -141,47 +156,40 @@ input, select, textarea, button {
     text-align: left;
     position: relative;
     overflow: hidden;
-    transition: color var(--transition-normal), background-color var(--transition-normal), transform var(--transition-fast);
+    letter-spacing: var(--tracking-tight);
+    transition: color var(--transition-fast), background-color var(--transition-fast), transform var(--transition-fast);
 }
 
 .nav-item i {
     font-size: 18px;
     width: 20px;
     text-align: center;
-    transition: transform var(--transition-normal), color var(--transition-normal);
+    transition: transform var(--transition-elastic), color var(--transition-fast);
 }
 
 .nav-item:hover {
     color: var(--text-primary);
-    background: rgba(255, 255, 255, 0.04);
+    background: rgba(255, 255, 255, 0.035);
     transform: translateX(4px);
 }
 
 .nav-item:hover i {
-    transform: scale(1.15);
+    transform: scale(1.15) rotate(5deg);
     color: var(--primary);
 }
 
 .nav-item.active {
     color: var(--text-primary);
-    background: linear-gradient(90deg, rgba(139, 92, 246, 0.12) 0%, rgba(139, 92, 246, 0.01) 100%);
-}
-
-.nav-item.active::before {
-    content: '';
-    position: absolute;
-    left: 0;
-    top: 20%;
-    height: 60%;
-    width: 3.5px;
-    background: var(--primary);
-    border-radius: 0 4px 4px 0;
-    box-shadow: 0 0 10px var(--primary);
+    background: linear-gradient(90deg, hsla(263, 85%, 64%, 0.08) 0%, hsla(263, 85%, 64%, 0.01) 100%);
+    border-left: 3px solid var(--primary);
+    border-radius: 0 var(--radius-md) var(--radius-md) 0;
+    box-shadow: inset 4px 0 15px -4px hsla(263, 85%, 64%, 0.2);
 }
 
 .nav-item.active i {
     color: var(--primary);
-    filter: drop-shadow(0 0 5px var(--primary-glow));
+    filter: drop-shadow(0 0 8px var(--primary-glow));
+    transform: scale(1.05);
 }
 
 .sidebar-footer {

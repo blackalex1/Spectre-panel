@@ -164,7 +164,7 @@ function updateChart(cpu, ram, swap, disk) {
                 datasets: [{
                     data: [cpu, 100 - cpu],
                     backgroundColor: [
-                        '#8b5cf6', // Неоновый фиолетовый (Theme Accent)
+                        '#8b5cf6', // Фиолетовый
                         'rgba(255, 255, 255, 0.04)'
                     ],
                     borderWidth: 0,
@@ -190,7 +190,7 @@ function updateChart(cpu, ram, swap, disk) {
                 datasets: [{
                     data: [ram, 100 - ram],
                     backgroundColor: [
-                        '#8b5cf6', // Неоновый фиолетовый
+                        '#00f0ff', // Циановый
                         'rgba(255, 255, 255, 0.04)'
                     ],
                     borderWidth: 0,
@@ -216,7 +216,7 @@ function updateChart(cpu, ram, swap, disk) {
                 datasets: [{
                     data: [swap, 100 - swap],
                     backgroundColor: [
-                        '#8b5cf6', // Неоновый фиолетовый
+                        '#f43f5e', // Розовый
                         'rgba(255, 255, 255, 0.04)'
                     ],
                     borderWidth: 0,
@@ -242,7 +242,7 @@ function updateChart(cpu, ram, swap, disk) {
                 datasets: [{
                     data: [disk, 100 - disk],
                     backgroundColor: [
-                        '#8b5cf6', // Неоновый фиолетовый
+                        '#10b981', // Зеленый
                         'rgba(255, 255, 255, 0.04)'
                     ],
                     borderWidth: 0,
@@ -260,27 +260,26 @@ function updateChart(cpu, ram, swap, disk) {
         });
     }
     
-    const NORMAL_COLOR = '#8b5cf6'; // Единый неоновый фиолетовый
-    const WARNING_COLOR = '#f43f5e'; // Предупреждающий неоновый красный (>90%)
+    const WARNING_COLOR = '#ff0055'; // Яркий аварийный цвет
     
     if (cpuCircularChart) {
         cpuCircularChart.data.datasets[0].data = [cpu, 100 - cpu];
-        cpuCircularChart.data.datasets[0].backgroundColor[0] = (cpu >= 90) ? WARNING_COLOR : NORMAL_COLOR;
+        cpuCircularChart.data.datasets[0].backgroundColor[0] = (cpu >= 90) ? WARNING_COLOR : '#8b5cf6';
         cpuCircularChart.update();
     }
     if (ramCircularChart) {
         ramCircularChart.data.datasets[0].data = [ram, 100 - ram];
-        ramCircularChart.data.datasets[0].backgroundColor[0] = (ram >= 90) ? WARNING_COLOR : NORMAL_COLOR;
+        ramCircularChart.data.datasets[0].backgroundColor[0] = (ram >= 90) ? WARNING_COLOR : '#00f0ff';
         ramCircularChart.update();
     }
     if (swapCircularChart) {
         swapCircularChart.data.datasets[0].data = [swap, 100 - swap];
-        swapCircularChart.data.datasets[0].backgroundColor[0] = (swap >= 90) ? WARNING_COLOR : NORMAL_COLOR;
+        swapCircularChart.data.datasets[0].backgroundColor[0] = (swap >= 90) ? WARNING_COLOR : '#f43f5e';
         swapCircularChart.update();
     }
     if (diskCircularChart) {
         diskCircularChart.data.datasets[0].data = [disk, 100 - disk];
-        diskCircularChart.data.datasets[0].backgroundColor[0] = (disk >= 90) ? WARNING_COLOR : NORMAL_COLOR;
+        diskCircularChart.data.datasets[0].backgroundColor[0] = (disk >= 90) ? WARNING_COLOR : '#10b981';
         diskCircularChart.update();
     }
     

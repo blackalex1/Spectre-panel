@@ -83,7 +83,7 @@
     gap: 8px;
     background: var(--bg-sidebar);
     border: 1px solid var(--border-color);
-    border-radius: 20px;
+    border-radius: var(--radius-lg);
     padding: 16px;
     backdrop-filter: blur(24px);
     -webkit-backdrop-filter: blur(24px);
@@ -95,7 +95,7 @@
     gap: 14px;
     background: transparent;
     border: 1px solid transparent;
-    border-radius: 12px;
+    border-radius: var(--radius-md);
     padding: 12px 16px;
     cursor: pointer;
     text-align: left;
@@ -139,26 +139,18 @@
 }
 
 .settings-nav-item.active {
-    background: linear-gradient(90deg, rgba(139, 92, 246, 0.12) 0%, rgba(139, 92, 246, 0.01) 100%);
+    background: linear-gradient(90deg, hsla(263, 85%, 64%, 0.08) 0%, hsla(263, 85%, 64%, 0.01) 100%);
+    border-left: 3px solid var(--primary);
+    border-radius: 0 var(--radius-md) var(--radius-md) 0;
+    box-shadow: inset 4px 0 15px -4px hsla(263, 85%, 64%, 0.2);
     padding-left: 16px;
-    position: relative;
-}
-
-.settings-nav-item.active::before {
-    content: '';
-    position: absolute;
-    left: 0;
-    top: 20%;
-    height: 60%;
-    width: 3.5px;
-    background: var(--primary);
-    border-radius: 0 4px 4px 0;
-    box-shadow: 0 0 10px var(--primary);
 }
 
 .settings-nav-item.active i {
-    color: var(--primary);
+    color: var(--primary) !important;
+    filter: drop-shadow(0 0 5px var(--primary-glow));
 }
+
 
 .settings-sections-content {
     flex: 1;

@@ -90,7 +90,7 @@ async function loadPanelStylesheets() {
         return new Promise((resolve) => {
             const link = document.createElement("link");
             link.rel = "stylesheet";
-            link.href = href;
+            link.href = href + "?v=upgrade_2";
             link.onload = resolve;
             link.onerror = resolve; // Продолжить даже при ошибке
             document.head.appendChild(link);
