@@ -75,13 +75,14 @@ export async function loadHysteriaLogs() {
         terminal.innerHTML = "";
         res.logs.forEach(line => {
             const div = document.createElement("div");
-            div.innerText = line;
+            const cleanLine = line.replace(/[\u001b\u009b][[()#;?]*(?:[0-9]{1,4}(?:;[0-9]{0,4})*)?[0-9A-ORZcf-nqry=><]/g, '');
+            div.innerText = cleanLine;
             
-            if (line.toLowerCase().includes("warn") || line.includes("[Warning]")) {
+            if (cleanLine.toLowerCase().includes("warn") || cleanLine.includes("[Warning]")) {
                 div.style.color = "var(--accent-orange)";
-            } else if (line.toLowerCase().includes("err") || line.includes("[Error]")) {
+            } else if (cleanLine.toLowerCase().includes("err") || cleanLine.includes("[Error]")) {
                 div.style.color = "var(--accent-rose)";
-            } else if (line.includes("connected") || line.includes("authenticate")) {
+            } else if (cleanLine.includes("connected") || cleanLine.includes("authenticate")) {
                 div.style.color = "var(--accent-blue)";
             }
             

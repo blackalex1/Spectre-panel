@@ -70,11 +70,12 @@ export async function loadLogs() {
         terminal.innerHTML = "";
         res.logs.forEach(line => {
             const div = document.createElement("div");
-            div.innerText = line;
+            const cleanLine = line.replace(/[\u001b\u009b][[()#;?]*(?:[0-9]{1,4}(?:;[0-9]{0,4})*)?[0-9A-ORZcf-nqry=><]/g, '');
+            div.innerText = cleanLine;
             
-            if (line.includes("[Warning]")) div.style.color = "var(--accent-orange)";
-            else if (line.includes("[Error]")) div.style.color = "var(--accent-rose)";
-            else if (line.includes("api:")) div.style.color = "var(--accent-blue)";
+            if (cleanLine.includes("[Warning]")) div.style.color = "var(--accent-orange)";
+            else if (cleanLine.includes("[Error]")) div.style.color = "var(--accent-rose)";
+            else if (cleanLine.includes("api:")) div.style.color = "var(--accent-blue)";
             
             terminal.appendChild(div);
         });

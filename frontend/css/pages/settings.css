@@ -67,11 +67,9 @@
     white-space: pre-wrap;
     position: relative;
     box-shadow: inset 0 0 30px rgba(0, 0, 0, 0.85);
-    text-shadow: 0 0 4px rgba(52, 211, 153, 0.35);
-    animation: crt-flicker 0.25s infinite;
 }
 
-/* CRT Эффект полос сканирования (Scanlines) */
+/* CRT Эффект полос сканирования (Scanlines) - Сверхмягкий и ненавязчивый */
 .terminal-body::after {
     content: " ";
     display: block;
@@ -81,14 +79,27 @@
     background-size: 100% 4px, 3px 100%;
     z-index: 10;
     pointer-events: none;
-    opacity: 0.85;
+    opacity: 0.06;
 }
 
-/* Анимация мерцания CRT */
-@keyframes crt-flicker {
-    0% { opacity: 0.99; }
-    50% { opacity: 0.995; }
-    100% { opacity: 0.99; }
+.terminal-body div {
+    margin-bottom: 2px;
+}
+
+/* Кастомный ретро-скроллбар терминала */
+.terminal-body::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+}
+.terminal-body::-webkit-scrollbar-track {
+    background: rgba(0, 0, 0, 0.35);
+}
+.terminal-body::-webkit-scrollbar-thumb {
+    background: rgba(52, 211, 153, 0.25);
+    border-radius: 3px;
+}
+.terminal-body::-webkit-scrollbar-thumb:hover {
+    background: rgba(52, 211, 153, 0.45);
 }
 
 /* Настройки - Новый премиальный лейаут */
