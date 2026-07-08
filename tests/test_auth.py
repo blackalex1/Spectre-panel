@@ -476,3 +476,82 @@ def test_file_permissions():
     if os.path.exists(DB_PATH):
         os.chmod(DB_PATH, 0o600)
 
+
+def test_2fa_session_eviction(client):
+    """Test that toggling 2FA terminates all other active sessions of the user."""
+    from backend.totp import get_totp_token
+    from backend.database import db_session, add_session_db
+    from backend.models import UserSession
+    client.cookies.clear()
+    
+    # 1. Login to establish current active session
+    login_payload = {"username": "test_admin", "password": "test_password"}
+    response = client.post("/login", json=login_payload)
+    assert response.status_code == 200
+    
+    current_sid = response.cookies.get("session_id")
+    client.cookies.set("session_id", current_sid)
+    
+    csrf_res = client.get("/csrf-token")
+    csrf_token = csrf_res.json()["obj"]
+    
+    # 2. Programmatically inject another active session in the database for the same user
+    with db_session() as session:
+        # Delete existing sessions to start clean
+        session.query(UserSession).filter_by(username="test_admin").delete()
+        session.commit()
+    
+    # Re-insert the current session
+    add_session_db(current_sid, "test_admin", 7)
+    # Insert another session (simulating logged in on another device)
+    other_sid = "fake_other_device_session_id_12345"
+    add_session_db(other_sid, "test_admin", 7)
+    
+    # Verify both sessions exist
+    with db_session() as session:
+        sessions = session.query(UserSession).filter_by(username="test_admin").all()
+        assert len(sessions) == 2
+        
+    # 3. Setup 2FA
+    response = client.get("/api/settings/2fa/setup")
+    secret = response.json()["secret"]
+    
+    # 4. Enable 2FA
+    correct_code = get_totp_token(secret)
+    response = client.post(
+        "/api/settings/2fa/enable",
+        json={"code": correct_code},
+        headers={"X-CSRF-Token": csrf_token}
+    )
+    assert response.status_code == 200
+    assert response.json()["success"] is True
+    
+    # 5. Verify other session is evicted, while current is kept
+    with db_session() as session:
+        sessions = session.query(UserSession).filter_by(username="test_admin").all()
+        assert len(sessions) == 1
+        assert sessions[0].session_id == current_sid
+        
+    # 6. Inject another session again
+    add_session_db(other_sid, "test_admin", 7)
+    
+    with db_session() as session:
+        sessions = session.query(UserSession).filter_by(username="test_admin").all()
+        assert len(sessions) == 2
+        
+    # 7. Disable 2FA
+    correct_code_disable = get_totp_token(secret)
+    response = client.post(
+        "/api/settings/2fa/disable",
+        json={"code": correct_code_disable},
+        headers={"X-CSRF-Token": csrf_token}
+    )
+    assert response.status_code == 200
+    assert response.json()["success"] is True
+    
+    # 8. Verify other session is evicted again, and current is kept
+    with db_session() as session:
+        sessions = session.query(UserSession).filter_by(username="test_admin").all()
+        assert len(sessions) == 1
+        assert sessions[0].session_id == current_sid
+

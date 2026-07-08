@@ -313,3 +313,43 @@ def test_status_endpoint_reads_from_cache(client, monkeypatch):
     assert data["obj"]["disk"]["current"] == 111
     assert data["obj"]["disk"]["total"] == 999
     assert data["obj"]["disk"]["percent"] == 11.1
+
+
+def test_decoy_proxy_ssrf_block(monkeypatch):
+    """
+    Проверяет, что при попытке указать loopback или приватный IP в качестве proxy decoy,
+    система блокирует запрос (возвращает 404).
+    """
+    from backend.auth_utils import handle_decoy_route
+    from fastapi import Request
+    
+    # Mock get_setting to return a loopback url
+    def mock_get_setting(key, default=""):
+        if key == "decoy_type":
+            return "proxy"
+        if key == "decoy_value":
+            return "http://127.0.0.1:8080"
+        return default
+        
+    monkeypatch.setattr("backend.auth_utils.get_setting", mock_get_setting)
+    
+    scope = {
+        "type": "http",
+        "method": "GET",
+        "headers": [],
+        "query_string": b""
+    }
+    
+    async def mock_receive():
+        return {"type": "http.request", "body": b"", "more_body": False}
+        
+    req = Request(scope, receive=mock_receive)
+    
+    import anyio
+    async def run():
+        return await handle_decoy_route(req, "some-path")
+        
+    res = anyio.run(run)
+    # Должен сработать блок SSRF и вернуться стандартная 404 заглушка HTML
+    assert res.status_code == 404
+    assert b"404 Not Found" in res.body
