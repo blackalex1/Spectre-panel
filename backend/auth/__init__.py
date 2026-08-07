@@ -1,15 +1,16 @@
-"""
-Facade module re-exporting symbols from backend.auth package for backward compatibility.
-"""
-from backend.auth import (
-    is_safe_url,
+from backend.auth.security import is_safe_url
+from backend.auth.sessions import (
     DbCsrfTokens,
     DbActiveSessions,
     ACTIVE_SESSIONS,
     CSRF_TOKENS,
+)
+from backend.auth.verification import (
     check_auth,
     verify_node_token,
     verify_telegram_webapp,
+)
+from backend.auth.decoy import (
     DecoyException,
     RawDropResponse,
     decoy_response_html,
